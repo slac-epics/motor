@@ -47,6 +47,7 @@ Last Modified:	2003/12/12 21:36:37
 #include <stdio.h>
 #include <dbScan.h>
 #include <devSup.h>
+#include <osiUnistd.h>
 
 /* Maximum message size of all supported devices; see drv[device].h for maximum
 message size for each device. */
