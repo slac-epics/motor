@@ -2,9 +2,9 @@
 FILENAME...	devPmac.cc
 USAGE... Device level support for Delta Tau PMAC.
 
-Version:	1.2
+Version:	1.4
 Modified By:	sluiter
-Last Modified:	2004/09/15 18:49:33
+Last Modified:	2004/12/20 21:05:19
 */
 
 /*
@@ -67,7 +67,7 @@ struct motor_dset devPmac =
     Pmac_end_trans
 };
 
-epicsExportAddress(dset,devPmac);
+extern "C" {epicsExportAddress(dset,devPmac);}
 
 /* This table is used to define the command types */
 /* WARNING! this must match "motor_cmnd" in motor.h */
@@ -149,7 +149,6 @@ static RTN_STATUS Pmac_build_trans(motor_cmnd command, double *parms, struct mot
     unsigned int size;
     RTN_STATUS rtnval;
     bool send;
-    msta_field msta;
 
     send = true;		/* Default to send motor command. */
     rtnval = OK;
@@ -158,8 +157,6 @@ static RTN_STATUS Pmac_build_trans(motor_cmnd command, double *parms, struct mot
     /* Protect against NULL pointer with WRTITE_MSG(GO/STOP_AXIS/GET_INFO, NULL). */
     intval = (parms == NULL) ? 0 : NINT(parms[0]);
 
-    msta.All = mr->msta;
-    
     motor_call = &(trans->motor_call);
     card = motor_call->card;
     axis = motor_call->signal + 1;
