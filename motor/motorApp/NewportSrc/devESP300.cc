@@ -2,9 +2,9 @@
 FILENAME...	devESP300.cc
 USAGE...	Motor record device level support for Newport ESP300.
 
-Version:	1.2
+Version:	1.3
 Modified By:	sluiter
-Last Modified:	2003/11/04 15:49:01
+Last Modified:	2004/12/20 21:10:53
 */
 
 /*
@@ -67,7 +67,7 @@ struct motor_dset devESP300 =
     ESP300_end_trans
 };
 
-epicsExportAddress(dset,devESP300);
+extern "C" {epicsExportAddress(dset,devESP300);}
 
 /* --------------------------- program data --------------------- */
 
