@@ -2,9 +2,9 @@
 FILENAME...	drvMM3000.cc
 USAGE...	Motor record driver level support for Newport MM3000.
 
-Version:	1.7
+Version:	1.13
 Modified By:	sluiter
-Last Modified:	2004/02/03 19:59:21
+Last Modified:	2004/09/21 14:45:38
 */
 
 /*
@@ -53,6 +53,9 @@ Last Modified:	2004/02/03 19:59:21
  * .08 10/23/03 rls - recv_mess() eats the controller error response, outputs
  *			an error message and retries.
  * .09 02/03/04 rls - Eliminate erroneous "Motor motion timeout ERROR".
+ * .10 07/09/04 rls - removed unused <driver>Setup() argument.
+ * .11 07/28/04 rls - "epicsExport" debug variable.
+ * .12 09/21/04 rls - support for 32axes/controller.
  *
  */
 
@@ -62,7 +65,7 @@ Last Modified:	2004/02/03 19:59:21
 #include "motor.h"
 #include "NewportRegister.h"
 #include "drvMMCom.h"
-#include "serialIO.h"
+#include "asynOctetSyncIO.h"
 #include "epicsExport.h"
 
 #define STATIC static
@@ -87,14 +90,14 @@ Last Modified:	2004/02/03 19:59:21
 #define BUFF_SIZE 100       /* Maximum length of string to/from MM3000 */
 
 /* The MM3000 does not respond for 2 to 5 seconds after hitting a travel limit. */
-#define GPIB_TIMEOUT	5000	/* Command timeout in msec. */
-#define SERIAL_TIMEOUT	5000	/* Command timeout in msec. */
+#define SERIAL_TIMEOUT	5.0	/* Command timeout in sec. */
 
 /*----------------debugging-----------------*/
 #ifdef __GNUG__
     #ifdef	DEBUG
 	volatile int drvMM3000debug = 0;
 	#define Debug(l, f, args...) { if(l<=drvMM3000debug) printf(f,## args); }
+	epicsExportAddress(int, drvMM3000debug);
     #else
 	#define Debug(l, f, args...)
     #endif
@@ -110,9 +113,9 @@ int MM3000_num_cards = 0;
 
 /*----------------functions-----------------*/
 STATIC int recv_mess(int, char *, int);
-STATIC RTN_STATUS send_mess(int card, char const *com, char c);
-STATIC int set_status(int card, int signal);
-static long report(int level);
+STATIC RTN_STATUS send_mess(int, char const *, char *);
+STATIC int set_status(int, int);
+static long report(int);
 static long init();
 STATIC int motor_init();
 STATIC void query_done(int, int, struct mess_node *);
@@ -181,24 +184,10 @@ static long report(int level)
 		struct MMcontroller *cntrl;
 
 		cntrl = (struct MMcontroller *) brdptr->DevicePrivate;
-		switch (cntrl->port_type)
-		{
-		case RS232_PORT: 
-		    printf("    MM3000 controller %d port type = RS-232, id: %s \n", 
-			   card, 
+	    	printf("    MM3000 controller %d asyn port= %s, address=%d, id: %s \n", 
+			   card, cntrl->asyn_port, cntrl->asyn_address,
 			   brdptr->ident);
 		    break;
-		case GPIB_PORT:
-		    printf("    MM3000 controller %d port type = GPIB, id: %s \n", 
-			   card, 
-			   brdptr->ident);
-		    break;
-		default:
-		    printf("    MM3000 controller %d port type = Unknown, id: %s \n", 
-			   card, 
-			   brdptr->ident);
-		    break;
-		}
 	    }
 	}
     }
@@ -394,7 +383,7 @@ exit:
 /* send a message to the MM3000 board		     */
 /* send_mess()			                     */
 /*****************************************************/
-STATIC RTN_STATUS send_mess(int card, char const *com, char inchar)
+STATIC RTN_STATUS send_mess(int card, char const *com, char *name)
 {
     struct MMcontroller *cntrl;
     char local_buff[BUFF_SIZE];
@@ -416,9 +405,9 @@ STATIC RTN_STATUS send_mess(int card, char const *com, char inchar)
 	return(ERROR);
     }
 
-    if (inchar != (char) NULL)
+    if (name != NULL)
     {
-	errlogPrintf("drvMM3000:send_mess() - invalid argument = %c\n", inchar);
+	errlogPrintf("drvMM3000:send_mess() - invalid argument = %s\n", name);
 	return(ERROR);
     }
 
@@ -429,11 +418,8 @@ STATIC RTN_STATUS send_mess(int card, char const *com, char inchar)
 
     cntrl = (struct MMcontroller *) motor_state[card]->DevicePrivate;
 
-    if (cntrl->port_type == GPIB_PORT)
-	;
-//	gpibIOSend(cntrl->gpibInfo, local_buff, strlen(local_buff), GPIB_TIMEOUT);
-    else        
-	cntrl->serialInfo->serialIOSend(local_buff, strlen(local_buff), SERIAL_TIMEOUT);
+    pasynOctetSyncIO->write(cntrl->pasynUser, local_buff, strlen(local_buff), 
+                       SERIAL_TIMEOUT);
     
     return(OK);
 }
@@ -464,7 +450,7 @@ STATIC RTN_STATUS send_mess(int card, char const *com, char inchar)
  *	    IF input "flag" indicates NOT flushing the input buffer.
  *		Set receive timeout nonzero.
  *	    ENDIF
- *	    Call serialIORecv().
+ *	    Call pasynOctetSyncIO->read().
  *
  *	    NOTE: The MM3000 sometimes responds to an MS command with an error
  *		message (see MM3000 User's Manual Appendix A).  This is an
@@ -474,7 +460,7 @@ STATIC RTN_STATUS send_mess(int card, char const *com, char inchar)
  *	    IF input "com" buffer length is > 3 characters, AND, the 1st
  *			character is an "E" (Maybe this an unsolicited error
  *			message response?).
- *	    	Call serialIORecv().
+ *	   	Call pasynOctetSyncIO->read().
  *	    ENDIF
  *	    BREAK
  *    ENDSWITCH
@@ -485,8 +471,10 @@ STATIC RTN_STATUS send_mess(int card, char const *com, char inchar)
 STATIC int recv_mess(int card, char *com, int flag)
 {
     struct MMcontroller *cntrl;
-    int timeout = 0;
+    double timeout = 0.;
+    int flush = 1;
     int len = 0;
+    int eomReason;
 
     /* Check that card exists */
     if (!motor_state[card])
@@ -494,26 +482,21 @@ STATIC int recv_mess(int card, char *com, int flag)
 
     cntrl = (struct MMcontroller *) motor_state[card]->DevicePrivate;
 
-    switch (cntrl->port_type)
+    if (flag != FLUSH) {
+        flush = 0;
+	timeout	= SERIAL_TIMEOUT;
+    }
+    len = pasynOctetSyncIO->read(cntrl->pasynUser, com, BUFF_SIZE, (char *) 
+                            "\n", 1, flush, timeout, &eomReason);
+    if (len > 3 && com[0] == 'E')
     {
-	case GPIB_PORT:
-	    if (flag != FLUSH)
-		timeout	= GPIB_TIMEOUT;
-//	    len = gpibIORecv(cntrl->gpibInfo, com, BUFF_SIZE, "\n",timeout);
-	    break;
-	case RS232_PORT:
-	    if (flag != FLUSH)
-		timeout	= SERIAL_TIMEOUT;
-	    len = cntrl->serialInfo->serialIORecv(com, BUFF_SIZE, (char *) "\n", timeout);
-	    if (len > 3 && com[0] == 'E')
-	    {
-		long error;
+	long error;
 
-		error = strtol(&com[1], NULL, 0);
-		if (error >= 35 && error <= 42)
-		    len = cntrl->serialInfo->serialIORecv(com, BUFF_SIZE, (char *) "\n", timeout);
-	    }
-	    break;
+	error = strtol(&com[1], NULL, 0);
+	if (error >= 35 && error <= 42)
+	    len = pasynOctetSyncIO->read(cntrl->pasynUser, com, BUFF_SIZE, 
+                                    (char *) "\n", 1, flush, timeout,
+                                    &eomReason);
     }
 
     if (len <= 0)
@@ -547,7 +530,6 @@ STATIC int recv_mess(int card, char *com, int flag)
 /*****************************************************/
 RTN_STATUS
 MM3000Setup(int num_cards,	/* maximum number of controllers in system.  */
-	    int num_channels,	/* NOT Used. */
 	    int scan_rate)	/* polling rate - 1/60 sec units.  */
 {
     int itera;
@@ -585,9 +567,8 @@ MM3000Setup(int num_cards,	/* maximum number of controllers in system.  */
 /*****************************************************/
 RTN_STATUS
 MM3000Config(int card,		/* card being configured */
-            PortType port_type,	/* GPIB_PORT or RS232_PORT */
-	    int location,       /* = link for GPIB or MPF serial server location */
-            const char *name)   /* GPIB address or MPF serial server task name */
+            const char *port,   /* asyn port name */
+            int address)        /* asyn address (GPIB) */
 {
     struct MMcontroller *cntrl;
 
@@ -598,22 +579,8 @@ MM3000Config(int card,		/* card being configured */
     motor_state[card]->DevicePrivate = malloc(sizeof(struct MMcontroller));
     cntrl = (struct MMcontroller *) motor_state[card]->DevicePrivate;
 
-    switch (port_type)
-    {
-/*    case GPIB_PORT:
-        cntrl->port_type = port_type;
-        cntrl->gpib_link = addr1;
-        cntrl->gpib_address = addr2;
-        break;
-*/
-    case RS232_PORT:
-        cntrl->port_type = port_type;
-        cntrl->serial_card = location;
-        strcpy(cntrl->serial_task, name);
-        break;
-    default:
-        return(ERROR);
-    }
+    strcpy(cntrl->asyn_port, port);
+    cntrl->asyn_address = address;
     return(OK);
 }
 
@@ -635,7 +602,7 @@ STATIC int motor_init()
     char *tok_save, *bufptr;
     int total_axis = 0;
     int status;
-    bool success_rtn;
+    asynStatus success_rtn;
 
     initialized = true;	/* Indicate that driver is initialized. */
     
@@ -656,44 +623,27 @@ STATIC int motor_init()
 	cntrl = (struct MMcontroller *) brdptr->DevicePrivate;
 
 	/* Initialize communications channel */
-	success_rtn = false;
-	switch (cntrl->port_type)
-	{
-/*
-	    case GPIB_PORT:
-		cntrl->gpibInfo = gpibIOInit(cntrl->gpib_link,
-					     cntrl->gpib_address);
-		if (cntrl->gpibInfo == NULL)
-		    success_rtn = true;
-		break;
-*/
-	    case RS232_PORT:
-		cntrl->serialInfo = new serialIO(cntrl->serial_card,
-					     cntrl->serial_task, &success_rtn);
-		break;
-	}
-
-	if (success_rtn == true)
+	success_rtn = pasynOctetSyncIO->connect(cntrl->asyn_port, 
+                          cntrl->asyn_address, &cntrl->pasynUser);
+	if (success_rtn == asynSuccess)
 	{
 	    /* Send a message to the board, see if it exists */
 	    /* flush any junk at input port - should not be any data available */
-	    do
-		recv_mess(card_index, buff, FLUSH);
-	    while (strlen(buff) != 0);
+	    pasynOctetSyncIO->flush(cntrl->pasynUser);
     
 	    send_mess(card_index, GET_IDENT, (char) NULL);
 	    status = recv_mess(card_index, axis_pos, 1);  
 	    /* Return value is length of response string */
 	}
 
-	if (success_rtn == true && status > 0)
+	if (success_rtn == asynSuccess && status > 0)
 	{
 	    brdptr->localaddr = (char *) NULL;
 	    brdptr->motor_in_motion = 0;
 	    send_mess(card_index, STOP_ALL, (char) NULL);	/* Stop all motors */
 	    send_mess(card_index, GET_IDENT, (char) NULL);	/* Read controller ID string */
 	    recv_mess(card_index, buff, 1);
-	    strncpy(brdptr->ident, &buff[0], 50);  /* Skip "VE" */
+	    strncpy(brdptr->ident, &buff[0], MAX_IDENT_LEN);  /* Skip "VE" */
 
 	    send_mess(card_index, "RC", (char) NULL);
 	    recv_mess(card_index, buff, 1);
@@ -716,7 +666,7 @@ STATIC int motor_init()
 			cntrl->type[total_axis] = DC;
 		    else
 			errlogPrintf("drvMM3000:motor_init() - invalid RC response = %s\n",
-			       (int) bufptr);
+			       bufptr);
 
 		    bufptr = strtok_r(NULL, "=", &tok_save);
 		    bufptr = strtok_r(NULL, " ", &tok_save);
