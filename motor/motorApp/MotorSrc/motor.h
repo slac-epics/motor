@@ -3,9 +3,9 @@ FILENAME...	motor.h
 USAGE...	Definitions and structures common to all levels of motorRecord
 		support (i.e., record, device and driver).
 
-Version:	1.10
+Version:	1.12
 Modified By:	sluiter
-Last Modified:	2003/12/12 21:36:37
+Last Modified:	2004/09/20 20:23:08
 */
 
 /*
@@ -39,6 +39,8 @@ Last Modified:	2003/12/12 21:36:37
  * .01 10-21-02 rls - Convert to R3.14.x and C++.
  * .02 12-12-03 rls - Added MAX_SCAN_RATE.
  *		    - Converted MSTA #define's to bit field.
+ * .03 08-30-04 rls - Added osiUnistd.h for RTEMS.
+ * .04 09-20-04 rls - Increase max. axis / board to 32 for Delta Tau PMAC.
  */
 
 #ifndef	INCmotorh
@@ -47,6 +49,7 @@ Last Modified:	2003/12/12 21:36:37
 #include <stdio.h>
 #include <dbScan.h>
 #include <devSup.h>
+#include <osiUnistd.h> 
 
 /* Maximum message size of all supported devices; see drv[device].h for maximum
 message size for each device. */
@@ -104,7 +107,7 @@ enum motor_cmnd {
 #define MAX_SCAN_RATE	60	/* Maximum polling rate in HZ. */
 #define SCAN_RATE	6	/* Default polling rate in HZ. */
 #define MAX_COUNT	50000	/*19000*/	/* timeout value */
-#define MAX_AXIS	10	/* max number of axis per board */
+#define MAX_AXIS	32	/* max number of axis per board */
 
 #define NO		0
 #define YES		1
