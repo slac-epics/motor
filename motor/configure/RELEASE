@@ -18,10 +18,10 @@
 # If any motor controller communication mechanism besides the VME backplane is
 # required, then MPF must be defined.
 # Recommended MPF release: R2.4.2
-MPF=/home/oxygen/MOONEY/epics/synApps_5_0/support/mpf/2-4-2
+#MPF=/home/oxygen/MOONEY/epics/synApps_5_0/support/mpf/2-4-2
 
 # Recommended EPICS release: R3.14.5
-EPICS_BASE=/net/beams/export/local/epics/baseR3.14.5
+EPICS_BASE=/afs/slac/g/spear/3.14.6epics/base
 
 # The following must be defined if motorExApp is to be built.
 #TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
@@ -30,7 +30,7 @@ EPICS_BASE=/net/beams/export/local/epics/baseR3.14.5
 # The following must be defined if the "WithMPF" example in motorExApp is to
 # be built.
 # Recommended IPAC release: R2.7a
-IPAC=/home/oxygen/MOONEY/epics/synApps_5_0/support/ipac/2-7a
+#IPAC=/home/oxygen/MOONEY/epics/synApps_5_0/support/ipac/2-7a
 
 #GPIB is not yet supported!
 #MPF_GPIB=$(SUPPORT)/mpfGpib/mpfGpib1-4
@@ -38,3 +38,4 @@ IPAC=/home/oxygen/MOONEY/epics/synApps_5_0/support/ipac/2-7a
 # The following must be defined for the MXmotor device driver.
 #MX=$(SUPPORT)/mx/mx
 
+INSTALL_LOCATION_APP = $(TOP)/../..
