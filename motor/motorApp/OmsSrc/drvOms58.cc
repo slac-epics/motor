@@ -85,6 +85,8 @@ Last Modified:	2004/02/03 20:09:00
  * .26  02-03-04  rls - Eliminate erroneous "Motor motion timeout ERROR".
  * .27  05-20-04  skf - RTEMS port
  * .28  07-07-04  skf - added support for the mvme5500
+ * .29  07-21-04  skf - Let users know where the defected/absent cards are.
+ * .30  09-15-04  tss - Use calloc instead of malloc for the motor_state
  */
 
 #ifdef vxWorks
@@ -336,7 +338,7 @@ STATIC void query_done(int card, int axis, struct mess_node *nodeptr)
     recv_mess(card, buffer, 1);
 
     /*#if (CPU == PPC604 || CPU == PPC603)  */
-#if  (defined(mpc604)||defined(mpc7455) || (CPU == PPC604 || CPU == PPC603))
+#if  (defined(mpc604)||defined(mpc7455))
     if (strcmp(motor_state[card]->ident, "VME58 ver 2.35-8") == 0) 
        epicsThreadSleep(QUANTUM_X);	/* Work around for intermittent wrong LS status. */
 #endif
@@ -1085,8 +1087,8 @@ STATIC int motor_init()
     }
 
     /* allocate space for total number of motors */
-    motor_state = (struct controller **) malloc(oms58_num_cards *
-						sizeof(struct controller *));
+    motor_state = (struct controller **) calloc(oms58_num_cards ,
+                                                sizeof(struct controller *));
 
     /* allocate structure space for each motor present */
 
@@ -1113,8 +1115,9 @@ STATIC int motor_init()
 	do
 	{
 	    status = devNoResponseProbe(OMS_ADDRS_TYPE, (unsigned int) startAddr, 2);
+            if ( !PROBE_SUCCESS(status)) break;
 	    startAddr += 0x100;
-	} while (PROBE_SUCCESS(status) && startAddr < endAddr);
+	} while (startAddr < endAddr);
 
 	if (PROBE_SUCCESS(status))
 	{
@@ -1243,13 +1246,11 @@ STATIC int motor_init()
         }
 	else
 	{
-	    printf("motor_init: Card %d NOT found at 0x%8x\n",card_index,(uint_t) localaddr);
+ 	    printf("motor_init: Card %d read Error at 0x%x\n",card_index,(uint_t) startAddr);
 	    motor_state[card_index] = (struct controller *) NULL;
 	    return(ERROR);
 	}
     }
-    epicsThreadSleep(QUANTUM_X); /* workaround for fast processor boards */
-
     any_motor_in_motion = 0;
 
     mess_queue.head = (struct mess_node *) NULL;
