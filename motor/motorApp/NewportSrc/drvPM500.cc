@@ -2,9 +2,9 @@
 FILENAME...	drvPM500.cc
 USAGE...	Motor record driver level support for Newport PM500.
 
-Version:	1.6
+Version:	1.12
 Modified By:	sluiter
-Last Modified:	2004/02/03 19:59:21
+Last Modified:	2004/09/21 14:57:12
 */
 
 /* Device Driver Support routines for PM500 motor controller */
@@ -40,6 +40,9 @@ Last Modified:	2004/02/03 19:59:21
  * .03 10/02/01 rls allow one retry after a communication error.
  * .04 05-23-03	rls Converted to R3.14.x.
  * .05 02/03/04 rls Eliminate erroneous "Motor motion timeout ERROR".
+ * .06 07/09/04 rls removed unused <driver>Setup() argument.
+ * .07 07/28/04 rls "epicsExport" debug variable.
+ * .08 09/21/04 rls support for 32axes/controller.
  */
 
 
@@ -50,10 +53,8 @@ Last Modified:	2004/02/03 19:59:21
 #include "motor.h"
 #include "NewportRegister.h"
 #include "drvMMCom.h"
-#include "serialIO.h"
+#include "asynOctetSyncIO.h"
 #include "epicsExport.h"
-
-#define STATIC static
 
 #define READ_RESOLUTION ""
 #define READ_STATUS     ""
@@ -75,14 +76,14 @@ Last Modified:	2004/02/03 19:59:21
 #define PM500_NUM_CHANNELS        12
 #define BUFF_SIZE 100       /* Maximum length of string to/from PM500 */
 
-#define GPIB_TIMEOUT	2000	/* Command timeout in msec. */
-#define SERIAL_TIMEOUT	2000	/* Command timeout in msec. */
+#define SERIAL_TIMEOUT	2.0	/* Command timeout in sec. */
 
 /*----------------debugging-----------------*/
 #ifdef __GNUG__
     #ifdef	DEBUG
 	volatile int drvPM500debug = 0;
 	#define Debug(l, f, args...) { if(l<=drvPM500debug) printf(f,## args); }
+	epicsExportAddress(int, drvPM500debug);
     #else
 	#define Debug(l, f, args...)
     #endif
@@ -92,20 +93,20 @@ Last Modified:	2004/02/03 19:59:21
 
 /* --- Local data. --- */
 int PM500_num_cards = 0;
-static char PM500_axis_names[PM500_NUM_CHANNELS] = {'X', 'Y', 'Z', 'A', 'B',
-    'C', 'D', 'E', 'F', 'G', 'H', 'I'};
+static char *PM500_axis_names[] = {"X", "Y", "Z", "A", "B", "C", "D", "E", "F",
+				   "G", "H", "I"};
 
 /* Local data required for every driver; see "motordrvComCode.h" */
 #include	"motordrvComCode.h"
 
 /*----------------functions-----------------*/
-STATIC int recv_mess(int, char *, int);
-STATIC RTN_STATUS send_mess(int card, char const *com, char c);
-STATIC int set_status(int card, int signal);
-static long report(int level);
+static int recv_mess(int, char *, int);
+static RTN_STATUS send_mess(int, char const *, char *);
+static int set_status(int, int);
+static long report(int);
 static long init();
-STATIC int motor_init();
-STATIC void query_done(int, int, struct mess_node *);
+static int motor_init();
+static void query_done(int, int, struct mess_node *);
 
 /*----------------functions-----------------*/
 
@@ -147,7 +148,7 @@ struct
 
 epicsExportAddress(drvet, drvPM500);
 
-STATIC struct thread_args targs = {SCAN_RATE, &PM500_access};
+static struct thread_args targs = {SCAN_RATE, &PM500_access};
 
 /*********************************************************
  * Print out driver status report
@@ -171,24 +172,9 @@ static long report(int level)
 		struct MMcontroller *cntrl;
 
 		cntrl = (struct MMcontroller *) brdptr->DevicePrivate;
-		switch (cntrl->port_type)
-		{
-		case RS232_PORT: 
-		    printf("    PM500 controller %d port type = RS-232, id: %s \n", 
-			   card, 
+	    	printf("    PM500 controller %d port=%s, address=%d, id: %s \n", 
+			   card, cntrl->asyn_port, cntrl->asyn_address,
 			   brdptr->ident);
-		    break;
-		case GPIB_PORT:
-		    printf("    PM500 controller %d port type = GPIB, id: %s \n", 
-			   card, 
-			   brdptr->ident);
-		    break;
-		default:
-		    printf("    PM500 controller %d port type = Unknown, id: %s \n", 
-			   card, 
-			   brdptr->ident);
-		    break;
-		}
 	    }
 	}
     }
@@ -213,7 +199,7 @@ static long init()
 }
 
 
-STATIC void query_done(int card, int axis, struct mess_node *nodeptr)
+static void query_done(int card, int axis, struct mess_node *nodeptr)
 {
 }
 
@@ -223,13 +209,13 @@ STATIC void query_done(int card, int axis, struct mess_node *nodeptr)
  * set_status()
  ************************************************************/
 
-STATIC int set_status(int card, int signal)
+static int set_status(int card, int signal)
 {
     struct MMcontroller *cntrl;
     struct mess_node *nodeptr;
     register struct mess_info *motor_info;
     /* Message parsing variables */
-    char axis_name, status_char, dir_char, buff[BUFF_SIZE],
+    char *axis_name, status_char, dir_char, buff[BUFF_SIZE],
 	response[BUFF_SIZE];
     int rtnval, rtn_state = 0;
     double motorData;
@@ -243,7 +229,7 @@ STATIC int set_status(int card, int signal)
     status.All = motor_info->status.All;
 
     /* Request the status and position of this motor */
-    sprintf(buff, "%cR", axis_name);
+    sprintf(buff, "%sR", axis_name);
     send_mess(card, buff, (char) NULL);
     rtnval = recv_mess(card, response, 1);
     if (rtnval > 0)
@@ -355,7 +341,7 @@ exit:
 /* send a message to the PM500 board		     */
 /* send_mess()			                     */
 /*****************************************************/
-STATIC RTN_STATUS send_mess(int card, char const *com, char inchar)
+static RTN_STATUS send_mess(int card, char const *com, char *name)
 {
     struct MMcontroller *cntrl;
     char local_buff[BUFF_SIZE];
@@ -385,11 +371,8 @@ STATIC RTN_STATUS send_mess(int card, char const *com, char inchar)
 
     cntrl = (struct MMcontroller *) motor_state[card]->DevicePrivate;
 
-    if (cntrl->port_type == GPIB_PORT)
-	;
-//	    gpibIOSend(cntrl->gpibInfo, local_buff, strlen(local_buff), GPIB_TIMEOUT);
-    else
-	cntrl->serialInfo->serialIOSend(local_buff, strlen(local_buff), SERIAL_TIMEOUT);
+    pasynOctetSyncIO->write(cntrl->pasynUser, local_buff, strlen(local_buff), 
+                       SERIAL_TIMEOUT);
 
     return(OK);
 }
@@ -411,11 +394,13 @@ STATIC RTN_STATUS send_mess(int card, char const *com, char inchar)
  *  NORMAL RETURN.
  */
 
-STATIC int recv_mess(int card, char *com, int flag)
+static int recv_mess(int card, char *com, int flag)
 {
     struct MMcontroller *cntrl;
-    int timeout = 0;
+    double timeout = 0.;
+    int flush=1;
     int len = 0;
+    int eomReason;
 
     /* Check that card exists */
     if (!motor_state[card])
@@ -423,19 +408,12 @@ STATIC int recv_mess(int card, char *com, int flag)
 
     cntrl = (struct MMcontroller *) motor_state[card]->DevicePrivate;
 
-    switch (cntrl->port_type)
-    {
-	case GPIB_PORT:
-	    if (flag != FLUSH)
-		timeout	= GPIB_TIMEOUT;
-//	    len = gpibIORecv(cntrl->gpibInfo, com, BUFF_SIZE, (char *) "\r", timeout);
-	    break;
-	case RS232_PORT:
-	    if (flag != FLUSH)
-		timeout	= SERIAL_TIMEOUT;
-	    len = cntrl->serialInfo->serialIORecv(com, BUFF_SIZE, (char *) "\r", timeout);
-	    break;
+    if (flag != FLUSH) {
+        flush=0;
+	timeout	= SERIAL_TIMEOUT;
     }
+    len = pasynOctetSyncIO->read(cntrl->pasynUser, com, BUFF_SIZE, "\r", 
+                            1, flush, timeout, &eomReason);
 
     if (len <= 0)
     {
@@ -461,7 +439,6 @@ STATIC int recv_mess(int card, char *com, int flag)
 /*****************************************************/
 RTN_STATUS
 PM500Setup(int num_cards,	/* maximum number of controllers in system.  */
-	   int num_channels,	/* NOT Used. */
 	   int scan_rate)	/* polling rate - 1/60 sec units.  */
 {
     int itera;
@@ -499,9 +476,8 @@ PM500Setup(int num_cards,	/* maximum number of controllers in system.  */
 /*****************************************************/
 RTN_STATUS
 PM500Config(int card,	/* card being configured */
-            PortType port_type,	/* GPIB_PORT or RS232_PORT */
-	    int location,       /* = link for GPIB or MPF serial server location */
-            const char *name)   /* GPIB address or MPF serial server task name */
+            const char *name,   /*asyn port name */
+            int address)        /*asyn address (GPIB) */
 {
     struct MMcontroller *cntrl;
 
@@ -512,23 +488,8 @@ PM500Config(int card,	/* card being configured */
     motor_state[card]->DevicePrivate = malloc(sizeof(struct MMcontroller));
     cntrl = (struct MMcontroller *) motor_state[card]->DevicePrivate;
 
-    switch (port_type)
-    {
-/*
-    case GPIB_PORT:
-        cntrl->port_type = port_type;
-        cntrl->gpib_link = addr1;
-        cntrl->gpib_address = addr2;
-        break;
-*/
-    case RS232_PORT:
-        cntrl->port_type = port_type;
-        cntrl->serial_card = location;
-        strcpy(cntrl->serial_task, name);
-        break;
-    default:
-        return (ERROR);
-    }
+    strcpy(cntrl->asyn_port, name);
+    cntrl->asyn_address = address;
     return(OK);
 }
 
@@ -540,7 +501,7 @@ PM500Config(int card,	/* card being configured */
 /* device support.                                   */
 /* motor_init()			                     */
 /*****************************************************/
-STATIC int motor_init()
+static int motor_init()
 {
     struct controller *brdptr;
     struct MMcontroller *cntrl;
@@ -548,7 +509,7 @@ STATIC int motor_init()
     char buff[BUFF_SIZE];
     int total_axis = 0;
     int status, digits;
-    bool success_rtn;
+    asynStatus success_rtn;
 
     initialized = true;	/* Indicate that driver is initialized. */
 
@@ -567,29 +528,13 @@ STATIC int motor_init()
 	cntrl = (struct MMcontroller *) brdptr->DevicePrivate;
 
 	/* Initialize communications channel */
-	success_rtn = false;
-	switch (cntrl->port_type)
-	{
-/*
-	    case GPIB_PORT:
-		cntrl->gpibInfo = gpibIOInit(cntrl->gpib_link,
-					     cntrl->gpib_address);
-		if (cntrl->gpibInfo == NULL)
-		    success_rtn = true;
-		break;
-*/
-	    case RS232_PORT:
-		cntrl->serialInfo = new serialIO(cntrl->serial_card,
-					     cntrl->serial_task, &success_rtn);
-		break;
-	}
+	success_rtn = pasynOctetSyncIO->connect(cntrl->asyn_port, 
+                          cntrl->asyn_address, &cntrl->pasynUser);
 
-	if (success_rtn == true)
+	if (success_rtn == asynSuccess)
 	{
 	    /* flush any junk at input port - should not be any data available */
-	    do
-		recv_mess(card_index, buff, FLUSH);
-	    while (strlen(buff) != 0);
+            pasynOctetSyncIO->flush(cntrl->pasynUser);
     
 	    /* Send a SCUM 1 command to put device in this mode. */
 	    send_mess(card_index, "SCUM 1", (char) NULL);
@@ -623,7 +568,7 @@ STATIC int motor_init()
 	    /* Return value is length of response string */
 	}
 
-	if (success_rtn == true && status > 0)
+	if (success_rtn == asynSuccess && status > 0)
 	{
 	    brdptr->localaddr = (char *) NULL;
 	    brdptr->motor_in_motion = 0;
@@ -658,10 +603,10 @@ STATIC int motor_init()
 	    for (motor_index = 0; motor_index < total_axis; motor_index++)
 	    {
 		struct mess_info *motor_info = &brdptr->motor_info[motor_index];
-  		char *firmware, axis_name = PM500_axis_names[motor_index];
+  		char *firmware, *axis_name = PM500_axis_names[motor_index];
 		double res = 0.0;
 
-                sprintf(buff, "%cCONFIG?", axis_name);
+                sprintf(buff, "%sCONFIG?", axis_name);
 	        send_mess(card_index, buff, (char) NULL);
 	        recv_mess(card_index, buff, 1);
                 firmware = &buff[8];
