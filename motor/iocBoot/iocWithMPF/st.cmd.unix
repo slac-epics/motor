@@ -1,37 +1,31 @@
-# The is the "ASYN" example for communication to either a Newport MM4000/5 or an
-# IMS483 controller.  The examples must be configured by including or omitting
-# comment characters (i.e., #'s) from this file.
-
+# The is the ASYN example for communication to a Newport MM4000/5/6.
 # "#!" marks lines that can be uncommented.
 
-# The following must be added for many board support packages
-#!cd "... IOC st.cmd complete directory path ... "
+< envPaths
 
-< cdCommands 
-#!< ../nfsCommands
-
-cd topbin
-
-# If the VxWorks kernel was built using the project facility, the following must
-# be added before any C++ code is loaded (see SPR #28980).
-sysCplusEnable=1
-
-ld < WithMPFVx.munch
-
-cd startup
-dbLoadDatabase("$(TOP)/dbd/WithMPFVx.dbd")
-WithMPFVx_registerRecordDeviceDriver(pdbbase)
-
+dbLoadDatabase("$(TOP)/dbd/WithMPF.dbd")
+WithMPF_registerRecordDeviceDriver(pdbbase)
 dbLoadRecords("$(TOP)/db/WithMPF.db")
 
-# Configure the ASYN server code. This MUST be configured too!
-< st_asynserver.cmd.Vx
+
+# The following commands are for a local serial line
+# Configure the asyn server code for either sun or linux.
+#!Sun Solaris !drvAsynSerialPortConfigure("L0","/dev/ttya" ,0,0,0)
+#!Redhat Linux!drvAsynSerialPortConfigure("L0","/dev/ttyS0",0,0,0)
+
+asynSetOption("L0", -1, "baud", "9600")
+asynSetOption("L0", -1, "bits", "8")
+asynSetOption("L0", -1, "parity", "none")
+asynSetOption("L0", -1, "stop", "1")
+asynSetOption("L0", -1, "clocal", "Y")
+asynSetOption("L0", -1, "crtscts", "N")
+
 
 # Newport MM3000 and MM4000/5/6 driver setup parameters: 
 #     (1) maximum number of controllers in system
 #     (2) motor task polling rate (min=1Hz,max=60Hz)
 #!MM3000Setup(1, 10)
-#!MM4000Setup(1, 10)
+MM4000Setup(1, 10)
 
 # Newport MM3000 and MM4000/5/6 driver configuration parameters: 
 #     (1) controller# being configured
@@ -39,8 +33,8 @@ dbLoadRecords("$(TOP)/db/WithMPF.db")
 #     (3) address (GPIB only)
 #!MM3000Config(0, "a-Serial[0]")
 #!drvMM3000debug=4
-#!MM4000Config(0, "a-Serial[0]")
-#!drvMM4000debug=4
+MM4000Config(0, "L0")
+#!var drvMM4000debug 4
 
 # Newport PM500 driver setup parameters:
 #     (1) maximum number of controllers in system
@@ -51,8 +45,8 @@ dbLoadRecords("$(TOP)/db/WithMPF.db")
 #     (1) controller# being configured,
 #     (2) ASYN port name
 #     (3) address (GPIB only)
-#!PM500Config(0, "a-Serial[0]")
-#!drvPM500debug=4
+#!PM500Config(0, "L0")
+#!var drvPM500debug 4
 
 # IMS IM483 driver setup parameters:
 #     (1) maximum number of controllers in system
@@ -65,10 +59,10 @@ dbLoadRecords("$(TOP)/db/WithMPF.db")
 #     (1) controller# (chain#) being configured,
 #     (2) ASYN port name
 #  SM - single mode     PL - party mode
-#!IM483SMConfig(0, "a-Serial[0]")
-#!drvIM483SMdebug=4
-#!IM483PLConfig(0, "a-Serial[0]")
-#!drvIM483PLdebug=4
+#!IM483SMConfig(0, "L0")
+#!var drvIM483SMdebug 4
+#!IM483PLConfig(0, "L0")
+#!var drvIM483PLdebug 4
 
 # MCB-4B driver setup parameters:
 #     (1) maximum # of controllers,
@@ -78,8 +72,8 @@ dbLoadRecords("$(TOP)/db/WithMPF.db")
 # MCB-4B driver configuration parameters:
 #     (1) controller
 #     (2) ASYN port name
-#!MCB4BConfig(0, "a-Serial[0]")
-#!drvMCB4BDebug=4
+#!MCB4BConfig(0, "L0")
+#!var drvMCB4BDebug 4
 
 # Newport ESP300 driver setup parameters: 
 #     (1) maximum number of controllers in system
@@ -90,8 +84,8 @@ dbLoadRecords("$(TOP)/db/WithMPF.db")
 #     (1) controller# being configured,
 #     (2) ASYN port name
 #     (3) address (GPIB only)
-#!ESP300Config(0, "a-Serial[0]")
-#!drvESP300debug = 4
+#!ESP300Config(0, "L0")
+#!var drvESP300debug 4
 
 # MicroMo MVP2001 driver setup parameters: 
 #
@@ -105,7 +99,7 @@ dbLoadRecords("$(TOP)/db/WithMPF.db")
 
 # int MVP2001Config(int card,     /* CHAIN being configured */
 #     (2) ASYN port name
-#!MVP2001Config(0, "a-Serial[0]")
+#!MVP2001Config(0, "L0")
 #!drvMVP2001debug=4
 
 # PI C-844 driver setup parameters: 
@@ -117,8 +111,8 @@ dbLoadRecords("$(TOP)/db/WithMPF.db")
 #     (1) controller# being configured,
 #     (2) ASYN port name
 #     (3) address (GPIB only)
-#!PIC844Config(0, "a-Serial[0]")
-#!drvPIC844debug = 4
+#!PIC844Config(0, "L0")
+#!var drvPIC844debug 4
 
 # Micos MoCo driver setup parameters:
 # Load MicosSetup once.
@@ -135,8 +129,8 @@ dbLoadRecords("$(TOP)/db/WithMPF.db")
 # Load one MicosConfig for each group of Micos drivers.
 #     (1) "Controller group" number
 #     (2) ASYN port name
-#!MicosConfig(0, "a-Serial[0]")
-#!drvMicosDebug = 4
+#!MicosConfig(0, "L0")
+#!var drvMicosDebug 4
 
 # IMS MDrive driver setup parameters: 
 #     (1) maximum number of controllers in system
@@ -145,7 +139,8 @@ dbLoadRecords("$(TOP)/db/WithMPF.db")
 
 # IMS MDrive driver configuration parameters: 
 #     (1) controller# being configured,
-#!MDriveConfig(0, "a-Serial[0]")
-#!drvMDrivedebug = 4
+#     (2) ASYN port name
+#!MDriveConfig(0, "L0")
+#!var drvMDrivedebug 4
 
 iocInit
