@@ -3,9 +3,9 @@ FILENAME...	motordrvCom.cc
 USAGE... 	This file contains driver functions that are common
 		to all motor record driver modules.
 
-Version:	1.9
+Version:	1.11
 Modified By:	sluiter
-Last Modified:	2004/02/11 22:24:15
+Last Modified:	2004/09/20 20:39:55
 */
 
 /*
@@ -50,19 +50,17 @@ Last Modified:	2004/02/11 22:24:15
 #include	<string.h>
 #include	<callback.h>
 #include 	<epicsThread.h>
+#include        <epicsExport.h>
 
 #include	"motor.h"
 #include	"motordrvCom.h"
 
 /*----------------debugging-----------------*/
 
+volatile int motordrvComdebug = 0;
+epicsExportAddress(int, motordrvComdebug);
 #ifdef __GNUG__
-    #ifdef	DEBUG
-	volatile int motordrvComdebug = 0;
-	#define Debug(l, f, args...) {if (l <= motordrvComdebug) printf(f, ## args);}
-    #else
-	#define Debug(l, f, args...)
-    #endif
+    #define Debug(l, f, args...) {if (l <= motordrvComdebug) printf(f, ## args);}
 #else
     #define Debug()
 #endif
@@ -268,10 +266,10 @@ static void process_messages(struct driver_table *tabptr, epicsTime tick)
 	    struct mess_info *motor_info;
 	    struct controller *brdptr;
 	    char inbuf[MAX_MSG_SIZE];
-	    char axis_name;
+	    char *axis_name;
 
 	    if (tabptr->axis_names == NULL)
-		axis_name = (char) NULL;
+		axis_name = (char *) NULL;
 	    else
 		axis_name = tabptr->axis_names[axis];
 
