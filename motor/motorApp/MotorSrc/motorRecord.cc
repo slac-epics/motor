@@ -2,9 +2,9 @@
 FILENAME...	motorRecord.cc
 USAGE...	Motor Record Support.
 
-Version:	1.16
+Version:	1.19
 Modified By:	sluiter
-Last Modified:	2004/02/12 19:39:29
+Last Modified:	2004/09/20 20:37:28
 */
 
 /*
@@ -63,10 +63,12 @@ Last Modified:	2004/02/12 19:39:29
  * .13 12-23-03 rls - Prevent STUP from activating DLY or setting DMOV true.
  * .14 02-10-03 rls - Update lval in load_pos() if FOFF is set to FROZEN.
  * .15 02-12-03 rls - Allow sign(MRES) != sign(ERES).
+ * .16 06-16-04 rls - JAR validity check.
+ * .17 09-20-04 rls - Do status update if nothing else to do.
  *
  */
 
-#define VERSION 5.3
+#define VERSION 5.4
 
 #include	<stdlib.h>
 #include	<string.h>
@@ -95,6 +97,7 @@ Last Modified:	2004/02/12 19:39:29
     #ifdef	DEBUG
 	volatile int motorRecordDebug = 0;
 	#define Debug(l, f, args...) {if (l <= motorRecordDebug) printf(f, ## args);}
+	epicsExportAddress(int, motorRecordDebug);
     #else
 	#define Debug(l, f, args...)
     #endif
@@ -105,7 +108,7 @@ Last Modified:	2004/02/12 19:39:29
 
 /*** Forward references ***/
 
-static RTN_STATUS do_work(motorRecord *);
+static RTN_STATUS do_work(motorRecord *, CALLBACK_VALUE);
 static void alarm_sub(motorRecord *);
 static void monitor(motorRecord *);
 static void post_MARKed_fields(motorRecord *, unsigned short);
@@ -1023,7 +1026,8 @@ Exit:
 static long process(dbCommon *arg)
 {
     motorRecord *pmr = (motorRecord *) arg;
-    long status = OK, process_reason;
+    long status = OK;
+    CALLBACK_VALUE process_reason;
     int old_lvio = pmr->lvio;
     unsigned int old_msta = pmr->msta;
     struct motor_dset *pdset = (struct motor_dset *) (pmr->dset);
@@ -1196,7 +1200,7 @@ enter_do_work:
 	(pmr->spmg == motorSPMG_Pause) ||
 	(process_reason != CALLBACK_DATA) || pmr->dmov || pmr->mip & MIP_RETRY)
     {
-	status = do_work(pmr);
+	status = do_work(pmr, process_reason);
     }
 
     /* Fire off readback link */
@@ -1458,7 +1462,7 @@ LOGIC:
     
     
 *******************************************************************************/
-static RTN_STATUS do_work(motorRecord * pmr)
+static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 {
     struct motor_dset *pdset = (struct motor_dset *) (pmr->dset);
     int dir_positive = (pmr->dir == motorDIR_Pos);
@@ -2101,6 +2105,14 @@ static RTN_STATUS do_work(motorRecord * pmr)
 	    }
 	}
     }
+    else if (proc_ind == NOTHING_DONE && pmr->stup == motorSTUP_OFF)
+    {
+	pmr->stup = motorSTUP_BUSY;
+	MARK_AUX(M_STUP);
+	INIT_MSG();
+	WRITE_MSG(GET_INFO, NULL);
+	SEND_MSG();
+    }
     return(OK);
 }
 
@@ -2614,6 +2626,12 @@ pidcof:
 	    WRITE_MSG(JOG_VELOCITY, &jogv);
 	    SEND_MSG();
 	}
+	break;
+
+    case motorRecordJAR:
+	// Valid JAR; 0 < JAR < JVEL [egu / sec] / 0.1 [sec]
+	if (pmr->jar <= 0.0)
+	    pmr->jar = pmr->jvel / 0.1;
 	break;
 
     case motorRecordHVEL:
