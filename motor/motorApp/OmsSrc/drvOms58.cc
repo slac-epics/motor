@@ -2,9 +2,9 @@
 FILENAME...	drvOms58.cc
 USAGE...	Motor record driver level support for OMS model VME58.
 
-Version:	1.10
+Version:	1.12
 Modified By:	sluiter
-Last Modified:	2004/02/03 20:09:00
+Last Modified:	2004/09/21 14:04:57
 */
 
 /*
@@ -80,6 +80,8 @@ Last Modified:	2004/02/03 20:09:00
  *			described in;
  *		http://www.aps.anl.gov/upd/people/sluiter/epics/motor/R5-2/Problems.html
  * .26  02-03-04  rls - Eliminate erroneous "Motor motion timeout ERROR".
+ * .27  07-16-04  rls - removed unused <driver>Setup() argument.
+ * .28  09-20-04  rls - support for 32axes/controller.
  */
 
 #include	<vxLib.h>
@@ -110,14 +112,12 @@ extern "C" {
 
 #define PRIVATE_FUNCTIONS 1	/* normal:1, debug:0 */
 
-#define STATIC static
-
 /* Define for return test on devNoResponseProbe() */
 #define PROBE_SUCCESS(STATUS) ((STATUS)==S_dev_addressOverlap)
 
 /* jps: INFO messages - add RV and move QA to top */
-#define	ALL_INFO	"QA EA"	/* jps: add RV */
-#define	AXIS_INFO	"QA"		/* jps: add RV */
+#define	ALL_INFO	"QA EA"
+#define	AXIS_INFO	"QA"
 #define	ENCODER_QUERY	"EA ID"
 #define	AXIS_CLEAR	"CA"		/* Clear done of addressed axis */
 #define	DONE_QUERY	"RA"		/* ?? Is this needed?? */
@@ -141,28 +141,28 @@ int oms58_num_cards = 0;
 #include	"motordrvComCode.h"
 
 /* --- Local data common to all OMS drivers. --- */
-STATIC char *oms_addrs = 0x0;
-STATIC volatile unsigned omsInterruptVector = 0;
-STATIC volatile epicsUInt8 omsInterruptLevel = OMS_INT_LEVEL;
-STATIC volatile int max_io_tries = MAX_COUNT;
-STATIC volatile int motionTO = 10;
-STATIC char oms58_axis[] = {'X', 'Y', 'Z', 'T', 'U', 'V', 'R', 'S'};
+static char *oms_addrs = 0x0;
+static volatile unsigned omsInterruptVector = 0;
+static volatile epicsUInt8 omsInterruptLevel = OMS_INT_LEVEL;
+static volatile int max_io_tries = MAX_COUNT;
+static volatile int motionTO = 10;
+static char *oms58_axis[] = {"X", "Y", "Z", "T", "U", "V", "R", "S"};
 
 /*----------------functions-----------------*/
 
 /* Common local function declarations. */
-static long report(int level);
+static long report(int);
 static long init();
 static void query_done(int, int, struct mess_node *);
-static int set_status(int card, int signal);
-static RTN_STATUS send_mess(int card, char const *com, char c);
+static int set_status(int, int);
+static RTN_STATUS send_mess(int, char const *, char *);
 static int recv_mess(int, char *, int);
 static void motorIsr(int card);
 static int motor_init();
 static void oms_reset();
 
-STATIC void start_status(int card);
-STATIC int motorIsrSetup(int card);
+static void start_status(int card);
+static int motorIsrSetup(int card);
 
 struct driver_table oms58_access =
 {
@@ -197,7 +197,7 @@ struct
 
 epicsExportAddress(drvet, drvOms58);
 
-STATIC struct thread_args targs = {SCAN_RATE, &oms58_access};
+static struct thread_args targs = {SCAN_RATE, &oms58_access};
 
 /*----------------functions-----------------*/
 
@@ -217,8 +217,8 @@ static long report(int level)
 		printf("    Oms Vme58 motor card #%d not found.\n", card);
 	    else
 		printf("    Oms Vme58 motor card #%d @ 0x%X, id: %s \n", card,
-		       (uint_t) motor_state[card]->localaddr,
-		       motor_state[card]->ident);
+		       (uint_t) brdptr->localaddr,
+		       brdptr->ident);
 	}
     }
     return (0);
@@ -232,7 +232,7 @@ static long init()
 }
 
 
-STATIC void query_done(int card, int axis, struct mess_node *nodeptr)
+static void query_done(int card, int axis, struct mess_node *nodeptr)
 {
     char buffer[40];
 
@@ -255,7 +255,7 @@ STATIC void query_done(int card, int axis, struct mess_node *nodeptr)
  * start_status(int card)
  *            if card == -1 then start all cards
  *********************************************************/
-STATIC void start_status(int card)
+static void start_status(int card)
 {
     volatile struct vmex_motor *pmotor;
     CNTRL_REG cntrlReg;
@@ -343,7 +343,7 @@ STATIC void start_status(int card)
 *   EXIT with return state indicator.
 ******************************************************************************/
 
-STATIC int set_status(int card, int signal)
+static int set_status(int card, int signal)
 {
     struct mess_info *motor_info;
     struct mess_node *nodeptr;
@@ -368,7 +368,7 @@ STATIC int set_status(int card, int signal)
     pmotor = (struct vmex_motor *) motor_state[card]->localaddr;
     status.All = motor_info->status.All;
 
-    if (motor_state[card]->motor_info[signal].encoder_present == YES)
+    if (motor_info->encoder_present == YES)
     {
 	/* get 4 peices of info from axis */
 	send_mess(card, ALL_INFO, oms58_axis[signal]);
@@ -584,7 +584,7 @@ errorexit:	errMessage(-1, "Invalid device directive");
 /* send a message to the OMS board		     */
 /* send_mess()			     */
 /*****************************************************/
-STATIC RTN_STATUS send_mess(int card, char const *com, char inchar)
+static RTN_STATUS send_mess(int card, char const *com, char *name)
 {
     volatile struct vmex_motor *pmotor;
     epicsInt16 putIndex;
@@ -624,12 +624,13 @@ STATIC RTN_STATUS send_mess(int card, char const *com, char inchar)
     }
 
 
-    if (inchar == NULL)
+    if (name == NULL)
 	strcpy(outbuf, com);
     else
     {
-	strcpy(outbuf, "A? ");
-	outbuf[1] = inchar;
+	strcpy(outbuf, "A");
+	strcat(outbuf, name);
+	strcat(outbuf, " ");
 	strcat(outbuf, com);
     }
     strcat(outbuf, "\n");		/* Add the command line terminator. */
@@ -691,7 +692,7 @@ STATIC RTN_STATUS send_mess(int card, char const *com, char inchar)
  *  ENDFOR
  *  
  */
-STATIC int recv_mess(int card, char *com, int amount)
+static int recv_mess(int card, char *com, int amount)
 {
     volatile struct vmex_motor *pmotor;
     epicsInt16 getIndex;
@@ -815,7 +816,6 @@ STATIC int recv_mess(int card, char *com, int amount)
 /* areas. omsSetup()                                */
 /*****************************************************/
 int oms58Setup(int num_cards,	/* maximum number of cards in rack */
-	       int num_channels,/* Not used - Channels per card (4 or 8) */
 	       void *addrs,	/* Base Address(0x0-0xb000 on 4K boundary) */
 	       unsigned vector,	/* noninterrupting(0), valid vectors(64-255) */
 	       int int_level,	/* interrupt level (1-6) */
@@ -866,7 +866,7 @@ int oms58Setup(int num_cards,	/* maximum number of cards in rack */
 /* Interrupt service routine.                        */
 /* motorIsr()		                     */
 /*****************************************************/
-STATIC void motorIsr(int card)
+static void motorIsr(int card)
 {
     volatile struct controller *pmotorState;
     volatile struct vmex_motor *pmotor;
@@ -923,7 +923,7 @@ STATIC void motorIsr(int card)
 	       card, 0, 0, 0, 0, 0);
 }
 
-STATIC int motorIsrSetup(int card)
+static int motorIsrSetup(int card)
 {
     volatile struct vmex_motor *pmotor;
     long status;
@@ -972,7 +972,7 @@ STATIC int motorIsrSetup(int card)
 /* initialize all software and hardware		     */
 /* motor_init()			     */
 /*****************************************************/
-STATIC int motor_init()
+static int motor_init()
 {
     volatile struct controller *pmotorState;
     volatile struct vmex_motor *pmotor;
@@ -1173,7 +1173,7 @@ STATIC int motor_init()
 
 /* Disables interrupts. Called on CTL X reboot. */
 
-STATIC void oms_reset()
+static void oms_reset()
 {
     short card;
     volatile struct vmex_motor *pmotor;
