@@ -10,7 +10,8 @@ include $(TOP)/configure/CONFIG
 DBD += devOms.dbd
 DBD += devOms58.dbd
 
-LIBRARY_IOC = oms
+LIBRARY_RTEMS = oms
+LIBRARY_vxWorks = oms
 
 # The following is required for all OMS device drivers.
 SRCS += devOmsCom.cc
