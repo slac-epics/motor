@@ -2,9 +2,9 @@
 FILENAME...	MclennanRegister.cc
 USAGE...	Register Mclennan motor device driver shell commands.
 
-Version:	1.1
+Version:	1.3
 Modified By:	sluiter
-Last Modified:	2003/05/28 14:49:52
+Last Modified:	2004/07/16 19:17:22
 */
 
 /*****************************************************************
@@ -19,37 +19,35 @@ of this distribution.
 **********************************************************************/
 
 #include <iocsh.h>
-#include "MclennanRegister.h"
+#include "drvPM304.h"
 #include "epicsExport.h"
 
 extern "C"
 {
 
-// ACS Setup arguments
+// PM304Setup arguments
 static const iocshArg setupArg0 = {"Max. controller count", iocshArgInt};
-static const iocshArg setupArg1 = {"N/A", iocshArgInt};
-static const iocshArg setupArg2 = {"Polling rate", iocshArgInt};
-// ACS Config arguments
-static const iocshArg configArg0 = {"Card being configured", iocshArgInt};
-static const iocshArg configArg1 = {"MPF server location", iocshArgInt};
-static const iocshArg configArg2 = {"MPF server task name", iocshArgString};
-static const iocshArg configArg3 = {"Number of axes", iocshArgInt};
+static const iocshArg setupArg1 = {"Polling rate", iocshArgInt};
 
-static const iocshArg * const PM304SetupArgs[3]  = {&setupArg0, &setupArg1,
-    &setupArg2};
-static const iocshArg * const PM304ConfigArgs[4] = {&configArg0, &configArg1,
+// PM304Config arguments
+static const iocshArg configArg0 = {"Card being configured", iocshArgInt};
+static const iocshArg configArg1 = {"asyn port name", iocshArgString};
+static const iocshArg configArg2 = {"Number of axes", iocshArgInt};
+
+static const iocshArg * const PM304SetupArgs[2]  = {&setupArg0, &setupArg1};
+static const iocshArg * const PM304ConfigArgs[3] = {&configArg0, &configArg1,
     &configArg2};
 
-static const iocshFuncDef setupPM304  = {"PM304Setup",  3, PM304SetupArgs};
-static const iocshFuncDef configPM304 = {"PM304Config", 4, PM304ConfigArgs};
+static const iocshFuncDef setupPM304  = {"PM304Setup",  2, PM304SetupArgs};
+static const iocshFuncDef configPM304 = {"PM304Config", 3, PM304ConfigArgs};
 
 static void setupPM304CallFunc(const iocshArgBuf *args)
 {
-    PM304Setup(args[0].ival, args[1].ival, args[2].ival);
+    PM304Setup(args[0].ival, args[1].ival);
 }
 static void configPM304CallFunc(const iocshArgBuf *args)
 {
-    PM304Config(args[0].ival, args[1].ival, args[2].sval, args[3].ival);
+    PM304Config(args[0].ival, args[1].sval, args[2].ival);
 }
 
 static void MclennanRegister(void)
