@@ -2,8 +2,9 @@
 TOP = ../..
 include $(TOP)/configure/CONFIG
 
-# The following are used for debugging messages.
-USR_CXXFLAGS += -DDEBUG
+# Both the following line, and a line in the *.dbd file,
+# must be uncommented to use diagnostic debugging messages.
+#!USR_CXXFLAGS += -DDEBUG
 
 DBD += devNewport.dbd
 
@@ -23,7 +24,10 @@ SRCS += devPM500.cc  drvPM500.cc
 # ESP300 device driver.
 SRCS += devESP300.cc drvESP300.cc
 
-Newport_LIBS += motor motorCOM_mpf
+# XPS C8 device driver
+SRCS += Socket.cpp xps_c8_driver.cpp devXPSC8.cc  drvXPSC8.cc
+
+Newport_LIBS += motor asyn
 Newport_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 include $(TOP)/configure/RULES
