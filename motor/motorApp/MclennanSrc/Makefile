@@ -2,7 +2,8 @@
 TOP = ../..
 include $(TOP)/configure/CONFIG
 
-# The following are used for debugging messages.
+# Both the following line, and a line in the *.dbd file,
+# must be uncommented to use diagnostic debugging messages.
 #USR_CXXFLAGS += -DDEBUG
 
 DBD += devMclennanMotor.dbd
@@ -13,7 +14,8 @@ LIBRARY_IOC = Mclennan
 SRCS += MclennanRegister.cc
 SRCS += devPM304.cc drvPM304.cc
 
-Mclennan_LIBS += motor motorCOM_mpf
+Mclennan_LIBS += motor
+Mclennan_LIBS += asyn
 Mclennan_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 include $(TOP)/configure/RULES
