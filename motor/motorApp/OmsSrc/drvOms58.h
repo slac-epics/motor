@@ -70,16 +70,16 @@ Last Modified:	2001/12/14 20:53:00
 /* VME58 DUAL-PORT MEMORY MAP */
 typedef struct
 {
-    uint16_t encPos[2];
-    uint16_t cmndPos[2];
-    uint16_t cmndVel[2];
-    uint16_t accel[2];
-    uint16_t maxVel[2];
-    uint16_t baseVel[2];
-    uint16_t dFltrGain[2];
-    uint16_t dFltrPole[2];
-    uint16_t dFltrZero[2];
-    uint16_t reserved[46];
+    unsigned short encPos[2];
+    unsigned short cmndPos[2];
+    unsigned short cmndVel[2];
+    unsigned short accel[2];
+    unsigned short maxVel[2];
+    unsigned short baseVel[2];
+    unsigned short dFltrGain[2];
+    unsigned short dFltrPole[2];
+    unsigned short dFltrZero[2];
+    unsigned short reserved[46];
 } MOTOR_DATA_REGS;
 
 /* Definitions for VME58 I/O Registers */
@@ -87,7 +87,7 @@ typedef struct
 /* Control Register - Offset = 0x0FE1 */
 typedef union
 {
-    epicsUInt8 All;
+    unsigned char All;
     struct
     {
 	unsigned int intReqEna	:1;	/* Master interrupt request enable */
@@ -104,7 +104,7 @@ typedef union
 /* Status Register - Offset = 0x0FE3 */
 typedef union
 {
-    epicsUInt8 All;
+    unsigned char All;
     struct
     {
 	unsigned int interrupt	:1;	/* Interrupt dectect */
@@ -121,7 +121,7 @@ typedef union
 /* I/O Register(0-7) -  Offset = 0x0FE5 */
 typedef union
 {
-    epicsUInt8 All;
+    unsigned char All;
     struct
     {
 	unsigned int io_7	:1;	/* Bit 7 */
@@ -138,7 +138,7 @@ typedef union
 /* Slip Flag Register - Offset = 0x0FE7 */
 typedef union
 {
-    epicsUInt8 All;
+    unsigned char All;
     struct
     {
 	unsigned int slip_s	:1;	/* status of S axis */
@@ -155,7 +155,7 @@ typedef union
 /* Done Flag Register - Offset = 0x0FE9 */
 typedef union
 {
-    epicsUInt8 All;
+    unsigned char All;
     struct
     {
 	unsigned int done_s	:1;	/* status of S axis */
@@ -172,7 +172,7 @@ typedef union
 /* I/O High Register(8-13) - Offset = 0x0FEB */
 typedef union
 {
-    epicsUInt8 All;
+    unsigned char All;
     struct
     {
 	unsigned int		:1;	/* Unused */
@@ -190,7 +190,7 @@ typedef union
 /* Limit Switch Status Register - Offset = 0x0FED */
 typedef union
 {
-    epicsUInt8 All;
+    unsigned char All;
     struct
     {
 	unsigned int limit_s	:1;	/* status of S axis */
@@ -207,7 +207,7 @@ typedef union
 /* Home Switch Status Register - Offset = 0x0FEF */
 typedef union
 {
-    epicsUInt8 All;
+    unsigned char All;
     struct
     {
 	unsigned int home_s	:1;	/* status of S axis */
@@ -223,39 +223,39 @@ typedef union
 
 typedef struct
 {
-    epicsUInt8 unused00;
-    epicsUInt8 cntrlReg;	/* Control Register - Read/Write */
-    epicsUInt8 unused02;
-    epicsUInt8 statusReg;	/* Status Register  - Read */
-    epicsUInt8 unused04;
-    epicsUInt8 ioLowReg;	/* IO bits 0-7 status register   - Read */
-    epicsUInt8 unused06;
-    epicsUInt8 slipReg;		/* Encoder slip status register - Read */
-    epicsUInt8 unused08;
-    epicsUInt8 doneReg;		/* Axis done status register - Read */
-    epicsUInt8 unused0A;
-    epicsUInt8 ioHighReg;	/* IO bits 8-13 status register - Read */
-    epicsUInt8 unused0C;
-    epicsUInt8 limitReg;	/* Limit switch  status register - Read */
-    epicsUInt8 unused0E;
-    epicsUInt8 homeReg;		/* Home switch  status register - Read */
-    epicsUInt8 unusedF0;
-    epicsUInt8 intVector;	/* Interrupt vector */
+    unsigned char unused00;
+    unsigned char cntrlReg;	/* Control Register - Read/Write */
+    unsigned char unused02;
+    unsigned char statusReg;	/* Status Register  - Read */
+    unsigned char unused04;
+    unsigned char ioLowReg;	/* IO bits 0-7 status register   - Read */
+    unsigned char unused06;
+    unsigned char slipReg;		/* Encoder slip status register - Read */
+    unsigned char unused08;
+    unsigned char doneReg;		/* Axis done status register - Read */
+    unsigned char unused0A;
+    unsigned char ioHighReg;	/* IO bits 8-13 status register - Read */
+    unsigned char unused0C;
+    unsigned char limitReg;	/* Limit switch  status register - Read */
+    unsigned char unused0E;
+    unsigned char homeReg;		/* Home switch  status register - Read */
+    unsigned char unusedF0;
+    unsigned char intVector;	/* Interrupt vector */
 } MOTOR_CNTRL_REGS;
 
 
 /* OMS VME dual port memory map */
 struct vmex_motor
 {
-    epicsInt16 inPutIndex;
-    epicsInt16 outGetIndex;
-    epicsInt16 inBuffer[BUFFER_SIZE];
-    epicsInt16 reserved0[254];
+    unsigned short inPutIndex;
+    unsigned short outGetIndex;
+    unsigned short inBuffer[BUFFER_SIZE];
+    unsigned short reserved0[254];
     MOTOR_DATA_REGS data[OMS_NUM_CHANNELS];
-    epicsInt16 outPutIndex;
-    epicsInt16 inGetIndex;
-    epicsInt16 outBuffer[BUFFER_SIZE];
-    epicsInt16 reserved1[750];
+    unsigned short outPutIndex;
+    unsigned short inGetIndex;
+    unsigned short outBuffer[BUFFER_SIZE];
+    unsigned short reserved1[750];
     MOTOR_CNTRL_REGS control;
 };
 
