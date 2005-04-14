@@ -2,9 +2,9 @@
 FILENAME...	devOmsCom.cc
 USAGE... Data and functions common to all OMS device level support.
 
-Version:	1.6
+Version:	1.9
 Modified By:	sluiter
-Last Modified:	2004/08/27 21:38:42
+Last Modified:	2005/04/14 20:16:34
 */
 
 /*
@@ -54,6 +54,8 @@ Last Modified:	2004/08/27 21:38:42
  * .10  06-16-03 rls Converted to R3.14.x.
  * .11  06-16-04 rls Terminate "LP" command with ";" to prevent MAXv stale data.
  * .12  08-27-04 rls Terminate "JG" command with ";" to prevent MAXv stale data.
+ * .13  03-21-05 rls OSI - built for solaris and linux hosts.
+ * .14  03-23-05 rls restrict acceleration to valid values.
  */
 
 #include <string.h>
@@ -65,6 +67,7 @@ Last Modified:	2004/08/27 21:38:42
 #include "motorRecord.h"
 #include "motor.h"
 #include "motordevCom.h"
+#include "devOmsCom.h"
 
 /*
 Command set used by record support.  WARNING! this must match "motor_cmnd" in
@@ -174,15 +177,15 @@ LOGIC...
     ENDIF    
 */
 
-long oms_build_trans(motor_cmnd command, double *parms, struct motorRecord *mr)
+RTN_STATUS oms_build_trans(motor_cmnd command, double *parms, struct motorRecord *mr)
 {
     struct motor_trans *trans = (struct motor_trans *) mr->dpvt;
     struct mess_node *motor_call;
     char buffer[40];
     msg_types cmnd_type;
-    long rtnind;
+    RTN_STATUS rtnind;
 
-    rtnind = 0;
+    rtnind = OK;
     motor_call = &trans->motor_call;
 
     cmnd_type = oms_table[command].type;
@@ -191,7 +194,7 @@ long oms_build_trans(motor_cmnd command, double *parms, struct motorRecord *mr)
     
     /* concatenate onto the dpvt message field */
     if (trans->state != BUILD_STATE)
-	return(rtnind = -1);
+	return(rtnind = ERROR);
 
     if ((command == PRIMITIVE) && (mr->init != NULL) &&
 	(strlen(mr->init) != 0))
@@ -206,7 +209,7 @@ long oms_build_trans(motor_cmnd command, double *parms, struct motorRecord *mr)
 		struct driver_table *tabptr = trans->tabptr;
 		int size = (end - &mr->init[0]) + 1;
 		strncpy(buffer, mr->init, size);
-		buffer[size] = NULL;
+		buffer[size] = (char) NULL;
 		if (strcmp(buffer, "@DPM_ON@") == 0)
 		{
 		    int response, bitselect;
@@ -252,7 +255,7 @@ long oms_build_trans(motor_cmnd command, double *parms, struct motorRecord *mr)
 	    {
 		*parms = 0.00005;
 		mr->pcof = 0.00005;
-		rtnind = -1;
+		rtnind = ERROR;
 	    }
 	    else if (command == STOP_AXIS)
 	    {
@@ -268,7 +271,7 @@ long oms_build_trans(motor_cmnd command, double *parms, struct motorRecord *mr)
 	    {
 		if (strlen(mr->prem) != 0)
 		{
-		    char buffer[40];
+		    char prem_buff[40];
 
 		    /* Test for a "device directive" in the PREM string. */
 		    if (mr->prem[0] == '@')
@@ -284,16 +287,16 @@ long oms_build_trans(motor_cmnd command, double *parms, struct motorRecord *mr)
 			    char *start, *tail;
 			    int size = (end - &mr->prem[0]) + 1;
 
-			    /* Copy device directive to buffer. */
-			    strncpy(buffer, mr->prem, size);
-			    buffer[size] = NULL;
+			    /* Copy device directive to prem_buff. */
+			    strncpy(prem_buff, mr->prem, size);
+			    prem_buff[size] = (char) NULL;
 
-			    if (strncmp(buffer, "@PUT(", 5) != 0)
+			    if (strncmp(prem_buff, "@PUT(", 5) != 0)
 				goto errorexit;
 
 			    /* Point "start" to PV name argument. */
 			    tail = NULL;
-			    start = strtok_r(&buffer[5], ",", &tail);
+			    start = strtok_r(&prem_buff[5], ",", &tail);
 			    if (tail == NULL)
 				goto errorexit;
 
@@ -338,13 +341,13 @@ long oms_build_trans(motor_cmnd command, double *parms, struct motorRecord *mr)
 			if (errind == true)
 errorexit:		    errMessage(-1, "Invalid device directive");
 			end++;
-			strcpy(buffer, end);
+			strcpy(prem_buff, end);
 		    }
 		    else
-			strcpy(buffer, mr->prem);
+			strcpy(prem_buff, mr->prem);
 
 		    strcat(motor_call->message, " ");
-		    strcat(motor_call->message, buffer);
+		    strcat(motor_call->message, prem_buff);
 		    strcat(motor_call->message, " ");
 		}
 		if (strlen(mr->post) != 0)
@@ -391,7 +394,11 @@ errorexit:		    errMessage(-1, "Invalid device directive");
 			vel = NINT(parms[itera]);
 
 			if (vel <= vbase)
+			{
+			    errPrintf(-1, __FILE__, __LINE__,
+				"Overriding invalid velocity; slew <= base.\n");
 			    vel = vbase + 1;
+			}
 			sprintf(buffer, "%ld", vel);
 		    }
 		    break;
@@ -406,6 +413,24 @@ errorexit:		    errMessage(-1, "Invalid device directive");
 			    sprintf(buffer, "%ld.5", relmove);
 			else
 			    sprintf(buffer, "%ld", relmove);
+		    }
+		    break;
+
+		case SET_ACCEL:	/* Prevent invalid acceleration values. */
+		    {
+			long valid_acc = NINT(parms[itera]);
+
+			if (valid_acc < 1 || valid_acc > 1000000000)
+			{
+			    errPrintf(-1, __FILE__, __LINE__,
+				      "Overriding invalid acceleration.\n");
+
+			    if (valid_acc < 1)
+				valid_acc = 1;
+			    else
+				valid_acc = 1000000000;
+			}
+			sprintf(buffer, "%ld", valid_acc);
 		    }
 		    break;
 
