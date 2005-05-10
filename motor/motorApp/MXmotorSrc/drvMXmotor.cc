@@ -2,9 +2,9 @@
 FILENAME...	drvMXmotor.cc
 USAGE...	Motor record driver level support for MX device driver.
 
-Version:	1.6
+Version:	1.9
 Modified By:	sluiter
-Last Modified:	2004/09/20 21:10:56
+Last Modified:	2005/05/10 16:34:35
 */
 
 /*
@@ -95,9 +95,9 @@ struct
     long (*init) (void);
 } drvMXmotor = {2, report, init};
 
-epicsExportAddress(drvet,drvMXmotor);
+extern "C" {epicsExportAddress(drvet,drvMXmotor);}
 
-static struct thread_args targs = {SCAN_RATE, &MXmotor_access};
+static struct thread_args targs = {SCAN_RATE, &MXmotor_access, 0.0};
 
 /*----------------functions-----------------*/
 
@@ -229,7 +229,9 @@ static int motor_init()
 
     Debug(3, "Motors initialized\n");
 
-    epicsThreadCreate((const char *) "MX_motor", 64, 5000, (EPICSTHREADFUNC) motor_task, (void *) &targs);
+    epicsThreadCreate((const char *) "MX_motor", epicsThreadPriorityMedium,
+		      epicsThreadGetStackSize(epicsThreadStackMedium),
+		      (EPICSTHREADFUNC) motor_task, (void *) &targs);
 
     Debug(3, "Started motor_task\n");
     return (0);
