@@ -31,13 +31,15 @@
  */
 
 
-#include 	<string.h>
-#include 	<epicsThread.h>
-#include 	<drvSup.h>
+#include    <string.h>
+#include    <stdio.h>
+#include    <epicsThread.h>
+#include    <epicsString.h>
+#include    <drvSup.h>
 #include        "motor.h"
 #include        "drvPM304.h"
 #include        "asynOctetSyncIO.h"
-#include 	"epicsExport.h"
+#include    "epicsExport.h"
 
 #define STATIC static
 
@@ -59,12 +61,12 @@ struct mess_queue
 
 #ifdef __GNUG__
     #ifdef DEBUG
-	volatile int drvPM304Debug = 0;
-	#define Debug(L, FMT, V...) { if(L <= drvPM304Debug) \
+    volatile int drvPM304Debug = 0;
+    #define Debug(L, FMT, V...) { if(L <= drvPM304Debug) \
                         { errlogPrintf("%s(%d):",__FILE__,__LINE__); \
                           errlogPrintf(FMT,##V); } }
     #else
-	#define Debug(L, FMT, V...)
+    #define Debug(L, FMT, V...)
     #endif
 #else
     #define Debug()
@@ -73,10 +75,10 @@ struct mess_queue
 /* Debugging notes:
  *   drvPM304Debug == 0  No debugging information is printed
  *   drvPM304Debug >= 1  Warning information is printed
- *   drvPM304Debug >= 2  Time-stamped messages are printed for each string 
+ *   drvPM304Debug >= 2  Time-stamped messages are printed for each string
  *                       sent to and received from the controller
  *   drvPM304Debug >= 3  Additional debugging messages
- */    
+ */
 
 int PM304_num_cards = 0;
 
@@ -133,9 +135,9 @@ struct
 #endif
 } drvPM304 = {2, report, init};
 
-epicsExportAddress(drvet, drvPM304);
+extern "C" {epicsExportAddress(drvet, drvPM304);}
 
-STATIC struct thread_args targs = {SCAN_RATE, &PM304_access};
+STATIC struct thread_args targs = {SCAN_RATE, &PM304_access, 0.0};
 
 
 /*********************************************************
@@ -228,7 +230,7 @@ STATIC int set_status(int card, int signal)
 
     status.Bits.RA_PLUS_LS = 0;
     status.Bits.RA_MINUS_LS = 0;
-    
+
     if (cntrl->model == MODEL_PM304) {
         /* The response string is an eight character string of ones and zeroes */
 
@@ -240,17 +242,17 @@ STATIC int set_status(int card, int signal)
                 epicsThreadSleep(drvPM304ReadbackDelay);
         }
 
-	status.Bits.RA_PROBLEM = (response[2] == '1') ? 1 : 0;
+    status.Bits.RA_PROBLEM = (response[2] == '1') ? 1 : 0;
 
         if (response[1] == '1') {
-	    status.Bits.RA_PLUS_LS = 1;
-	    status.Bits.RA_DIRECTION = 1;
-	    ls_active = true;
+        status.Bits.RA_PLUS_LS = 1;
+        status.Bits.RA_DIRECTION = 1;
+        ls_active = true;
         }
         if (response[0] == '1') {
-	    status.Bits.RA_MINUS_LS = 1;
-	    status.Bits.RA_DIRECTION = 0;
-	    ls_active = true;
+        status.Bits.RA_MINUS_LS = 1;
+        status.Bits.RA_DIRECTION = 0;
+        ls_active = true;
         }
     } else {
         /* The response string is 01: followed by an eight character string of ones and zeroes */
@@ -263,22 +265,22 @@ STATIC int set_status(int card, int signal)
                 epicsThreadSleep(drvPM304ReadbackDelay);
         }
 
-	status.Bits.RA_PROBLEM = (response[1] == '1') ? 1 : 0;
+    status.Bits.RA_PROBLEM = (response[1] == '1') ? 1 : 0;
 
         if (response[2] == '1') {
-	    status.Bits.RA_PLUS_LS = 1;
+        status.Bits.RA_PLUS_LS = 1;
         }
         if (response[3] == '1') {
-	    status.Bits.RA_MINUS_LS = 1;
+        status.Bits.RA_MINUS_LS = 1;
         }
     }
 
 
     /* encoder status */
-    status.Bits.EA_SLIP	      = 0;
+    status.Bits.EA_SLIP       = 0;
     status.Bits.EA_POSITION   = 0;
     status.Bits.EA_SLIP_STALL = 0;
-    status.Bits.EA_HOME	      = 0;
+    status.Bits.EA_HOME       = 0;
 
     /* Request the position of this motor */
     if (cntrl->use_encoder[signal]) {
@@ -293,12 +295,12 @@ STATIC int set_status(int card, int signal)
 
     if (motorData == motor_info->position)
     {
-	if (nodeptr != 0)	/* Increment counter only if motor is moving. */
-	    motor_info->no_motion_count++;
+    if (nodeptr != 0)   /* Increment counter only if motor is moving. */
+        motor_info->no_motion_count++;
     }
     else
     {
-	status.Bits.RA_DIRECTION = (motorData >= motor_info->position) ? 1 : 0;
+    status.Bits.RA_DIRECTION = (motorData >= motor_info->position) ? 1 : 0;
         motor_info->position = motorData;
         motor_info->encoder_position = motorData;
         motor_info->no_motion_count = 0;
@@ -313,11 +315,11 @@ STATIC int set_status(int card, int signal)
         motor_info->velocity *= -1;
 
     rtn_state = (!motor_info->no_motion_count || ls_active == true ||
-		status.Bits.RA_DONE | status.Bits.RA_PROBLEM) ? 1 : 0;
+        status.Bits.RA_DONE | status.Bits.RA_PROBLEM) ? 1 : 0;
 
     /* Test for post-move string. */
     if ((status.Bits.RA_DONE || ls_active == true) && nodeptr != 0 &&
-	nodeptr->postmsgptr != 0)
+    nodeptr->postmsgptr != 0)
     {
         strcpy(buff, nodeptr->postmsgptr);
         strcat(buff, "\r");
@@ -345,16 +347,16 @@ STATIC int set_status(int card, int signal)
 STATIC RTN_STATUS send_mess(int card, const char *com, char *name)
 {
     char *p, *tok_save;
-    char buff[BUFF_SIZE];
     char response[BUFF_SIZE];
     struct PM304controller *cntrl;
+    size_t nwrite, nread;
     int eomReason;
 
     /* Check that card exists */
     if (!motor_state[card])
     {
         epicsPrintf("send_mess - invalid card #%d\n", card);
-	return(ERROR);
+    return(ERROR);
     }
 
     cntrl = (struct PM304controller *) motor_state[card]->DevicePrivate;
@@ -362,14 +364,12 @@ STATIC RTN_STATUS send_mess(int card, const char *com, char *name)
     /* Device support can send us multiple commands separated with ';'
      * characters.  The PM304 cannot handle more than 1 command on a line
      * so send them separately */
-    for (p = strtok_r((char *) com, ";", &tok_save);
+    for (p = epicsStrtok_r((char *) com, ";", &tok_save);
                 ((p != NULL) && (strlen(p) != 0));
-                p = strtok_r(NULL, ";", &tok_save)) {
-        strcpy(buff, p);
-        strcat(buff, OUTPUT_TERMINATOR);
-        Debug(2, "send_mess: sending message to card %d, message=%s\n", card, buff);
-	pasynOctetSyncIO->writeRead(cntrl->pasynUser, buff, strlen(buff), response,
-			    BUFF_SIZE, INPUT_TERMINATOR, 1, TIMEOUT, &eomReason);
+                p = epicsStrtok_r(NULL, ";", &tok_save)) {
+        Debug(2, "send_mess: sending message to card %d, message=%s\n", card, p);
+    pasynOctetSyncIO->writeRead(cntrl->pasynUser, p, strlen(p), response,
+                BUFF_SIZE, TIMEOUT, &nwrite, &nread, &eomReason);
         Debug(2, "send_mess: card %d, response=%s\n", card, response);
     }
 
@@ -389,10 +389,11 @@ STATIC RTN_STATUS send_mess(int card, const char *com, char *name)
 STATIC int recv_mess(int card, char *com, int flag)
 {
     double timeout;
-    int len=0;
     char *pos;
     char temp[BUFF_SIZE];
     int flush;
+    asynStatus status;
+    size_t nread=0;
     int eomReason;
     struct PM304controller *cntrl;
 
@@ -413,15 +414,16 @@ STATIC int recv_mess(int card, char *com, int flag)
         flush = 0;
         timeout = TIMEOUT;
     }
-    len = pasynOctetSyncIO->read(cntrl->pasynUser, com, BUFF_SIZE, 
-                            INPUT_TERMINATOR, 1, flush, timeout, &eomReason);
+    if (flush) status = pasynOctetSyncIO->flush(cntrl->pasynUser);
+    status = pasynOctetSyncIO->read(cntrl->pasynUser, com, BUFF_SIZE,
+                                    timeout, &nread, &eomReason);
 
     /* The response from the PM304 is terminated with CR/LF.  Remove these */
-    if (len < 2) com[0] = '\0'; else com[len-2] = '\0';
-    if (len > 0) {
+    if (nread == 0) com[0] = '\0';
+    if (nread > 0) {
         Debug(2, "recv_mess: card %d, flag=%d, message = \"%s\"\n", card, flag, com);
     }
-    if (len == 0) {
+    if (nread == 0) {
         if (flag != FLUSH)  {
             Debug(1, "recv_mess: card %d read ERROR: no response\n", card);
         } else {
@@ -456,10 +458,10 @@ STATIC int recv_mess(int card, char *com, int flag)
 STATIC int send_recv_mess(int card, const char *out, char *response)
 {
     char *p, *tok_save;
-    char buff[BUFF_SIZE];
     struct PM304controller *cntrl;
-    int len=0;
     char *pos;
+    asynStatus status;
+    size_t nwrite=0, nread=0;
     int eomReason;
     char temp[BUFF_SIZE];
 
@@ -477,23 +479,21 @@ STATIC int send_recv_mess(int card, const char *out, char *response)
     /* Device support can send us multiple commands separated with ';'
      * characters.  The PM304 cannot handle more than 1 command on a line
      * so send them separately */
-    for (p = strtok_r((char *) out, ";", &tok_save);
+    for (p = epicsStrtok_r((char *) out, ";", &tok_save);
                 ((p != NULL) && (strlen(p) != 0));
-                p = strtok_r(NULL, ";", &tok_save)) {
-        strcpy(buff, p);
-        strcat(buff, OUTPUT_TERMINATOR);
-        Debug(2, "send_recv_mess: sending message to card %d, message=%s\n", card, buff);
-	len = pasynOctetSyncIO->writeRead(cntrl->pasynUser, buff, strlen(buff), 
-                         response, BUFF_SIZE, INPUT_TERMINATOR, 1, TIMEOUT,
-                         &eomReason);
+                p = epicsStrtok_r(NULL, ";", &tok_save)) {
+        Debug(2, "send_recv_mess: sending message to card %d, message=%s\n", card, p);
+    status = pasynOctetSyncIO->writeRead(cntrl->pasynUser, p, strlen(p),
+                         response, BUFF_SIZE, TIMEOUT,
+                         &nwrite, &nread, &eomReason);
     }
 
     /* The response from the PM304 is terminated with CR/LF.  Remove these */
-    if (len < 2) response[0] = '\0'; else response[len-2] = '\0';
-    if (len > 0) {
+    if (nread == 0) response[0] = '\0';;
+    if (nread > 0) {
         Debug(2, "send_recv_mess: card %d, response = \"%s\"\n", card, response);
     }
-    if (len == 0) {
+    if (nread == 0) {
         Debug(1, "send_recv_mess: card %d ERROR: no response\n", card);
     }
     /* The PM600 always echoes the command sent to it, before sending the response.  It is terminated
@@ -516,7 +516,7 @@ STATIC int send_recv_mess(int card, const char *out, char *response)
 /* PM304Setup()                                      */
 /*****************************************************/
 RTN_STATUS
-PM304Setup(int num_cards,   	/* maximum number of controllers in system */
+PM304Setup(int num_cards,       /* maximum number of controllers in system */
            int scan_rate)       /* polling rate - 1/60 sec units */
 {
     int itera;
@@ -528,9 +528,9 @@ PM304Setup(int num_cards,   	/* maximum number of controllers in system */
 
     /* Set motor polling task rate */
     if (scan_rate >= 1 && scan_rate <= 60)
-	targs.motor_scan_rate = scan_rate;
+    targs.motor_scan_rate = scan_rate;
     else
-	targs.motor_scan_rate = SCAN_RATE;
+    targs.motor_scan_rate = SCAN_RATE;
 
    /*
     * Allocate space for motor_state structure pointers.  Note this must be done
@@ -554,7 +554,7 @@ PM304Setup(int num_cards,   	/* maximum number of controllers in system */
 /*****************************************************/
 RTN_STATUS
 PM304Config(int card,           /* card being configured */
-            const char *port,	/* asyn port name */
+            const char *port,   /* asyn port name */
             int n_axes)         /* Number of axes */
 {
     struct PM304controller *cntrl;
@@ -613,7 +613,7 @@ STATIC int motor_init()
         /* Initialize communications channel */
         success_rtn = false;
 
-        status = pasynOctetSyncIO->connect(cntrl->port, 0, &cntrl->pasynUser);
+        status = pasynOctetSyncIO->connect(cntrl->port, 0, &cntrl->pasynUser, NULL);
         success_rtn = (status == asynSuccess);
         Debug(1, "motor_init, return from pasynOctetSyncIO->connect for port %s = %d, pasynUser=%p\n", cntrl->port, success_rtn, cntrl->pasynUser);
 
@@ -672,7 +672,7 @@ STATIC int motor_init()
                 send_recv_mess(card_index, command, buff);    /* Read controller ID string for this axis */
                 if (cntrl->model == MODEL_PM304) {
                     /* For now always assume encoder if PM304 - needs work */
-                    cntrl->use_encoder[motor_index] = 1; 
+                    cntrl->use_encoder[motor_index] = 1;
                 } else {
                     /* PM600 ident string identifies open loop stepper motors */
                     if (strstr(buff, "Open loop stepper mode") != NULL) {
@@ -702,7 +702,9 @@ STATIC int motor_init()
     free_list.head = (struct mess_node *) NULL;
     free_list.tail = (struct mess_node *) NULL;
 
-    epicsThreadCreate((char *) "tPM304", 64, 5000, (EPICSTHREADFUNC) motor_task, (void *) &targs);
-    
+    epicsThreadCreate((char *) "tPM304", epicsThreadPriorityMedium,
+              epicsThreadGetStackSize(epicsThreadStackMedium),
+              (EPICSTHREADFUNC) motor_task, (void *) &targs);
+
     return(OK);
 }
