@@ -2,9 +2,9 @@
 FILENAME...	devOms.cc
 USAGE... Device level support for OMS VME8 and VME44 models.
 
-Version:	1.5
+Version:	1.7
 Modified By:	sluiter
-Last Modified:	2004/06/21 21:44:09
+Last Modified:	2006/01/24 20:01:37
 */
 
 /*
@@ -61,16 +61,15 @@ Last Modified:	2004/06/21 21:44:09
 
 #include	"epicsExport.h"
 
-#define STATIC static
 
 extern int oms44_num_cards;
 extern struct driver_table oms_access;
 
 /* ----------------Create the dsets for devOMS----------------- */
-STATIC long oms_init(void *);
-STATIC long oms_init_record(void *);
-STATIC long oms_start_trans(struct motorRecord *);
-STATIC RTN_STATUS oms_end_trans(struct motorRecord *);
+static long oms_init(void *);
+static long oms_init_record(void *);
+static long oms_start_trans(struct motorRecord *);
+static RTN_STATUS oms_end_trans(struct motorRecord *);
 
 struct motor_dset devOMS =
 {
@@ -81,12 +80,12 @@ struct motor_dset devOMS =
     oms_end_trans
 };
 
-epicsExportAddress(dset,devOMS);
+extern "C" {epicsExportAddress(dset,devOMS);}
 
-STATIC struct board_stat **oms_cards;
-STATIC const char errmsg[] = {"\n\n!!!ERROR!!! - Oms driver uninitialized.\n"};
+static struct board_stat **oms_cards;
+static const char errmsg[] = {"\n\n!!!ERROR!!! - Oms driver uninitialized.\n"};
 
-STATIC long oms_init(void *arg)
+static long oms_init(void *arg)
 {
     int after = (int) arg;
 
@@ -99,13 +98,13 @@ STATIC long oms_init(void *arg)
 	return(motor_init_com(after, oms44_num_cards, &oms_access, &oms_cards));
 }
 
-STATIC long oms_init_record(void *arg)
+static long oms_init_record(void *arg)
 {
     struct motorRecord *mr = (struct motorRecord *) arg;
     return(motor_init_record_com(mr, oms44_num_cards, &oms_access, oms_cards));
 }
 
-STATIC long oms_start_trans(struct motorRecord *mr)
+static long oms_start_trans(struct motorRecord *mr)
 {
     struct motor_trans *trans;
     long rtnval;
@@ -117,7 +116,7 @@ STATIC long oms_start_trans(struct motorRecord *mr)
     return(rtnval);
 }
 
-STATIC RTN_STATUS oms_end_trans(struct motorRecord *mr)
+static RTN_STATUS oms_end_trans(struct motorRecord *mr)
 {
     if (*(oms_access.init_indicator) == NO)
     {
