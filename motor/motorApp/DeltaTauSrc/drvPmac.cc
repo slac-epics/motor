@@ -2,9 +2,9 @@
 FILENAME...	drvPmac.cc
 USAGE...	Driver level support for Delta Tau PMAC model.
 
-Version:	1.3
+Version:	1.9
 Modified By:	sluiter
-Last Modified:	2004/09/21 15:24:37
+Last Modified:	2006/01/27 23:52:58
 */
 
 /*
@@ -35,9 +35,17 @@ Last Modified:	2004/09/21 15:24:37
  * Verified with firmware:
  *
  * Modification Log:
- * -----------------
+ * ----------------------------------------------------------------------------
  * .00 04/17/04 rls - Copied from drvOms.cc
  * .01 09/21/04 rls - support for 32axes/controller.
+ * .02 09/27/04 rls - convert "Mbox_addrs" from logical to physical address.
+ * .03 10/07/04 rls - mask off high order bits when setting DPRAM address lines.
+ * .04 12/21/04 rls - MS Visual C compiler support.
+ *                  - eliminate calls to devConnectInterrupt() due to C++
+ *		      problems with devLib.h; i.e. "sorry, not implemented:
+ *		      `tree_list' not supported..." compiler error message.
+ * .05 01/18/05 rls - Fix for R3.14.8 devLib.h prototype change for
+ *		      pDevConnectInterruptVME().
  */
 
 #include	<vxLib.h>
@@ -47,13 +55,7 @@ Last Modified:	2004/09/21 15:24:37
 #include	<logLib.h>
 #include	<drvSup.h>
 #include	<epicsVersion.h>
-#if EPICS_MODIFICATION <= 4
-extern "C" {
 #include	<devLib.h>
-}
-#else
-#include	<devLib.h>
-#endif
 #include	<dbAccess.h>
 #include	<epicsThread.h>
 #include	<epicsInterrupt.h>
@@ -91,7 +93,6 @@ int Pmac_num_cards = 0;
 
 /* --- Local data common to all Pmac drivers. --- */
 static char *Pmac_addrs = 0x0;	/* Base address of DPRAM. */
-static char *Mbox_addrs = 0x0;	/* Base address of Mailbox. */
 static epicsAddressType Pmac_ADDRS_TYPE;
 static volatile unsigned PmacInterruptVector = 0;
 static volatile epicsUInt8 PmacInterruptLevel = Pmac_INT_LEVEL;
@@ -151,9 +152,9 @@ struct
     long (*init) (void);
 } drvPmac = {2, report, init};
 
-epicsExportAddress(drvet, drvPmac);
+extern "C" {epicsExportAddress(drvet, drvPmac);}
 
-static struct thread_args targs = {SCAN_RATE, &Pmac_access};
+static struct thread_args targs = {SCAN_RATE, &Pmac_access, 0.0};
 
 /*----------------functions-----------------*/
 
@@ -167,8 +168,8 @@ static long report(int level)
     {
 	for (card = 0; card < Pmac_num_cards; card++)
 	    if (motor_state[card])
-		printf("    Pmac VME8/44 motor card %d @ 0x%X, id: %s \n", card,
-		       (uint_t) motor_state[card]->localaddr,
+		printf("    Pmac VME8/44 motor card %d @ 0x%X, id: %s \n",
+		       card, (uint_t) motor_state[card]->localaddr,
 		       motor_state[card]->ident);
     }
     return (0);
@@ -207,8 +208,8 @@ static int set_status(int card, int signal)
 
     send_mess(card, "?", Pmac_axis[signal]);
     recv_mess(card, buff, 1);
-    rtn_state = sscanf(buff, "%4hx%4hx%4hx", &motorstat.word1.All, &motorstat.word2.All,
-		       &motorstat.word3.All);
+    rtn_state = sscanf(buff, "%4hx%4hx%4hx", &motorstat.word1.All,
+		       &motorstat.word2.All, &motorstat.word3.All);
 
     status.Bits.RA_DONE     = (motorstat.word3.Bits.in_position == YES) ? 1 : 0;
     status.Bits.EA_POSITION = (motorstat.word1.Bits.amp_enabled == YES) ? 1 : 0;
@@ -456,7 +457,8 @@ static int recv_mess(int card, char *com, int amount)
 	    else
 	    {
 		stptr->All = 0;
-		errlogPrintf("%s(%d): ERROR = 0x%X\n", __FILE__, __LINE__, (unsigned int) control);
+		errlogPrintf("%s(%d): ERROR = 0x%X\n", __FILE__, __LINE__,
+			     (unsigned int) control);
 		epicsThreadSleep(flush_delay);
 		control = stptr->Bits.cntrl_char;
 	    }
@@ -509,7 +511,8 @@ static int recv_mess(int card, char *com, int amount)
     else
     {
 	stptr->All = 0;
-	errlogPrintf("%s(%d): ERROR = 0x%X\n", __FILE__, __LINE__, (unsigned int) control);
+	errlogPrintf("%s(%d): ERROR = 0x%X\n", __FILE__, __LINE__,
+		     (unsigned int) control);
 	return(-1);
     }
 }
@@ -576,10 +579,14 @@ static int motorIsrEnable(int card)
 {
     long status;
     
-    status = devConnectInterrupt(intVME, PmacInterruptVector + card,
-// Tornado 2.0.2    (void (*)()) motorIsr, (void *) card);
-		    (devLibVOIDFUNCPTR) motorIsr, (void *) card);// Tornado 2.2
-    
+    status = pdevLibVirtualOS->pDevConnectInterruptVME(
+	PmacInterruptVector + card,
+#if LT_EPICSBASE(3,14,8)
+        (void (*)()) motorIsr,
+#else
+        (void (*)(void *)) motorIsr,
+#endif
+        (void *) card);
 
     status = devEnableInterruptLevel(Pmac_INTERRUPT_TYPE,
 				     PmacInterruptLevel);
@@ -591,9 +598,9 @@ static void motorIsrDisable(int card)
 {
     long status;
 
-    status = devDisconnectInterrupt(intVME, PmacInterruptVector + card,
-// Tornado 2.0.2    (void (*)()) motorIsr);
-		    (devLibVOIDFUNCPTR) motorIsr);// Tornado 2.2
+    status = pdevLibVirtualOS->pDevDisconnectInterruptVME(
+	PmacInterruptVector + card, (void (*)(void *)) motorIsr);
+
     if (!RTN_SUCCESS(status))
 	errPrintf(status, __FILE__, __LINE__, "Can't disconnect vector %d\n",
 		  PmacInterruptVector + card);
@@ -601,10 +608,24 @@ static void motorIsrDisable(int card)
 }
 
 
-/*****************************************************/
-/* Configuration function for  module_types data     */
-/* areas. PmacSetup()                                */
-/*****************************************************/
+/*****************************************************
+ * FUNCTION... PmacSetup()
+ *
+ * USAGE...Configuration function for PMAC.
+ *                                
+ * LOGIC...
+ *  Check for valid input on maximum number of cards.
+ *  Based on VMEbus address type, check for valid Mailbox and DPRAM addresses.
+ *  Bus probe the logical mailbox address.
+ *  IF mailbox address valid.
+ *	Register 122 bytes of memory (0-121) based on mailbox base address.
+ *	Save physical address of mailbox base address in "Mbox_addrs".
+ *	Page-select DPRAM by writing to Mbox_addrs+0x121.
+ *  ELSE
+ *	Log error and set both Mbox_addrs and Pmac_num_cards to zero.
+ *  ENDIF
+ *****************************************************/
+
 int PmacSetup(int num_cards,	/* maximum number of cards in rack */
 	     int addrs_type,	/* VME address type; 24 - A24 or 32 - A32. */
 	     void *mbox,	/* Mailbox base address. */
@@ -613,7 +634,9 @@ int PmacSetup(int num_cards,	/* maximum number of cards in rack */
 	     int int_level,	/* interrupt level (1-6) */
 	     int scan_rate)	/* polling rate - in HZ */
 {
-    void *erraddr = 0;
+    char *Mbox_addrs;		/* Base address of Mailbox. */
+    volatile void *localaddr;
+    void *probeAddr, *erraddr = 0;
     long status;
 
     if (num_cards < 1 || num_cards > Pmac_NUM_CARDS)
@@ -643,14 +666,30 @@ int PmacSetup(int num_cards,	/* maximum number of cards in rack */
 	    break;
     }
 
-    // Test MailBox address
+    // Test MailBox address.
     Mbox_addrs = (char *) mbox;
-    status = devNoResponseProbe(Pmac_ADDRS_TYPE, (unsigned int) (Mbox_addrs + 0x121), 1);
+    status = devNoResponseProbe(Pmac_ADDRS_TYPE, (unsigned int)
+				(Mbox_addrs + 0x121), 1);
 
     if (PROBE_SUCCESS(status))
     {
+	char A19A14;	 /* Select VME A19-A14 for DPRAM. */
+	status = devRegisterAddress(__FILE__, Pmac_ADDRS_TYPE, (size_t)
+			    Mbox_addrs, 122, (volatile void **) &localaddr);
+	Debug(9, "motor_init: devRegisterAddress() status = %d\n", (int) status);
+
+	if (!RTN_SUCCESS(status))
+	{
+	    errPrintf(status, __FILE__, __LINE__, "Can't register address 0x%x\n",
+		      (unsigned int) probeAddr);
+	    return (ERROR);
+	}
+
+	Mbox_addrs = (char *) localaddr;	/* Convert to physical address.*/
 	Pmac_addrs = (char *) addrs;
-	*(Mbox_addrs + 0x121) = (char) ((unsigned long) Pmac_addrs >> 14); /* Select VME A19-A14 for DPRAM. */
+	A19A14 = (char) ((unsigned long) Pmac_addrs >> 14);
+	A19A14 &= 0x3F;
+	*(Mbox_addrs + 0x121) = A19A14;
     }
     else
     {
@@ -878,7 +917,9 @@ static int motor_init()
 
     Debug(3, "Motors initialized\n");
 
-    epicsThreadCreate((const char *) "Pmac_motor", 64, 5000, (EPICSTHREADFUNC) motor_task, (void *) &targs);
+    epicsThreadCreate((const char *) "Pmac_motor", epicsThreadPriorityMedium,
+		      epicsThreadGetStackSize(epicsThreadStackMedium),
+		      (EPICSTHREADFUNC) motor_task, (void *) &targs);
 
     Debug(3, "Started motor_task\n");
     return (0);
