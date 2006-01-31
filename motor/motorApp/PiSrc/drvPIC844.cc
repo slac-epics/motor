@@ -3,9 +3,9 @@ FILENAME...	drvPIC844.cc
 USAGE...	Motor record driver level support for Physik Instrumente (PI)
 		GmbH & Co. C-844 motor controller.
 
-Version:	1.8
+Version:	1.15
 Modified By:	sluiter
-Last Modified:	2004/09/21 14:41:41
+Last Modified:	2006/01/31 22:10:04
 */
 
 /*
@@ -41,6 +41,12 @@ Last Modified:	2004/09/21 14:41:41
  * .04 09/09/04 rls - Retry on initial comm. (PIC844 comm. locks up when IOC
  *                    is power cycled).
  * .05 09/21/04 rls - support for 32axes/controller.
+ * .06 12/16/04 rls - asyn R4.0 support.
+ *		    - make debug variables always available.
+ *		    - MS Visual C compatibility; make all epicsExportAddress
+ *		      extern "C" linkage.
+ * .07 08/31/04 rls - Bug fix for no "break"'s in axis #4 switch/case stmts.
+ *			in set_status().
  */
 
 /*
@@ -68,7 +74,6 @@ DESIGN LIMITATIONS...
 /*----------------debugging-----------------*/
 #ifdef __GNUG__
     #ifdef	DEBUG
-	volatile int drvPIC844debug = 0;
 	#define Debug(l, f, args...) { if(l<=drvPIC844debug) printf(f,## args); }
     #else
 	#define Debug(l, f, args...)
@@ -76,6 +81,8 @@ DESIGN LIMITATIONS...
 #else
     #define Debug()
 #endif
+volatile int drvPIC844debug = 0;
+extern "C" {epicsExportAddress(int, drvPIC844debug);}
 
 /* --- Local data. --- */
 int PIC844_num_cards = 0;
@@ -126,9 +133,9 @@ struct
     long (*init) (void);
 } drvPIC844 = {2, report, init};
 
-epicsExportAddress(drvet, drvPIC844);
+extern "C" {epicsExportAddress(drvet, drvPIC844);}
 
-static struct thread_args targs = {SCAN_RATE, &PIC844_access};
+static struct thread_args targs = {SCAN_RATE, &PIC844_access, 0.0};
 
 /*********************************************************
  * Print out driver status report
@@ -274,6 +281,7 @@ static int set_status(int card, int signal)
 	    break;
 	case 3:
 	    inmotion = mstat.Bits.axis4IM;
+	    break;
 	default:
 	    rtn_state = 1;
 	    goto exit;
@@ -326,6 +334,7 @@ static int set_status(int card, int signal)
 	case 3:
 	    plusLS  = mstat.Bits.axis4PL;
 	    minusLS = mstat.Bits.axis4ML;
+	    break;
 	default:
 	    rtn_state = 1;
 	    goto exit;
@@ -358,7 +367,7 @@ static int set_status(int card, int signal)
     send_mess(card, "AXIS:POS?", (char) NULL);
     recv_mess(card, buff, 1);
     motorData = atof(buff);
-    motor_info->encoder_position = (int32_t) motorData;
+    motor_info->encoder_position = (epicsInt32) motorData;
 
     status.Bits.RA_PROBLEM	= 0;
 
@@ -396,16 +405,18 @@ static RTN_STATUS send_mess(int card, char const *com, char *name)
 {
     char local_buff[MAX_MSG_SIZE];
     struct PIC844controller *cntrl;
-    int size;
+    int comsize, namesize;
+    size_t nwrite;
 
-    size = strlen(com);
-
-    if (size > MAX_MSG_SIZE)
+    comsize = (com == NULL) ? 0 : strlen(com);
+    namesize = (name == NULL) ? 0 : strlen(name);
+    
+    if ((comsize + namesize) > MAX_MSG_SIZE)
     {
 	errlogMessage("drvPIC844.cc:send_mess(); message size violation.\n");
 	return(ERROR);
     }
-    else if (size == 0)	/* Normal exit on empty input message. */
+    else if (comsize == 0)	/* Normal exit on empty input message. */
 	return(OK);
 
     if (!motor_state[card])
@@ -423,15 +434,14 @@ static RTN_STATUS send_mess(int card, char const *com, char *name)
 	strcat(local_buff, ";");	/* put in comman seperator. */
     }
 
-    /* Make a local copy of the string and add the command line terminator. */
+    /* Make a local copy of the string. */
     strcat(local_buff, com);
-    strcat(local_buff, "\n");
 
     Debug(2, "send_mess(): message = %s\n", local_buff);
 
     cntrl = (struct PIC844controller *) motor_state[card]->DevicePrivate;
     pasynOctetSyncIO->write(cntrl->pasynUser, local_buff, strlen(local_buff),
-		       COMM_TIMEOUT);
+		       COMM_TIMEOUT, &nwrite);
 
     return(OK);
 }
@@ -444,9 +454,8 @@ static RTN_STATUS send_mess(int card, char const *com, char *name)
 static int recv_mess(int card, char *com, int flag)
 {
     struct PIC844controller *cntrl;
-    int flush = 0;
-    int timeout;
-    int len=0;
+    size_t nread = 0;
+    asynStatus status = asynError;
     int eomReason;
 
     /* Check that card exists */
@@ -454,25 +463,21 @@ static int recv_mess(int card, char *com, int flag)
 	return(ERROR);
 
     cntrl = (struct PIC844controller *) motor_state[card]->DevicePrivate;
-
+    
     if (flag == FLUSH)
-	timeout = 0;
+	pasynOctetSyncIO->flush(cntrl->pasynUser);
     else
-	timeout	= COMM_TIMEOUT;
+	status = pasynOctetSyncIO->read(cntrl->pasynUser, com, BUFF_SIZE,
+				     COMM_TIMEOUT, &nread, &eomReason);
 
-    len = pasynOctetSyncIO->read(cntrl->pasynUser, com, BUFF_SIZE, (char *) "\n", 
-                            1, flush, timeout, &eomReason);
-
-    if (len == 0)
-	com[0] = '\0';
-    else
+    if ((status != asynSuccess) || (nread <= 0))
     {
-	com[len - 1] = '\0';
-	len -= 1;
+	com[0] = '\0';
+	nread = 0;
     }
 
     Debug(2, "recv_mess(): message = \"%s\"\n", com);
-    return(len);
+    return(nread);
 }
 
 
@@ -552,6 +557,8 @@ static int motor_init()
     int total_axis;
     int status;
     asynStatus success_rtn;
+    static const char output_terminator[] = "\n";
+    static const char  input_terminator[] = "\n";
 
     initialized = true;	/* Indicate that driver is initialized. */
 
@@ -571,18 +578,21 @@ static int motor_init()
 	cntrl = (struct PIC844controller *) brdptr->DevicePrivate;
 
 	/* Initialize communications channel */
-	success_rtn = pasynOctetSyncIO->connect(cntrl->asyn_port, 
-                                      cntrl->asyn_address, &cntrl->pasynUser);
+	success_rtn = pasynOctetSyncIO->connect(cntrl->asyn_port, 0,
+						&cntrl->pasynUser, NULL);
 
 	if (success_rtn == asynSuccess)
 	{
 	    int retry = 0;
 
+	    pasynOctetSyncIO->setOutputEos(cntrl->pasynUser, output_terminator,
+					   strlen(output_terminator));
+	    pasynOctetSyncIO->setInputEos(cntrl->pasynUser, input_terminator,
+					  strlen(input_terminator));
+
 	    /* Send a message to the board, see if it exists */
 	    /* flush any junk at input port - should not be any data available */
-	    do
-		recv_mess(card_index, buff, FLUSH);
-	    while (strlen(buff) != 0);
+	    pasynOctetSyncIO->flush(cntrl->pasynUser);
 
 	    do
 	    {
@@ -629,7 +639,9 @@ static int motor_init()
     free_list.head = (struct mess_node *) NULL;
     free_list.tail = (struct mess_node *) NULL;
 
-    epicsThreadCreate((char *) "PIC844_motor", 64, 5000, (EPICSTHREADFUNC) motor_task, (void *) &targs);
+    epicsThreadCreate((char *) "PIC844_motor", epicsThreadPriorityMedium,
+		      epicsThreadGetStackSize(epicsThreadStackMedium),
+		      (EPICSTHREADFUNC) motor_task, (void *) &targs);
 
     return(OK);
 }
