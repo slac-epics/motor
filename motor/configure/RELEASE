@@ -1,0 +1,41 @@
+# RELEASE - Location of external products
+#
+# Note: This file will be scanned to automatically generate
+#       include path definitions etc.
+#       The order of the following declarations will be retained
+#       within those definitions.
+#
+# Add your declarations here
+
+#SUPPORT=
+
+# If the EPICS GPIB Module from Benjamin Franksen is used, then remove the '#'
+# from the following and modify the motorApp/CommSrc/Makefile.Vx file per
+# instructions found there.  If GPIB driver support is from EPICS base, then
+# leave this line commented out.
+#GPIB=$(SUPPORT)/gpib
+
+# If any motor controller communication mechanism besides the VME backplane is
+# required, then MPF must be defined.
+# Recommended MPF release: R2.4.2
+#MPF=/home/oxygen/MOONEY/epics/synApps_5_0/support/mpf/2-4-2
+
+# Recommended EPICS release: R3.14.5
+EPICS_BASE=/afs/slac/g/spear/epics/base
+
+# The following must be defined if motorExApp is to be built.
+#TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
+#MSI=
+
+# The following must be defined if the "WithMPF" example in motorExApp is to
+# be built.
+# Recommended IPAC release: R2.7a
+#IPAC=/home/oxygen/MOONEY/epics/synApps_5_0/support/ipac/2-7a
+
+#GPIB is not yet supported!
+#MPF_GPIB=$(SUPPORT)/mpfGpib/mpfGpib1-4
+
+# The following must be defined for the MXmotor device driver.
+#MX=$(SUPPORT)/mx/mx
+
+INSTALL_LOCATION_APP = $(TOP)/../..
