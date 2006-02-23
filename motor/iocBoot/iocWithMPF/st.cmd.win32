@@ -3,24 +3,12 @@
 
 < envPaths
 
-dbLoadDatabase("$(TOP)/dbd/WithMPF.dbd")
-WithMPF_registerRecordDeviceDriver(pdbbase)
+dbLoadDatabase("$(TOP)/dbd/WithMPFWin32.dbd")
+WithMPFWin32_registerRecordDeviceDriver(pdbbase)
 dbLoadTemplate("motor.substitutions")
 dbLoadRecords("$(MOTOR)/db/motorUtil.db", "P=IOC:")
 
-
-# The following commands are for a local serial line
-# Configure the asyn server code for either sun or linux.
-#!Sun Solaris !drvAsynSerialPortConfigure("L0","/dev/ttya" ,0,0,0)
-#!Redhat Linux!drvAsynSerialPortConfigure("L0","/dev/ttyS0",0,0,0)
-
-asynSetOption("L0", -1, "baud", "9600")
-asynSetOption("L0", -1, "bits", "8")
-asynSetOption("L0", -1, "parity", "none")
-asynSetOption("L0", -1, "stop", "1")
-asynSetOption("L0", -1, "clocal", "Y")
-asynSetOption("L0", -1, "crtscts", "N")
-
+# This is for WIN32, local serial ports not supported.  Must use IP terminal server.
 
 # Newport MM3000 and MM4000/5/6 driver setup parameters: 
 #     (1) maximum number of controllers in system
