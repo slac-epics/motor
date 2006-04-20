@@ -17,7 +17,9 @@ include $(TOP)/configure/CONFIG
 # databases, templates, substitutions like this
 DB += motor.db
 DB += basic_motor.db
+DB += basic_asyn_motor.db
 DB += TransPos.db
+DB += motorUtil.db
 
 #----------------------------------------------------
 # Declare template files which do not show up in DB
