@@ -5,11 +5,254 @@
   <meta name="GENERATOR" content="Mozilla/4.77 [en] (X11; U; SunOS 5.8 sun4u) [Netscape]">
   <meta name="Author" content="Ronald L. Sluiter">
   <meta name="Description" content="Synopsis of modifications, fixes and new features for each motor record release.">
-  <title>EPICS Motor Record Release R5.3 Notice</title>
+  <title>EPICS Motor Record Release R5.9 Notice</title>
   <meta name="author" content="Ronald L. Sluiter">
   <meta name="description" content="Notification of bug fixes, functional changes and new features.">
 </head>
 <body>
+
+
+<CENTER>
+  <H1><B><U>Motor Record Version 5.9 Release Notice</U></B></H1>
+</CENTER>
+
+<BR>
+<B><U>Requirements</U></B><BR>
+<BR>
+EPICS base R3.14.8.2 or greater.&nbsp; See the "Required Modules" section of the 
+Motor Record web page for details.<BR>
+
+
+<center>
+  <h4><u>Modifications to Existing Features</u></h4>
+</CENTER>
+
+<DIV align="left">
+  <P>
+  <U><B>Soft Motor allocation limit</B></U>
+  </P>
+  <P>
+  Peter Denison (Diamond Light Source) enhanced the Soft Channel device support by 
+  eliminating the 50 soft motor limit and replacing it with an unlimited linked list.
+  </P>
+</DIV>
+
+
+<CENTER>
+  <H4><U>New Features</U></H4>
+</CENTER>
+
+<DIV align="left">
+  <P>
+  <U><B>All motors done/stop/moving utility</B></U>
+  </P>
+  <P>
+  Kevin Peterson's (UNI-CAT) motorUtil task was added to the motor record 
+  distribution. The motorUtil task monitors and maintains 3 PV's; $(P)alldone, $(P)allstop, 
+  $(P)moving. motorUtil is a replacement for the all_com_##.db distributed with 
+  the STD support module.  See the motorUtil.db file for details.
+  </P>
+
+  <P>
+  <U><B>Asyn Motor</B></U>
+  </P>
+  <P>
+  Peter Denison (Diamond), Nick Rees (Diamond) and Mark Rivers (APS) have added a 
+  new motor record device support architecture based on ASYN; called "asyn motor" 
+  support.  The asyn motor support <I>is an attempt to define a clean, extensible 
+  API for motor controller drivers to support</I>.  This is a preliminary release 
+  of work in progress.  Do not use <I>asynMotor</I> device support at this time, except 
+  for development and testing purposes only.
+  </P>
+
+  <P>
+  <U><B>New Focus 8750 Network Controller</B></U>
+  </P>
+  <P>
+  Joe Sullivan added support for the New Focus Model 8750 Network Controller.
+  </P>
+
+  <P>
+  <U><B>Physik Instrumente (PI) E-662 piezo controller</B></U>
+  </P>
+  <P>
+  Joe Sullivan added support for the Physik Instrumente (PI) GmbH & Co. Model E-662 
+  piezo controller.
+  </P>
+
+  <P>
+  <U><B>Newport XPS-C8 asyn motor support</B></U>
+  </P>
+  <P>
+  Mark Rivers added asyn motor support for the Newport XPS-C8 motor controller. 
+  This is a preliminary release of work in progress. However, it has fewer 
+  problems than the previous XPS support, so we recommend using the new asyn 
+  support for the XPS, with the understanding that it is still under development.
+  </P>
+
+  <P>
+  <U><B>Trajectory Scanning</B></U>
+  </P>
+  <P>
+  Mark Rivers added the Trajectory Scanning software for both the Newport MM4005 
+  and XPS-C8 motor controllers to the motor record distribution.
+  </P>
+
+  <P>
+  <U><B>OMS PC68 and PC78 support</B></U>
+  </P>
+  <P>
+  Brian Tieman and Ron Sluiter added support for the standalone, RS-232 versions 
+  of the OMS PC68 and PC78 model controllers.  The same device driver (OMS PC68/78) 
+  supports both models.
+  </P>
+</DIV>
+
+
+<CENTER>
+  <H1><B><U>Motor Record Version 5.8 Release Notice</U></B></H1>
+</CENTER>
+
+<BR>
+<B><U>Requirements</U></B><BR>
+<BR>
+EPICS base R3.14.7 or greater.&nbsp; See the "Required Modules" section of the 
+Motor Record web page for details.<BR>
+
+
+<CENTER>
+  <H4><U>New Features</U></H4>
+</CENTER>
+
+<DIV align="left">
+  <P>
+  <U><B>Faulhaber MCDC2805</B></U>
+  </P>
+  <P>
+  Mark Rivers added support for the Faulhaber MCDC2805 servo controller.
+  </P>
+
+  <P>
+  <U><B>Parker Hannifin, Compumotor Division, 6K Series</B></U>
+  </P>
+  <P>
+  Joe Sullivan added support for Parker Hannifin, Compumotor Division, 6K Series 
+  controllers.
+  </P>
+</DIV>
+
+
+<CENTER>
+  <H1><B><U>Motor Record Version 5.7 Release Notice</U></B></H1>
+</CENTER>
+
+<BR>
+<B><U>Requirements</U></B><BR>
+<BR>
+EPICS base R3.14.7 or greater.&nbsp; See the "Required Modules" section of the 
+Motor Record web page for details.<BR>
+
+<CENTER>
+  <H4><U>Modifications to Existing Features</U></H4>
+</CENTER>
+
+<DIV align="left">
+  <U><B>Initial Position</B></U>
+  <P>
+  With this release, if the absolute values of both the save/restore's target 
+  position and the controller's commanded position are greater than the re-try 
+  deadband (RDBD) at boot-up, then DVAL will be initialized from the controller's 
+  value.  In other words, if the absolute value of the controller's commanded 
+  position is greater than the re-try deadband at boot-up, than the controller's 
+  position takes precedence over the save/restore value.
+  </P>
+</DIV>
+
+<CENTER>
+  <H4><U>New Features</U></H4>
+</CENTER>
+
+<DIV align="left">
+  <P>
+  <U><B>Physik Instrumente (PI) C-630</B></U>
+  </P>
+  <P>
+  Kurt Goetze added support for the Physik Instrumente (PI) model C-630 motion 
+  controller.
+  </P>
+
+  <P>
+  <U><B>Physik Instrumente (PI) C-848</B></U>
+  </P>
+  <P>
+  Support added for the Physik Instrumente (PI) C-848 motor controller.
+  </P>
+</DIV>
+
+
+<CENTER>
+  <h1><b><u>Motor Record Version 5.6 Release Notice</u></b></h1>
+</CENTER>
+
+<BR>
+<b><U>Requirements</u></B><BR>
+<BR>
+EPICS base R3.14.7 or greater.&nbsp; See the "Required Modules" section of the 
+Motor Record web page for details.<br>
+
+<center>
+  <h4><u>Modifications to Existing Features</u></h4>
+</CENTER>
+
+<div align="left">
+  <U><B>IMS MDrive Configuration</B></U>
+  <P>
+  IMS MDrive users must make the following configuration changes to their MDrive's 
+  as described in the distribution document "motorR5-6/motorApp/ImsSrc/README".
+  <UL>
+    <LI>
+      Configure the limit and home switches.
+    </LI>
+    <LI>
+      Change the MDrives' Echo Mode Flag to two (EM=2).
+    </LI>
+  </UL>
+  </P>
+</div>
+
+
+<CENTER>
+  <h1><b><u>Motor Record Version 5.5 Release Notice</u></b></h1>
+</CENTER>
+
+<BR>
+<b><U>Requirements</u></B><BR>
+<BR>
+EPICS base R3.14.7 or greater.&nbsp; See the "Required Modules" section of the 
+Motor Record web page for details.<br>
+
+<center>
+  <h4><u>Modifications to Existing Features</u></h4>
+</CENTER>
+
+
+<div align="left">
+  <U><B>Conversion to ASYN</B></U>
+  <P>
+  The motor record distribution has been converted from MPF to ASYN R4.1. All 
+  support for MPF has been removed.
+  </P>
+</div>
+
+<div align="left">
+  <U><B>Acceleration Correction</B></U>
+  <P>
+  Slew acceleration calculations were incorrect.  Instead of the correct 
+  calculation; A = (Vf - Vo) / t, the record was using A = Vf / t, which is 
+  correct only if Vo (VBAS) is zero.  Thanks to Harvey Rarback for pointing out 
+  this long standing error.
+  </P>
+</div>
 
 
 <CENTER>
@@ -54,9 +297,6 @@ Motor Record web page for details.<br>
   Device support for Delta Tau's PMAC2-VME controller was added.
   </P>
 </div>
-
-
-
 
 
 <CENTER>
