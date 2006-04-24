@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-  <meta name="GENERATOR" content="Mozilla/4.77 [en] (X11; U; SunOS 5.8 sun4u) [Netscape]">
+  <meta name="GENERATOR" content="Mozilla/4.77 [en] (X11; U; SunOS 5.9 sun4u) [Netscape]">
   <title>Motor Record and related software</title>
 </head>
 
@@ -37,9 +37,9 @@
 </ul>
 <a name="Overview"></a>
 
-<h2>Overview</h2> This documentation describes version 5.4 of the EPICS motor
+<h2>Overview</h2> This documentation describes version 5.9 of the EPICS motor
 record, and related EPICS software required to build and use it.&nbsp; Version
-5.4 of the motor record is compatible with EPICS base R3.14.6 and above.
+5.9 of the motor record is compatible with EPICS base R3.14.8.2 and above.
 <p>
 The motor record is intended to support motors of all kinds, but currently 
 supports only the following variety of motor controllers (in addition to Soft 
@@ -48,13 +48,13 @@ Channel support):
 
 <ul>
   <li>
-    Oregon Micro Systems, Inc. (OMS) models; VME8, VME44, VME58, VS4 and MAXv.
+    Oregon Micro Systems, Inc. (OMS) models; VME8, VME44, VME58, VS4, VX2, MAXv, PC68 and PC78.
   </li>
   <li>
     Highland Technologies model V540.
   </li>
   <li>
-    Newport models MM3000, MM4000, MM4005, MM4006, PM500 and ESP300.
+    Newport models MM3000, MM4000/5/6, PM500, ESP300/100 and XPSC8.
   </li>
   <li>
     Intelligent Motion Systems, Inc. (IMS) models IM483 and MDrive.
@@ -66,7 +66,7 @@ Channel support):
     Mclennan models PM304 and PM600.
   </li>
   <li>
-    Physik Instrumente (PI) GmbH & Co. model C-844.
+    Physik Instrumente (PI) GmbH & Co. model C-630, C-844, C-848 and E-662.
   </li>
   <li>
     MicroMo model MVP 2001 B02.
@@ -76,6 +76,14 @@ Channel support):
   </li>
   <li>
     Delta Tau PMAC2-VME controller.
+  </li>
+  <li>
+    Faulhaber MCDC2805 servo controller.
+  <li>
+    Parker Hannifin, Compumotor Division, 6K Series controllers.
+  </li>
+  <li>
+    New Focus, Model 8750 Network Controller.
   </li>
 </ul>
 The record maintains two coordinate systems for motor position ("user" and "dial 
@@ -245,7 +253,7 @@ below.
   <tr>
     <td><a href="#Fields_private">CDIR</a></td>
     <td>R</td>
-    <td>Command direction</td>
+    <td>Raw commanded direction</td>
     <td>SHORT</td>
     <td><br>
     </td>
@@ -970,6 +978,14 @@ below.
     <td>Stop</td>
     <td>SHORT</td>
     <td><br>
+    </td>
+  </tr>
+  <tr>
+    <td><a href="#Fields_status">STUP</a></td>
+    <td>R</td>
+    <td>Status Update Request</td>
+    <td>RECCHOICE</td>
+    <td>ON(1)<br>
     </td>
   </tr>
   <tr>
@@ -1802,17 +1818,25 @@ below.
     <td>If Soft Channel device support is specified, a one is written to the&nbsp; 
     specified link each time the STOP_AXIS motor command is issued.</td>
   </tr>
-  <tr nosave="">
-    <td colspan="5" nosave=""><h4>Soft Channel Device Driver</h4> The Soft Channel 
-    database links (i.e., DINP, RINP and STOO) are only processed when the Soft 
-    Channel device driver is selected.&nbsp; These links are ignored when using any 
-    other Motor Record device driver. <br>
+  <TR nosave="">
+    <TD colspan="5" nosave=""><H4>Soft Channel Device Driver</H4>
+      The Soft Channel database links (i.e., DINP, RINP and STOO) are only processed 
+      when the Soft Channel device driver is selected.&nbsp; These links are ignored 
+      when using any other Motor Record device driver. <BR>
+      <BR>
       The input links (i.e., DINP, RDBL and RINP) are monitored for value changes by a 
       CA event task.&nbsp; Users must choose either a dial input link (RDBL) or a raw 
-      input link (RINP), but not both. At this time, the above links are <b>not</b> 
-      dynamically retargetable.&nbsp; <br>
-      Note that JOG[F/R] does not work with the Soft Channel device driver.</td>
-  </tr>
+      input link (RINP), but not both. At this time, the above links are <B>not</B> 
+      dynamically retargetable.&nbsp; <BR>
+      <BR>
+      Note that Soft Channel device support resets the target position (VAL/DVAL/RVAL) 
+      to the actual position (RBV/DRBV/RRBV) the first time, and only the first time, 
+      that the PV pointed to by RDBL is posted. Hence, Soft Channel device support 
+      requires that the RDBL PV have a valid value the first time it is posted.&nbsp; <BR>
+      <BR>
+      Note that JOG[F/R] does not work with the Soft Channel device driver.
+    </TD>
+  </TR>
 
   </tbody>
 </table>
@@ -2340,7 +2364,7 @@ below.
       <blockquote>
 	<ol>
 	  <li>
-	    DIRECTION: (0:Negative, 1:Positive)
+	    DIRECTION: last raw direction; (0:Negative, 1:Positive)
 	  </li>
 	  <li>
 	    DONE: motion is complete.
@@ -2922,7 +2946,7 @@ below.
     <td>CDIR<br>
     </td>
     <td>R</td>
-    <td>Command direction<br>
+    <td>Raw commanded direction<br>
     </td>
     <td>SHORT<br>
     </td>
