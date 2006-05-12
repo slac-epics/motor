@@ -16,6 +16,7 @@ typedef int BOOL;
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <epicsThread.h>
@@ -36,6 +37,8 @@ typedef int BOOL;
 #define PORT_NAME_SIZE     100
 #define ERROR_STRING_SIZE  100
 #define DEFAULT_TIMEOUT    0.2
+
+#define MAX_RETRIES 2
 
 static int  nextSocket = 0;
 
@@ -68,7 +71,8 @@ int ConnectToServer(char *IpAddress, int IpPort, double timeout)
     /* Create a new asyn port */
     epicsSnprintf(ipString, PORT_NAME_SIZE, "%s:%d TCP", IpAddress, IpPort);
     epicsSnprintf(portName, PORT_NAME_SIZE, "%s:%d:%d", IpAddress, IpPort, nextSocket);
-    drvAsynIPPortConfigure(portName, ipString, 0, 0, 1);
+    /* Create port with noAutoConnect and noProcessEos options */
+    drvAsynIPPortConfigure(portName, ipString, 0, 1, 1);
 
     /* Connect to driver with asynOctet interface */
     status = pasynOctetSyncIO->connect(portName, 0, &pasynUser, NULL);
@@ -89,14 +93,12 @@ int ConnectToServer(char *IpAddress, int IpPort, double timeout)
     psock->pasynUserCommon = pasynUserCommon;
 
     /* Connect to controller */
-/* No need to do this, it will be done automatically and it gives an error if already connected 
     status = pasynCommonSyncIO->connectDevice(pasynUserCommon);
     if (status != asynSuccess) {
-        printf("ConnectToServer, error calling pasynCommonSyncIO->connectDevice %s\n", 
-               pasynUserCommon->errorMessage);
+        printf("ConnectToServer, error calling pasynCommonSyncIO->connectDevice port=%s error=%s\n", 
+               portName, pasynUserCommon->errorMessage);
         return -1;
     }
-*/
 
     psock->timeout = timeout;
     psock->connected = 1;
@@ -126,6 +128,8 @@ void SendAndReceive (int SocketIndex, char buffer[], char valueRtrn[], int retur
     int bufferLength;
     socketStruct *psock;
     int status;
+    int retries;
+    int errStat;
 
     /* Check to see if the Socket is valid! */
     
@@ -165,19 +169,42 @@ void SendAndReceive (int SocketIndex, char buffer[], char valueRtrn[], int retur
     } else {
         /* This is typically used for the "Move" commands, and we don't want to wait for the response */
         /* Fake the response by putting "-1" (for error) or "0" (for success) in the return string */
-        status = pasynOctetSyncIO->write(psock->pasynUser,
-                                         (char const *)buffer, 
-                                         bufferLength,
-                                         -psock->timeout,
-                                         &nbytesOut);
-        if ( status != asynSuccess ) {
-            asynPrint(psock->pasynUser, ASYN_TRACE_ERROR,
-                      "SendAndReceive error calling write, output=%s status=%d, error=%s\n",
-                      buffer, status, psock->pasynUser->errorMessage);
-            strcpy(valueRtrn, "-1");
+        for (retries=0; retries<MAX_RETRIES; retries++) {
+            status = pasynOctetSyncIO->writeRead(psock->pasynUser,
+                                                 (char const *)buffer, 
+                                                 bufferLength,
+                                                 valueRtrn,
+                                                 returnSize,
+                                                 -psock->timeout,
+                                                 &nbytesOut,
+                                                 &nbytesIn,
+                                                 &eomReason);
+            if (status == asynError) {
+                asynPrint(psock->pasynUser, ASYN_TRACE_ERROR,
+                          "SendAndReceive error calling write, output=%s status=%d, error=%s\n",
+                          buffer, status, psock->pasynUser->errorMessage);
+                strcpy(valueRtrn, "-1");
+                break;
+            }
+            asynPrint(psock->pasynUser, ASYN_TRACEIO_DRIVER,
+                      "SendAndReceive, sent: '%s'\n", buffer);    
+            /* A timeout is OK */
+            if (status == asynTimeout) {
+                asynPrint(psock->pasynUser, ASYN_TRACEIO_DRIVER,
+                          "SendAndReceive, timeout on read\n");
+                break;
+            } else {
+                asynPrint(psock->pasynUser, ASYN_TRACEIO_DRIVER,
+                          "SendAndReceive, read: '%s'\n", valueRtrn);
+                errStat = atoi(valueRtrn);
+                if (errStat == 0) break;    /* All done */
+                if (errStat == -1) continue; /* Error that previous command not complete */
+                asynPrint(psock->pasynUser, ASYN_TRACE_ERROR,
+                          "SendAndReceive unexpected response =%s\n",
+                          valueRtrn);
+                break;
+            }
         }
-        asynPrint(psock->pasynUser, ASYN_TRACEIO_DRIVER,
-                  "SendAndReceive, sent: '%s'\n", buffer);    
         strcpy(valueRtrn, "0");
     }
 }
@@ -196,7 +223,7 @@ void CloseSocket(int SocketIndex)
     }
     psock = &socketStructs[SocketIndex];
     pasynUser = psock->pasynUserCommon;
-    status = pasynCommonSyncIO->disconnect(pasynUser);
+    status = pasynCommonSyncIO->disconnectDevice(pasynUser);
     if (status != asynSuccess ) {
         asynPrint(pasynUser, ASYN_TRACE_ERROR,
                   "CloseSocket: error calling pasynCommonSyncIO->disconnect, status=%d, %s\n",
@@ -207,7 +234,7 @@ void CloseSocket(int SocketIndex)
 }
 
 /***************************************************************************************/
-void CloseAllSockets(void)
+void closeXPSSockets(void)
 {
     int i;
 
@@ -215,13 +242,6 @@ void CloseAllSockets(void)
         if (socketStructs[i].connected) CloseSocket(i);
     }
 }
-
-/***************************************************************************************/
-void ResetAllSockets(void)
-{
-    CloseAllSockets();
-}
-
 
 /***************************************************************************************/
 char * GetError(int SocketIndex)
@@ -233,13 +253,17 @@ char * GetError(int SocketIndex)
     return socketStructs[SocketIndex].errorString;
 }
 
+/***************************************************************************************/
 void strncpyWithEOS(char * szStringOut, const char * szStringIn, int nNumberOfCharToCopy, int nStringOutSize)
 {
-    char *eos = "\n";
-
-    if ((nNumberOfCharToCopy + (int)strlen(eos)) > nStringOutSize) {
-        return;
-    }
-    strcpy(szStringOut, szStringIn);
-    strcat(szStringOut, eos);
+        if (nNumberOfCharToCopy < nStringOutSize)
+        {
+                strncpy (szStringOut, szStringIn, nNumberOfCharToCopy);
+                szStringOut[nNumberOfCharToCopy] = '\0';
+        }
+        else
+        {
+                strncpy (szStringOut, szStringIn, nStringOutSize - 1);
+                szStringOut[nStringOutSize - 1] = '\0';
+        }
 }
