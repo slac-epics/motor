@@ -132,6 +132,7 @@ extern "C" {
 #define	PID_QUERY	"KK2 ID"
 
 extern "C" {
+int oms58Setup(int num_cards,void *addrs,unsigned vector,int int_level,int scan_rate);
 
 #ifdef mpc7455
 #define PCI_ORDERING

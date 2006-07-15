@@ -93,6 +93,8 @@ extern "C" {
 #define	PID_QUERY	"?KA ID"
 
 extern "C" {
+RTN_VALUES MAXvSetup(int num_cards, int addrs_type, void *addrs, unsigned vector, int int_level, int scan_rate);
+RTN_VALUES MAXvConfig(int card, const char *initstr);
 
 #ifdef mpc7455
 #define PCI_ORDERING
@@ -108,6 +110,7 @@ extern void CPU0_PciEnhanceSync(unsigned int syncVal);
 }
 
 /*----------------debugging-----------------*/
+#define	DEBUG
 #ifdef	DEBUG
     volatile int drvMAXvdebug = 0;
     #define Debug(l, f, args...) { if(l<=drvMAXvdebug) printf(f,## args); }
