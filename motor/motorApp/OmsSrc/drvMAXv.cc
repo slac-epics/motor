@@ -1012,12 +1012,13 @@ static int motor_init()
 	/* Scan memory space to assure card id */
 	do
 	{
-	    status = devNoResponseProbe(MAXv_ADDRS_TYPE, (unsigned int) startAddr, 2);
+            status = devNoResponseProbe(MAXv_ADDRS_TYPE, (unsigned int) startAddr, 2);
 	    startAddr += 0x100;
 	} while (PROBE_SUCCESS(status) && startAddr < endAddr);
 
 	if (PROBE_SUCCESS(status))
 	{
+            FIRMWARE_STATUS firmware_status;
 	    status = devRegisterAddress(__FILE__, MAXv_ADDRS_TYPE,
 					(size_t) probeAddr, MAXv_BRD_SIZE,
 					(volatile void **) &localaddr);
@@ -1031,8 +1032,8 @@ static int motor_init()
 
 	    Debug(9, "motor_init: localaddr = %x\n", (unsigned int) localaddr);
 	    pmotor = (struct MAXv_motor *) localaddr;
-		
-	    if (pmotor->firmware_status.Bits.running == 0)
+
+            firmware_status.All = readReg32(&pmotor->firmware_status.All);           	    if (firmware_status.Bits.running == 0)
 		errMessage(-1, "controller is NOT running.\n");
 
 	    Debug(9, "motor_init: malloc'ing motor_state\n");
@@ -1154,7 +1155,7 @@ static int motor_init()
 	}
 	else
 	{
-	    Debug(3, "motor_init: Card NOT found!\n");
+	    Debug(3, "motor_init: Card NOT found! status = %ld\n", status);
 	    motor_state[card_index] = (struct controller *) NULL;
 	}
     }
