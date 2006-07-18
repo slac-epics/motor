@@ -1584,9 +1584,9 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 	}
     }
 
-    /*** Handle changes in motor/encoder resolution, and in .ueip. ***/
+    /*** Handle changes in motor/encoder resolution, and in .ueip/urip. ***/
     mmap_bits.All = pmr->mmap; /* Initialize for MARKED. */
-    if (MARKED(M_MRES) || MARKED(M_ERES) || MARKED(M_UEIP))
+    if (MARKED(M_MRES) || MARKED(M_ERES) || MARKED(M_UEIP) || MARKED(M_URIP))
     {
 	/* encoder pulses, motor pulses */
 	double ep_mp[2];
@@ -2511,6 +2511,7 @@ velcheckB:
 
 	/* new urip flag */
     case motorRecordURIP:
+	MARK(M_URIP);
 	break;
 
 	/* Set to SET mode  */

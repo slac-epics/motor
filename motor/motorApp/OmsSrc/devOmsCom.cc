@@ -206,7 +206,7 @@ long oms_build_trans(motor_cmnd command, double *parms, struct motorRecord *mr)
 		struct driver_table *tabptr = trans->tabptr;
 		int size = (end - &mr->init[0]) + 1;
 		strncpy(buffer, mr->init, size);
-		buffer[size] = NULL;
+		buffer[size] = 0;
 		if (strcmp(buffer, "@DPM_ON@") == 0)
 		{
 		    int response, bitselect;
@@ -286,7 +286,7 @@ long oms_build_trans(motor_cmnd command, double *parms, struct motorRecord *mr)
 
 			    /* Copy device directive to buffer. */
 			    strncpy(buffer, mr->prem, size);
-			    buffer[size] = NULL;
+			    buffer[size] = 0;
 
 			    if (strncmp(buffer, "@PUT(", 5) != 0)
 				goto errorexit;

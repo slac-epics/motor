@@ -47,12 +47,19 @@ Last Modified:	2004/09/20 21:30:34
  *
  */
 
+#ifdef vxWorks
 #include	<vxLib.h>
 #include	<sysLib.h>
-#include	<string.h>
 #include	<rebootLib.h>
 #include	<logLib.h>
 #include	<taskLib.h>
+#endif
+
+#ifdef HAS_IOOPS_H
+#include        <basicIoOps.h>
+#endif
+
+#include	<string.h>
 #include	<dbCommon.h>
 #include	<drvSup.h>
 #include	<epicsVersion.h>
@@ -65,6 +72,7 @@ extern "C" {
 #endif
 #include	<dbAccess.h>
 #include	<epicsThread.h>
+#include        <epicsInterrupt.h>
 
 #include	"motorRecord.h"	/* For Driver Power Monitor feature only. */
 #include	"motor.h"
@@ -84,8 +92,25 @@ extern "C" {
 #define	DONE_QUERY	"RA"		/* ?? Is this needed?? */
 #define	PID_QUERY	"?KA ID"
 
+extern "C" {
+RTN_VALUES MAXvSetup(int num_cards, int addrs_type, void *addrs, unsigned vector, int int_level, int scan_rate);
+RTN_VALUES MAXvConfig(int card, const char *initstr);
+
+#ifdef mpc7455
+#define PCI_ORDERING
+#ifdef PCI_ORDERING
+extern void pciToCpuSync(int pci_num);
+#define GT64260PCIsync()   pciToCpuSync(0)
+#else
+extern void CPU0_PciEnhanceSync(unsigned int syncVal);
+#define GT64260PCIsync()   CPU0_PciEnhanceSync(5)
+#endif
+#endif
+
+}
 
 /*----------------debugging-----------------*/
+#define	DEBUG
 #ifdef	DEBUG
     volatile int drvMAXvdebug = 0;
     #define Debug(l, f, args...) { if(l<=drvMAXvdebug) printf(f,## args); }
@@ -93,7 +118,7 @@ extern "C" {
     #define Debug(l, f, args...)
 #endif
 
-#define pack2x16(p)      ((uint32_t)(((p[0])<<16)|(p[1])))
+#define pack2x16(p) ((epicsUInt32)(readReg16(&p[0])<<16)|readReg16(&p[1])) 
 #define INITSTR_SIZE	150	/* 150 byte intialization string. */
 
 /* Global data. */
@@ -182,7 +207,7 @@ static long report(int level)
 		printf("    Oms MAXv motor card #%d not found.\n", card);
 	    else
 		printf("    Oms MAXv motor card #%d @ 0x%X, id: %s \n", card,
-		       (uint_t) motor_state[card]->localaddr,
+		       (unsigned int) motor_state[card]->localaddr,
 		       motor_state[card]->ident);
 	}
     }
@@ -196,6 +221,61 @@ static long init()
     return ((long) 0);
 }
 
+static void writeReg8(volatile epicsUInt8 *a8,epicsUInt8 value)
+{
+#ifdef HAS_IOOPS_H
+   out_8(a8, value);
+#ifdef mpc7455
+   GT64260PCIsync();
+#endif
+#else
+   *a8 = value;
+#endif
+}
+
+static epicsUInt8 readReg8(volatile epicsUInt8 *a8)
+{
+#ifdef HAS_IOOPS_H
+    return in_8(a8);
+#else
+    epicsUInt8 value;
+
+    value = *a8;
+    return(value);
+#endif
+}
+
+static void writeReg32(volatile epicsUInt32 *a32, epicsUInt32 value)
+{
+#ifdef HAS_IOOPS_H
+   out_be32(a32, value);
+#ifdef mpc7455
+   GT64260PCIsync();
+#endif
+#else
+   *a = value;
+#endif
+}
+
+static epicsUInt32 readReg32(volatile epicsUInt32 *a32)
+{
+#ifdef HAS_IOOPS_H
+    return in_be32(a32);
+#else
+    epicsUInt32 value;
+
+    value = *a32;
+    return(value);
+#endif
+}
+
+static void readRegMem(char *bufptr, volatile char *memptr, int size)
+{
+    memcpy(bufptr, (const void *)memptr, size);
+#ifdef HAS_IOOPS_H
+    iobarrier_r();
+#endif
+}
 
 static void query_done(int card, int axis, struct mess_node *nodeptr)
 {
@@ -350,7 +430,7 @@ static int set_status(int card, int signal)
     }
 
     /* motor pulse count (position) */
-    motorData = pmotor->cmndPos[signal];
+    motorData = readReg32(&pmotor->cmndPos[signal]);
 
     if (motorData == motor_info->position)
     {
@@ -375,7 +455,7 @@ static int set_status(int card, int signal)
 	status.Bits.RA_PROBLEM = 0;
     
     /* Get encoder position */
-    motorData = pmotor->encPos[signal];
+    motorData = readReg32(&pmotor->encPos[signal]);
 
     motor_info->encoder_position = motorData;
 
@@ -384,8 +464,7 @@ static int set_status(int card, int signal)
 	struct motor_trans *trans = (struct motor_trans *) nodeptr->mrecord->dpvt;
 	if (trans->dpm == true)
 	{
-	    logMsg((char *) "Drive power failure at MAXv card#%d motor#%d\n",
-		       card, signal, 0, 0, 0, 0);
+	    epicsInterruptContextMessage("Drive power failure at MAXv card");
 	}
     }
 
@@ -413,7 +492,7 @@ static int set_status(int card, int signal)
 
 		/* Copy device directive to buffer. */
 		strncpy(buffer, nodeptr->postmsgptr, size);
-		buffer[size] = NULL;
+		buffer[size] = 0;
 
 		if (strncmp(buffer, "@PUT(", 5) != 0)
 		    goto errorexit;
@@ -483,28 +562,26 @@ RTN_STATUS send_mess(int card, char const *com, char *name)
 
     if (strlen(com) > MAX_MSG_SIZE)
     {
-	logMsg((char *) "drvMAXv.cc:send_mess(); message size violation.\n",
-	       0, 0, 0, 0, 0, 0);
+	epicsInterruptContextMessage("drvMAXv.cc:send_mess(); message size violation.");
 	return (ERROR);
     }
 
     /* Check that card exists */
     if (!motor_state[card])
     {
-	logMsg((char *) "drvMAXv.cc:send_mess() - invalid card #%d\n", card,
-	       0, 0, 0, 0, 0);
+	epicsInterruptContextMessage("drvMAXv.cc:send_mess() - invalid card");
 	return (ERROR);
     }
 
     pmotor = (struct MAXv_motor *) motor_state[card]->localaddr;
-    Debug(9, "send_mess: pmotor = %x\n", (uint_t) pmotor);
+    Debug(9, "send_mess: pmotor = %x\n", (unsigned int) pmotor);
 
     return_code = OK;
 
     Debug(9, "send_mess: checking card %d status\n", card);
 
     /* see if junk at input port - should not be any data available */
-    if (pmotor->inGetIndex != pmotor->inPutIndex)
+    if (readReg32(&pmotor->inGetIndex) != readReg32(&pmotor->inPutIndex))
     {
 	Debug(1, "send_mess - clearing data in buffer\n");
 	recv_mess(card, NULL, -1);
@@ -522,10 +599,10 @@ RTN_STATUS send_mess(int card, char const *com, char *name)
     }
 
     Debug(9, "send_mess: ready to send message.\n");
-    putIndex = pmotor->outPutIndex;
+    putIndex = readReg32(&pmotor->outPutIndex);
     for (p = outbuf; *p != '\0'; p++)
     {
-	pmotor->outBuffer[putIndex++] = *p;
+	writeReg8(&pmotor->outBuffer[putIndex++], *p);
 	if (putIndex >= BUFFER_SIZE)
 	    putIndex = 0;
     }
@@ -533,16 +610,18 @@ RTN_STATUS send_mess(int card, char const *com, char *name)
     Debug(4, "send_mess: sent card %d message:", card);
     Debug(4, "%s\n", outbuf);
 
-    pmotor->outPutIndex = putIndex;	/* Message Sent */
+    writeReg32(&pmotor->outPutIndex, putIndex);	/* Message Sent */
 
-    while (pmotor->outPutIndex != pmotor->outGetIndex)
+    while (readReg32(&pmotor->outPutIndex) != readReg32(&pmotor->outGetIndex))
     {
+#ifdef DEBUG
 	epicsInt16 deltaIndex;
+#endif
 	
 	Debug(5, "send_mess: Waiting for ack: index delta=%d\n",
-	   (((deltaIndex = pmotor->outPutIndex - pmotor->outGetIndex) < 0) ?
+	   (((deltaIndex = readReg32(&pmotor->outPutIndex) - readReg32(&pmotor->outGetIndex)) < 0) ?
 	    BUFFER_SIZE + deltaIndex : deltaIndex));
-	taskDelay(0);
+	epicsThreadSleep(0.0);
     };
 
     return (return_code);
@@ -595,7 +674,7 @@ int recv_mess(int card, char *com, int amount)
 
     if (amount == -1)
     {
-	if (pmotor->inGetIndex != pmotor->inPutIndex)
+      if (readReg32(&pmotor->inGetIndex) != readReg32(&pmotor->inPutIndex))
 	{
 	    char junk[80];
 
@@ -607,22 +686,25 @@ int recv_mess(int card, char *com, int amount)
     }
 
     bufptr = com;
-    *bufptr = NULL;
+    *bufptr = 0;
 
     do
     {
 	itera = 1;
 	double time = 0.0;
-
-	while (pmotor->status1_flag.Bits.text_response == 0 && time < 0.100)
+        STATUS1 flag1;
+        
+        flag1.All = readReg32(&pmotor->status1_flag.All);
+	while ((flag1.Bits.text_response == 0) && (time < 0.100))
 	{
 	    Debug(1, "recv_mess(): response wait - %d\n", itera);
 	    time += quantum * itera;
 	    epicsThreadSleep(quantum * itera);
 	    itera++;
+            flag1.All = readReg32(&pmotor->status1_flag.All);
 	}
 
-	if (pmotor->status1_flag.Bits.text_response == 0)
+	if (flag1.Bits.text_response == 0)
 	{
 	    Debug(1, "Timeout occurred in recv_mess\n");
 	    *bufptr = '\0';
@@ -644,10 +726,10 @@ static char *readbuf(volatile struct MAXv_motor *pmotor, char *bufptr)
     STATUS1 flag1;
     epicsUInt32 getIndex, putIndex;
     int bufsize;
-    char *start, *end, *bufend;
+    volatile char *start, *end, *bufend;
     
-    getIndex = pmotor->inGetIndex;
-    putIndex = pmotor->inPutIndex;
+    getIndex = readReg32(&pmotor->inGetIndex);
+    putIndex = readReg32(&pmotor->inPutIndex);
     bufsize  = putIndex - getIndex;
     
     start  = (char *) &pmotor->inBuffer[getIndex];
@@ -655,18 +737,19 @@ static char *readbuf(volatile struct MAXv_motor *pmotor, char *bufptr)
 
     if (start < end)	/* Test for message wraparound in buffer. */
     {
-	memcpy(bufptr, start, bufsize);
+	readRegMem(bufptr, start, bufsize);
     }
     else
     {
 	int size;
 
-	bufend = (char *) &pmotor->inBuffer[BUFFER_SIZE];
+	bufend = (volatile char *) &pmotor->inBuffer[BUFFER_SIZE];
 	size = bufend - start;
 	bufsize += BUFFER_SIZE;
 
-	memcpy(bufptr, start, size);
-	memcpy((bufptr + size), (const char *) &pmotor->inBuffer[0], (bufsize - size));
+	readRegMem(bufptr, start, size);
+        start = (char *) &pmotor->inBuffer[0];
+	readRegMem((bufptr + size), start, (bufsize - size));
     }
     
     getIndex += bufsize;
@@ -674,19 +757,19 @@ static char *readbuf(volatile struct MAXv_motor *pmotor, char *bufptr)
 	getIndex -= BUFFER_SIZE;
     
     bufptr += (bufsize - 1);
-    *bufptr = NULL;
+    *bufptr = 0;
 
-    while (getIndex != pmotor->inPutIndex)
+    while (getIndex != readReg32(&pmotor->inPutIndex))
     {
-	Debug(1, "readbuf(): flushed - %d\n", pmotor->inBuffer[getIndex]);
+	Debug(1, "readbuf(): flushed - %d\n", readReg8(&pmotor->inBuffer[getIndex]));
 	if (++getIndex > BUFFER_SIZE)
 	    getIndex = 0;
     }
 
-    pmotor->inGetIndex = getIndex;
-    flag1.All = pmotor->status1_flag.All;
-    pmotor->status1_flag.All = flag1.All;
-    pmotor->msg_semaphore = 0;
+    writeReg32(&pmotor->inGetIndex, getIndex);
+    flag1.All = readReg32(&pmotor->status1_flag.All);
+    writeReg32(&pmotor->status1_flag.All, flag1.All);
+    writeReg32(&pmotor->msg_semaphore, 0);
     return(bufptr);
 }
 
@@ -714,9 +797,9 @@ RTN_VALUES MAXvSetup(int num_cards,	/* maximum number of cards in rack */
     {
 	case 16:
 	    MAXv_ADDRS_TYPE = atVMEA16;
-	    if ((uint32_t) addrs & 0xFFFF0000)
+	    if ((epicsUInt32) addrs & 0xFFFF0000)
 	    {
-		errlogPrintf("MAXvSetup(): invalid A16 address = 0x%X.\n", (uint_t) addrs);
+		errlogPrintf("MAXvSetup(): invalid A16 address = 0x%X.\n", (unsigned int) addrs);
 		rtnind = ERROR;
 	    }
 	    else
@@ -724,9 +807,9 @@ RTN_VALUES MAXvSetup(int num_cards,	/* maximum number of cards in rack */
 	    break;
 	case 24:
 	    MAXv_ADDRS_TYPE = atVMEA24;
-	    if ((uint32_t) addrs & 0xF0000000)
+	    if ((epicsUInt32) addrs & 0xF0000000)
 	    {
-		errlogPrintf("MAXvSetup(): invalid A24 address = 0x%X.\n", (uint_t) addrs);
+		errlogPrintf("MAXvSetup(): invalid A24 address = 0x%X.\n", (unsigned int) addrs);
 		rtnind = ERROR;
 	    }
 	    else
@@ -737,14 +820,14 @@ RTN_VALUES MAXvSetup(int num_cards,	/* maximum number of cards in rack */
 	    MAXv_addrs = (char *) addrs;
 	    break;
 	default:
-	    errlogPrintf("MAXvSetup(): invalid VME address type = %d.\n", (uint_t) addrs_type);
+	    errlogPrintf("MAXvSetup(): invalid VME address type = %d.\n", (unsigned int) addrs_type);
 	    rtnind = ERROR;
 	    break;
     }
 
-    if ((uint32_t) addrs & 0x00000FFF)
+    if ((epicsUInt32) addrs & 0x00000FFF)
     {
-	errlogPrintf("MAXvSetup(): address = 0x%X, not aligned on 4K boundary.\n", (uint_t) addrs);
+	errlogPrintf("MAXvSetup(): address = 0x%X, not aligned on 4K boundary.\n", (unsigned int) addrs);
 	rtnind = ERROR;
     }
 
@@ -778,7 +861,7 @@ RTN_VALUES MAXvSetup(int num_cards,	/* maximum number of cards in rack */
     for (itera = 0, strptr = &initstring[0]; itera < MAXv_num_cards; itera++, strptr++)
     {
 	*strptr = (char *) malloc(INITSTR_SIZE);
-	**strptr = NULL;
+	**strptr = 0;
     }
 
     return(rtnind);
@@ -813,12 +896,12 @@ static void motorIsr(int card)
 
     if (card >= total_cards || (pmotorState = motor_state[card]) == NULL)
     {
-	logMsg((char *) "Invalid entry-card #%d\n", card, 0, 0, 0, 0, 0);
+	epicsInterruptContextMessage("Invalid entry");
 	return;
     }
 
     pmotor = (struct MAXv_motor *) (pmotorState->localaddr);
-    status1_flag.All = pmotor->status1_flag.All;
+    status1_flag.All = readReg32(&pmotor->status1_flag.All);
 
     /* Motion done handling */
     if (status1_flag.Bits.done != 0)
@@ -828,13 +911,12 @@ static void motorIsr(int card)
 
     }
     if (status1_flag.Bits.cmndError)
-	logMsg((char *) "command error detected by motorISR() on card %d\n",
-	       card, 0, 0, 0, 0, 0);
+	epicsInterruptContextMessage("command error detected by motorISR()");
 
     if (status1_flag.Bits.text_response != 0)	/* Don't clear this. */
 	status1_flag.Bits.text_response = 0;
 
-    pmotor->status1_flag.All = status1_flag.All; /* Release IRQ's. */
+    writeReg32(&pmotor->status1_flag.All, status1_flag.All); /* Release IRQ's. */
 }
 
 static int motorIsrSetup(int card)
@@ -870,8 +952,8 @@ static int motorIsrSetup(int card)
     status1_irq.Bits.done = 0xFF;
     status1_irq.Bits.cmndError = 1;
 
-    pmotor->status1_irq_enable.All = status1_irq.All;	/* Enable interrupts. */
-    pmotor->status2_irq_enable = 0x0;
+    writeReg32(&pmotor->status1_irq_enable.All, status1_irq.All); /* Enable interrupts. */
+    writeReg32(&pmotor->status2_irq_enable, 0x0);
     return (OK);
 }
 
@@ -903,15 +985,17 @@ static int motor_init()
     }
 
     /* allocate space for total number of motors */
-    motor_state = (struct controller **) malloc(MAXv_num_cards *
+    motor_state = (struct controller **) calloc(MAXv_num_cards,
 						sizeof(struct controller *));
 
     /* allocate structure space for each motor present */
 
     total_cards = MAXv_num_cards;
 
+#ifdef vxWorks
     if (rebootHookAdd((FUNCPTR) MAXv_reset) == ERROR)
 	Debug(1, "MAXv motor_init: MAXv_reset disabled\n");
+#endif
 
     for (card_index = 0; card_index < MAXv_num_cards; card_index++)
     {
@@ -924,16 +1008,17 @@ static int motor_init()
 	startAddr = (int8_t *) probeAddr;
 	endAddr = startAddr + MAXv_BRD_SIZE;
 
-	Debug(9, "motor_init: devNoResponseProbe() on addr 0x%x\n", (uint_t) probeAddr);
+	Debug(9, "motor_init: devNoResponseProbe() on addr 0x%x\n", (unsigned int) probeAddr);
 	/* Scan memory space to assure card id */
 	do
 	{
-	    status = devNoResponseProbe(MAXv_ADDRS_TYPE, (unsigned int) startAddr, 2);
+            status = devNoResponseProbe(MAXv_ADDRS_TYPE, (unsigned int) startAddr, 2);
 	    startAddr += 0x100;
 	} while (PROBE_SUCCESS(status) && startAddr < endAddr);
 
 	if (PROBE_SUCCESS(status))
 	{
+            FIRMWARE_STATUS firmware_status;
 	    status = devRegisterAddress(__FILE__, MAXv_ADDRS_TYPE,
 					(size_t) probeAddr, MAXv_BRD_SIZE,
 					(volatile void **) &localaddr);
@@ -945,10 +1030,10 @@ static int motor_init()
 		return (ERROR);
 	    }
 
-	    Debug(9, "motor_init: localaddr = %x\n", (uint_t) localaddr);
+	    Debug(9, "motor_init: localaddr = %x\n", (unsigned int) localaddr);
 	    pmotor = (struct MAXv_motor *) localaddr;
-		
-	    if (pmotor->firmware_status.Bits.running == 0)
+
+            firmware_status.All = readReg32(&pmotor->firmware_status.All);           	    if (firmware_status.Bits.running == 0)
 		errMessage(-1, "controller is NOT running.\n");
 
 	    Debug(9, "motor_init: malloc'ing motor_state\n");
@@ -959,15 +1044,15 @@ static int motor_init()
 	    pmotorState->cmnd_response = false;
 
 	    if (MAXvInterruptVector == 0)
-		pmotor->IACK_vector = 0;
+		writeReg32(&pmotor->IACK_vector, 0);
 	    else
-		pmotor->IACK_vector = MAXvInterruptVector + card_index;
+		writeReg32(&pmotor->IACK_vector, MAXvInterruptVector + card_index);
 
-	    pmotor->status1_flag.All = 0xFFFFFFFF;
-	    pmotor->status2_flag = 0xFFFFFFFF;
+	    writeReg32(&pmotor->status1_flag.All, 0xFFFFFFFF);
+	    writeReg32(&pmotor->status2_flag, 0xFFFFFFFF);
 	    /* Disable all interrupts */
-	    pmotor->status1_irq_enable.All = 0;
-	    pmotor->status2_irq_enable = 0;
+	    writeReg32(&pmotor->status1_irq_enable.All, 0);
+	    writeReg32(&pmotor->status2_irq_enable, 0);
 
 	    send_mess(card_index, ERROR_CLEAR, (char) NULL);
 	    send_mess(card_index, STOP_ALL, (char) NULL);
@@ -997,15 +1082,16 @@ static int motor_init()
 
 	    	/* Test if motor has an encoder. */
 		send_mess(card_index, ENCODER_QUERY, MAXv_axis[motor_index]);
-		while (!pmotor->status1_flag.Bits.done)	/* Wait for command to complete. */
+		do {	/* Wait for command to complete. */
 		    epicsThreadSleep(quantum);
-
-		if (pmotor->status1_flag.Bits.cmndError)
+                    flag1.All = readReg32(&pmotor->status1_flag.All);                
+                } while (!flag1.Bits.done);
+		if (flag1.Bits.cmndError)
 		{
 		    Debug(2, "motor_init: No encoder on axis %d\n", motor_index);
 		    pmotorState->motor_info[motor_index].encoder_present = NO;
-		    flag1.All = pmotor->status1_flag.All;	/* Clear command error. */
-		    pmotor->status1_flag.All = flag1.All;
+		    flag1.All = readReg32(&pmotor->status1_flag.All);	/* Clear command error. */
+		    writeReg32(&pmotor->status1_flag.All, flag1.All);
 		}
 		else
 		{
@@ -1016,14 +1102,16 @@ static int motor_init()
 		
 		/* Test if motor has PID parameters. */
 		send_mess(card_index, PID_QUERY, MAXv_axis[motor_index]);
-		while (!pmotor->status1_flag.Bits.done)	/* Wait for command to complete. */
+		do {	/* Wait for command to complete. */
 		    epicsThreadSleep(quantum);
-		if (pmotor->status1_flag.Bits.cmndError)
+                    flag1.All = readReg32(&pmotor->status1_flag.All);                
+                } while (!flag1.Bits.done);
+		if (flag1.Bits.cmndError)
 		{
 		    Debug(2, "motor_init: No PID parameters on axis %d\n", motor_index);
 		    pmotorState->motor_info[motor_index].pid_present = NO;
-		    flag1.All = pmotor->status1_flag.All;	/* Clear command error. */
-		    pmotor->status1_flag.All = flag1.All;
+		    flag1.All = readReg32(&pmotor->status1_flag.All);	/* Clear command error. */
+		    writeReg32(&pmotor->status1_flag.All, flag1.All);
 		}
 		else
 		{
@@ -1061,13 +1149,13 @@ static int motor_init()
 		recv_mess(card_index, axis_pos, 1);
 	    }
 
-	    Debug(2, "motor_init: Init Address=0x%8.8x\n", (uint_t) localaddr);
+	    Debug(2, "motor_init: Init Address=0x%8.8x\n", (unsigned int) localaddr);
 	    Debug(3, "motor_init: Total encoders = %d\n", total_encoders);
 	    Debug(3, "motor_init: Total with PID = %d\n", total_pidcnt);
 	}
 	else
 	{
-	    Debug(3, "motor_init: Card NOT found!\n");
+	    Debug(3, "motor_init: Card NOT found! status = %ld\n", status);
 	    motor_state[card_index] = (struct controller *) NULL;
 	}
     }
@@ -1082,13 +1170,13 @@ static int motor_init()
 
     Debug(3, "Motors initialized\n");
 
-    epicsThreadCreate((char *) "MAXv_motor", 64, 5000, (EPICSTHREADFUNC) motor_task, (void *) &targs);
+    epicsThreadCreate((char *) "MAXv_motor", epicsThreadPriorityHigh, epicsThreadGetStackSize(epicsThreadStackSmall), (EPICSTHREADFUNC) motor_task, (void *) &targs);
 
     Debug(3, "Started motor_task\n");
 
     /* Deallocate memory for initialization strings. */
     for (itera = 0, strptr = &initstring[0]; itera < MAXv_num_cards; itera++, strptr++)
-	cfree(*strptr);
+	free(*strptr);
 
     return (0);
 }
@@ -1107,9 +1195,9 @@ static void MAXv_reset()
 	if (motor_state[card] != NULL)
 	{
 	    pmotor = (struct MAXv_motor *) motor_state[card]->localaddr;
-	    if (vxMemProbe((char *) pmotor, READ, sizeof(short), (char *) &status) == OK)
+	    if (devReadProbe(sizeof(short), (char *) pmotor, (void *) &status) == OK)
 	    {
-		pmotor->status1_irq_enable.All = 0;
+		writeReg32(&pmotor->status1_irq_enable.All, 0);
 	    }
 	}
     }
