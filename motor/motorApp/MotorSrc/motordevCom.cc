@@ -3,9 +3,9 @@ FILENAME: motordevCom.cc
 USAGE... This file contains device functions that are common to all motor
     record device support modules.
 
-Version:	1.6
-Modified By:	sluiter
-Last Modified:	2004/02/03 19:42:47
+Version:	1.9
+Modified By:	rivers
+Last Modified:	2005/12/08 00:12:54
 */
 
 /*
@@ -43,6 +43,9 @@ Last Modified:	2004/02/03 19:42:47
  * .04a 02-19-97 tmm fixed for EPICS 3.13
  * .05  06/13/03 rls Ported to R3.14.
  * .06  02/03/04 rls Initialize PID parameters from motor_init_record_com().
+ * .07  06/07/05 rls Use RDBD as threshold for controller's position takes
+ *                   precedence over the save/restore value at initialization.
+ * .08  10/18/05 rls Use MAX_TIMEOUT.
  */
 
 
@@ -58,8 +61,11 @@ Last Modified:	2004/02/03 19:42:47
 
 #include	"motorRecord.h"
 #include	"motor.h"
-#include	"motordevCom.h"
 #include	"motordrvCom.h"
+
+#define          epicsExportSharedSymbols
+#include        <shareLib.h>
+#include	"motordevCom.h"
 
 static void motor_callback(struct mess_node * motor_return);
 static void motor_init_callback(struct mess_node * motor_return);
@@ -68,12 +74,11 @@ static void motor_init_callback(struct mess_node * motor_return);
    "motor_cmnds" in motor.h .
 */
 
-long motor_init_com(int after, int brdcnt, struct driver_table *tabptr,
+epicsShareFunc long motor_init_com(int after, int brdcnt, struct driver_table *tabptr,
 	      struct board_stat ***sptr)	/* Initialize motor record device support. */
 {
     MOTOR_CARD_QUERY card_query;
     int card, motor;
-
     memset(&card_query, 0 ,sizeof(card_query));
     
     if (after == 0)
@@ -142,9 +147,9 @@ LOGIC...
 	Set local encoder ratio to unity.
     ENDIF
 
-    Set Initialize position indicator based on (DVEL != 0, AND, MRES != 0,
-	AND, the above "get_axis_info()" position == 0) [NOTE: non-zero controller
-	position takes precedence over autorestore position].
+    Set Initialize position indicator based on (|DVEL| > RDBD, AND, MRES != 0,
+	AND, the above "get_axis_info()" position < RDBD) [NOTE: |controller
+	position| >= RDBD takes precedence over save/restore position].
     Set Command Primitive Initialization string indicator based on (non-NULL "init"
 	pointer, AND, non-zero string length.
 
@@ -172,7 +177,7 @@ LOGIC...
     NORMAL RETURN.
 */
 
-long motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_table *tabptr,
+epicsShareFunc long motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_table *tabptr,
 	      struct board_stat *sptr[])
 {
     struct motor_dset *pdset = (struct motor_dset *) (mr->dset);
@@ -281,7 +286,9 @@ long motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_tab
 	ep_mp[1] = 1.;
     }
 
-    initPos = (mr->dval != 0 && mr->mres != 0 && axis_query.position == 0) ? true : false;
+    initPos = (fabs(mr->dval) > mr->rdbd && mr->mres != 0 &&
+	      (float) (axis_query.position * mr->mres) < mr->rdbd)
+	      ? true : false;
     /* Test for command primitive initialization string. */
     initString = (mr->init != NULL && strlen(mr->init)) ? true : false;
     /* Test for PID support. */
@@ -351,7 +358,7 @@ long motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_tab
 	(*pdset->end_trans)(mr);
 
 	/* Wait for callback w/timeout */
-	if (ptrans->initSem->wait(1.0) == FALSE)
+	if (ptrans->initSem->wait(MAX_TIMEOUT) == FALSE)
 	    recGblRecordError(S_dev_NoInit, (void *) mr,
 		(char *) "dev_NoInit (init_record_com: callback2 timeout");
 	delete(ptrans->initSem);
@@ -381,7 +388,7 @@ USAGE... Update the following motor record fields with the latest driver data:
 NOTES... This function MUST BE reentrant.
 */
 
-CALLBACK_VALUE motor_update_values(struct motorRecord * mr)
+epicsShareFunc CALLBACK_VALUE motor_update_values(struct motorRecord * mr)
 {
     struct motor_trans *ptrans;
     CALLBACK_VALUE rc;
@@ -415,7 +422,7 @@ USAGE... Start building a transaction.
 NOTES... This function MUST BE reentrant.
 */
 
-long motor_start_trans_com(struct motorRecord *mr, struct board_stat **sptr)
+epicsShareFunc long motor_start_trans_com(struct motorRecord *mr, struct board_stat **sptr)
 {
     int card = mr->out.value.vmeio.card;
     int axis = mr->out.value.vmeio.signal;
@@ -449,7 +456,7 @@ USAGE... Finish building a transaction.
 NOTES... This function MUST BE reentrant.
 */
 
-RTN_STATUS motor_end_trans_com(struct motorRecord *mr, struct driver_table *tabptr)
+epicsShareFunc RTN_STATUS motor_end_trans_com(struct motorRecord *mr, struct driver_table *tabptr)
 {
     struct motor_trans *trans = (struct motor_trans *) mr->dpvt;
     struct mess_node *motor_call;

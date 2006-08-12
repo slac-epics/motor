@@ -3,9 +3,9 @@ FILENAME...	motor.h
 USAGE...	Definitions and structures common to all levels of motorRecord
 		support (i.e., record, device and driver).
 
-Version:	1.12
-Modified By:	sluiter
-Last Modified:	2004/09/20 20:23:08
+Version:	1.17
+Modified By:	rivers
+Last Modified:	2006/04/08 20:11:56
 */
 
 /*
@@ -41,6 +41,9 @@ Last Modified:	2004/09/20 20:23:08
  *		    - Converted MSTA #define's to bit field.
  * .03 08-30-04 rls - Added osiUnistd.h for RTEMS.
  * .04 09-20-04 rls - Increase max. axis / board to 32 for Delta Tau PMAC.
+ * .05 12-21-04 rls - Changed pre-compiler instructions for LSB/MSB_First
+ *		      to support MS Visual C.
+ * .06 01-27-06 rls - Added LT_EPICSBASE macro for test EPICS base versions.
  */
 
 #ifndef	INCmotorh
@@ -50,6 +53,10 @@ Last Modified:	2004/09/20 20:23:08
 #include <dbScan.h>
 #include <devSup.h>
 #include <osiUnistd.h> 
+#include <epicsVersion.h>
+
+/* Less than EPICS base version test.*/
+#define LT_EPICSBASE(v,r,l) ((EPICS_VERSION<=(v)) && (EPICS_REVISION<=(r)) && (EPICS_MODIFICATION<(l)))
 
 /* Maximum message size of all supported devices; see drv[device].h for maximum
 message size for each device. */
@@ -70,17 +77,17 @@ typedef enum CALLBACK_VALUES {NOTHING_DONE = 0, CALLBACK_DATA = 1} CALLBACK_VALU
 #define NINT(f)	(long)((f)>0 ? (f)+0.5 : (f)-0.5)	/* Nearest integer. */
 
 /* Motor Record Command Set. !WARNING! this enumeration must match ALL of the
-   following;
+   following (up to and including JOG_VELOCITY);
     - "oms_table" in devOmsCom.c
     - "MM4000_table" in devMM4000.c
 */
 
-enum motor_cmnd {
+typedef enum  {
 	MOVE_ABS,	/* Absolute Move. */
 	MOVE_REL,	/* Relative Move. */
 	HOME_FOR,	/* Home Forward. */
 	HOME_REV,	/* Home Reverse. */
-	LOAD_POS,	/* Load Zero Position. */
+	LOAD_POS,	/* Load Position. */
 	SET_VEL_BASE,	/* Set Minimum Velocity. */
 	SET_VELOCITY,	/* Set Jog and Trajectory Velocity. */
 	SET_ACCEL,	/* Set Acceleration. */
@@ -97,8 +104,9 @@ enum motor_cmnd {
 	PRIMITIVE,	/* Primitive Controller command. */
 	SET_HIGH_LIMIT,	/* Set High Travel Limit. */
 	SET_LOW_LIMIT,	/* Set Low Travel Limit. */
-	JOG_VELOCITY	/* Change Jog velocity. */
-};
+	JOG_VELOCITY,	/* Change Jog velocity. */
+	SET_RESOLUTION	/* Set resolution */
+} motor_cmnd;
 
 
 /* -------------------------------------------------- */
@@ -112,12 +120,16 @@ enum motor_cmnd {
 #define NO		0
 #define YES		1
 
-// Define, from top to bottom, how bit fields are packed.
-// This works for SunPro, 
-#if #cpu(i386) && !#cpu(sparc)
-    #define LSB_First (TRUE)  // LSB is packed first.
+/* Define, from top to bottom, how bit fields are packed. */
+/* This works for VxWorks, SunPro, Linux g++, MS Visual C. */
+#ifdef _WIN32
+#define LSB_First (TRUE)  // LSB is packed first.
 #else
-    #define MSB_First (TRUE)  // MSB is packed first.
+#if #cpu(i386) && !#cpu(sparc)
+#define LSB_First (TRUE)  // LSB is packed first.
+#else
+#define MSB_First (TRUE)  // MSB is packed first.
+#endif
 #endif
 
 /* -------------------------------------------------- */
