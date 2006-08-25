@@ -102,7 +102,6 @@ extern void CPU0_PciEnhanceSync(unsigned int syncVal);
 }
 
 /*----------------debugging-----------------*/
-#define	DEBUG
 #ifdef __GNUG__
     #ifdef	DEBUG
 	#define Debug(l, f, args...) {if (l <= drvMAXvdebug) printf(f, ## args);}
