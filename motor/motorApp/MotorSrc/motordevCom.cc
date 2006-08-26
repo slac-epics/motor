@@ -79,7 +79,8 @@ epicsShareFunc long motor_init_com(int after, int brdcnt, struct driver_table *t
 {
     MOTOR_CARD_QUERY card_query;
     int card, motor;
-
+    memset(&card_query, 0 ,sizeof(card_query));
+    
     if (after == 0)
     {
 	/* allocate space for maximum possible cards in system */

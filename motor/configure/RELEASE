@@ -9,25 +9,30 @@
 #
 # Add your declarations here
 
+#!GATEWAY=
 #!SUPPORT=
 
 # If any motor controller communication mechanism besides the VME backplane is
 # required, then ASYN must be defined.
-# Recommended ASYN release: R3-3
-#!ASYN=$(SUPPORT)/asynR3-3
+# Recommended ASYN release: R4-5
+#ASYN=$(SUPPORT)/asynR4-5
 
-# Recommended EPICS release: R3.14.6
-EPICS_BASE=$(SUPPORT)/../base-3.14.6
+# Need the sequencer for the MM4005 and XPS trajectory scanning
+#!SNCSEQ=$(SUPPORT)/seq/2-0-11
 
-# The following must be defined if motorExApp is to be built.
-#!TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
-#!MSI=
+# Recommended EPICS release: R3.14.8.2
+#EPICS_BASE=$(SUPPORT)/../base-3.14.8.2
 
 # The following must be defined if the "WithMPF" example in motorExApp is to
 # be built.
-# Recommended IPAC release: R2.7a
-#!IPAC=$(SUPPORT)/ipac2-7a
+# Recommended IPAC release: R2-8
+#!IPAC=$(SUPPORT)/ipacR2-8
 
 # The following must be defined for the MXmotor device driver.
 #!MX=$(SUPPORT)/mx/mx
 
+# The following is only needed for the motor examples in iocBoot.
+#!MOTOR=$(TOP)
+
+include $(TOP)/../../configure/RELEASE-master
+include $(TOP)/../../configure/CONFIG_SITE-master
