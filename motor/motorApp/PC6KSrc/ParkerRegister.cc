@@ -2,9 +2,9 @@
 FILENAME...	ParkerRegister.cc
 USAGE...	Register Parker/Compumotor motor device driver shell commands.
 
-Version:	1.1
-Modified By:	rivers
-Last Modified:	2005/12/21 22:58:24
+Version:	1.2
+Modified By:	sullivan
+Last Modified:	2006/08/31 15:42:31
 */
 
 /*****************************************************************
