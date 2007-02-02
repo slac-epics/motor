@@ -1,15 +1,31 @@
-/* drvMotorAsyn.c
-
-    Derived from ip330 driver from GSE-CARS
-    Original Authors: Jim Kowalkowski, Mark Rivers, Joe Sullivan, and Marty Kraimer
-********************COPYRIGHT NOTIFICATION**********************************
-This software was developed under a United States Government license
-described on the COPYRIGHT_UniversityOfChicago file included as part
-of this distribution.
-****************************************************************************
-
-    22-Sep-2005  Peter Denison
-*/
+/*
+ * drvMotorAsyn.c
+ * 
+ * Motor record common Asyn driver support layer
+ *
+ * Copyright (C) 2005-6 Peter Denison, Diamond Light Source
+ *
+ * This software is distributed subject to the EPICS Open Licence, which can
+ * be found at http://www.aps.anl.gov/epics/licence/open.php
+ * 
+ * Notwithstanding the above, explicit permission is granted for APS to 
+ * redistribute this software.
+ *
+ * Derived from ip330 driver from GSE-CARS which was:
+ *     Original Authors: Jim Kowalkowski, Mark Rivers, Joe Sullivan, and Marty Kraimer
+ *     ********************COPYRIGHT NOTIFICATION******************************
+ *     This software was developed under a United States Government license
+ *     described on the COPYRIGHT_UniversityOfChicago file included as part
+ *     of this distribution.
+ *     ************************************************************************
+ *
+ * Version: 1.14
+ * Modified by: peterd
+ * Last Modified: 2007/02/02 16:21:05
+ *
+ * Original Author: Peter Denison
+ * Current Author: Peter Denison
+ */
 
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +50,7 @@ of this distribution.
 #include <asynInt32.h>
 #include <asynFloat64.h>
 #include <asynFloat64Array.h>
+#include <asynMotorStatus.h>
 #include <asynDrvUser.h>
 
 #include <drvSup.h>
@@ -69,6 +86,20 @@ static motorCommandStruct motorCommands[] = {
     {motorLowLim,     "LOW_LIMIT"},
     {motorSetClosedLoop, "SET_CLOSED_LOOP"},
     {motorStatus,     "STATUS"},
+    {motorStatusDirection, "STATUS_DIRECTION"}, 
+    {motorStatusDone, "STATUS_DONE"},
+    {motorStatusHighLimit, "STATUS_HIGHLIMIT"},
+    {motorStatusAtHome,"STATUS_ATHOME"},
+    {motorStatusSlip, "STATUS_SLIP"},
+    {motorStatusPowerOn, "STATUS_POWERED"},
+    {motorStatusFollowingError, "STATUS_FOLLOWINGERROR"},
+    {motorStatusHome, "STATUS_HOME"},
+    {motorStatusHasEncoder, "STATUS_HASENCODER"},
+    {motorStatusProblem, "STATUS_PROBLEM"},
+    {motorStatusMoving, "STATUS_MOVING"},
+    {motorStatusGainSupport, "STATUS_GAINSUPPORT"},
+    {motorStatusCommsError, "STATUS_COMMSERROR"},
+    {motorStatusLowLimit, "STATUS_LOWLIMIT"},
 };
 
 typedef enum{typeInt32, typeFloat64, typeFloat64Array} dataType;
@@ -83,7 +114,7 @@ typedef struct drvmotorAxisPvt {
     double min_velocity;
     double accel;
     /* Received status */
-    epicsInt32 status;
+    MotorStatus status;
     struct drvmotorPvt *pPvt;
     asynUser *pasynUser;
 } drvmotorAxisPvt;
@@ -92,6 +123,7 @@ typedef struct drvmotorPvt {
     char *portName;
     motorAxisDrvSET_t *drvset;
     int card;
+    int numAxes;
     drvmotorAxisPvt *axisData;
     /* Housekeeping */
     epicsMutexId lock;
@@ -106,7 +138,8 @@ typedef struct drvmotorPvt {
     asynInterface float64;
     void *float64InterruptPvt;
     asynInterface float64Array;
-    void *float64ArrayInterruptPvt;
+    void *motorStatusInterruptPvt;
+    asynInterface motorStatus;
     asynInterface drvUser;
     asynUser *pasynUser;
 } drvmotorPvt;
@@ -122,6 +155,8 @@ static asynStatus readFloat64       (void *drvPvt, asynUser *pasynUser,
                                      epicsFloat64 *value);
 static asynStatus writeFloat64      (void *drvPvt, asynUser *pasynUser,
                                      epicsFloat64 value);
+static asynStatus readMotorStatus   (void *drvPvt, asynUser *pasynUser,
+				     struct MotorStatus *value);
 static asynStatus drvUserCreate     (void *drvPvt, asynUser *pasynUser,
                                      const char *drvInfo, 
                                      const char **pptypeName, size_t *psize);
@@ -165,14 +200,23 @@ static asynFloat64Array drvMotorFloat64Array = {
     NULL,
     NULL
 };
+
+static asynMotorStatus drvMotorMotorStatus = {
+    NULL,
+    readMotorStatus,
+};
+
 static asynDrvUser drvMotorDrvUser = {
     drvUserCreate,
     drvUserGetType,
     drvUserDestroy
 };
 
+static asynUser *defaultAsynUser;
+
 
-int drvAsynMotorConfigure(const char *portName, const char *driverName, int card, int num_axes)
+int drvAsynMotorConfigure(const char *portName, const char *driverName,
+			  int card, int num_axes)
 {
     drvmotorPvt *pPvt;
     drvmotorAxisPvt *pAxis;
@@ -200,11 +244,15 @@ int drvAsynMotorConfigure(const char *portName, const char *driverName, int card
     pPvt->float64Array.interfaceType = asynFloat64ArrayType;
     pPvt->float64Array.pinterface  = (void *)&drvMotorFloat64Array;
     pPvt->float64Array.drvPvt = pPvt;
+    pPvt->motorStatus.interfaceType = asynMotorStatusType;
+    pPvt->motorStatus.pinterface  = (void *)&drvMotorMotorStatus;
+    pPvt->motorStatus.drvPvt = pPvt;
     pPvt->drvUser.interfaceType = asynDrvUserType;
     pPvt->drvUser.pinterface  = (void *)&drvMotorDrvUser;
     pPvt->drvUser.drvPvt = pPvt;
+
     status = pasynManager->registerPort(portName,
-                                        ASYN_MULTIDEVICE, /*is multiDevice*/
+                                        ASYN_MULTIDEVICE | ASYN_CANBLOCK,
                                         1,  /*  autoconnect */
                                         0,  /* medium priority */
                                         0); /* default stack size */
@@ -217,6 +265,7 @@ int drvAsynMotorConfigure(const char *portName, const char *driverName, int card
         errlogPrintf("drvAsynMotorConfigure ERROR: Can't register common.\n");
         return -1;
     }
+
     status = pasynInt32Base->initialize(pPvt->portName,&pPvt->int32);
     if (status != asynSuccess) {
         errlogPrintf("drvAsynMotorConfigure ERROR: Can't register int32\n");
@@ -224,6 +273,7 @@ int drvAsynMotorConfigure(const char *portName, const char *driverName, int card
     }
     pasynManager->registerInterruptSource(portName, &pPvt->int32,
                                           &pPvt->int32InterruptPvt);
+
     status = pasynFloat64Base->initialize(pPvt->portName,&pPvt->float64);
     if (status != asynSuccess) {
         errlogPrintf("drvAsynMotorConfigure ERROR: Can't register float64\n");
@@ -231,13 +281,21 @@ int drvAsynMotorConfigure(const char *portName, const char *driverName, int card
     }
     pasynManager->registerInterruptSource(portName, &pPvt->float64,
                                           &pPvt->float64InterruptPvt);
+
     status = pasynFloat64ArrayBase->initialize(pPvt->portName,&pPvt->float64Array);
     if (status != asynSuccess) {
         errlogPrintf("drvAsynMotorConfigure ERROR: Can't register float64Array\n");
         return -1;
     }
-    pasynManager->registerInterruptSource(portName, &pPvt->float64Array,
-                                          &pPvt->float64ArrayInterruptPvt);
+
+    status = pasynMotorStatusBase->initialize(pPvt->portName,&pPvt->motorStatus);
+    if (status != asynSuccess) {
+        errlogPrintf("drvAsynMotorConfigure ERROR: Can't register motorStatus\n");
+        return -1;
+    }
+    pasynManager->registerInterruptSource(portName, &pPvt->motorStatus,
+                                          &pPvt->motorStatusInterruptPvt);
+
     status = pasynManager->registerInterface(pPvt->portName,&pPvt->drvUser);
     if (status != asynSuccess) {
         errlogPrintf("drvAsynMotorConfigure ERROR: Can't register drvUser\n");
@@ -257,14 +315,16 @@ int drvAsynMotorConfigure(const char *portName, const char *driverName, int card
     pPvt->card = card;
     config(pPvt);
 
-    pPvt->axisData = pasynManager->memMalloc(num_axes * sizeof(drvmotorAxisPvt));
-    if (!pPvt->axisData) {
-	errlogPrintf("drvAsynMotorConfigure ERROR: Cannot allocate memory\n");
-	return -1;
-    }
+    pPvt->numAxes = num_axes;
+
+    pPvt->axisData = callocMustSucceed(num_axes, sizeof(drvmotorAxisPvt), "drvAsynMotorConfigure");
     for ( i = 0; i < num_axes; i++) {
 	pAxis = &pPvt->axisData[i];
 	pAxis->axis = (*pPvt->drvset->open)(card, i, "");
+	if (!pAxis->axis) {
+	    asynPrint(pPvt->pasynUser, ASYN_TRACE_ERROR, 
+		      "drvAsynMotorConfigure: Failed to open axis %d\n", i);
+	}
 	pAxis->num = i;
 	pAxis->pPvt = pPvt;
         /* Create asynUser for debugging */
@@ -275,11 +335,17 @@ int drvAsynMotorConfigure(const char *portName, const char *driverName, int card
             errlogPrintf("drvAsynMotorConfigure, connectDevice failed\n");
             return -1;
         }
-	(*pPvt->drvset->setCallback)(pAxis->axis, intCallback, (void *)pAxis);
-	(*pPvt->drvset->setLogParam)(pAxis->axis, pAxis->pasynUser);
-	(*pPvt->drvset->setLog)(logFunc);
-	setDefaults(pAxis);
+	if (pAxis->axis) {
+	    (*pPvt->drvset->setCallback)(pAxis->axis, intCallback, (void *)pAxis);
+            (*pPvt->drvset->setLog)(pAxis->axis, logFunc, pAxis->pasynUser);
+	}
+	/* All other axis parameters are initialised to zero at allocation */
     }
+    /* Create a fallback asynUser for logging, but only the first time */
+    if (!defaultAsynUser) {
+	defaultAsynUser = pasynManager->createAsynUser(0,0);
+    }
+    (*pPvt->drvset->setLog)(NULL, logFunc, defaultAsynUser );
 
     return 0;
 }
@@ -300,21 +366,37 @@ static asynStatus readInt32(void *drvPvt, asynUser *pasynUser,
     motorCommand command = pasynUser->reason;
 
     pasynManager->getAddr(pasynUser, &channel);
+    if (channel >= pPvt->numAxes) {
+	epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+		      "drvMotorAsyn::readInt32 Invalid axis %d", channel);
+	return(asynError);
+    }
+
     pAxis = &pPvt->axisData[channel];
+    if (!pAxis->axis) {
+	epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+		      "drvMotorAsyn::readInt32 Uninitialised axis %d", pAxis->num);
+	return(asynError);
+    }
 
     switch(command) {
-    case motorPosition:
-    case motorEncoderPosition:
-	(*pPvt->drvset->getInteger)(pAxis->axis, command, value);
-	break;
-    default:
+    case -1:   /* This is commands we know about but don't want int32 interface for */
         epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
                       "drvMotorAsyn::readInt32 invalid command=%d",
                       command);
         return(asynError);
+    case motorStatus:
+	*value = pAxis->status.status;
+	break;
+    case motorPosition:
+    case motorEncoderPosition:
+    default:
+	(*pPvt->drvset->getInteger)(pAxis->axis, command, value);
+	break;
     }
     asynPrint(pasynUser, ASYN_TRACEIO_DRIVER,
-              "drvMotorAsyn::readInt32, value=%d\n", *value);
+              "drvMotorAsyn::readInt32, reason=%d, value=%d\n", 
+	      command, *value);
     return(asynSuccess);
 }
 
@@ -329,9 +411,25 @@ static asynStatus readFloat64(void *drvPvt, asynUser *pasynUser,
     asynStatus status = asynSuccess;
 
     pasynManager->getAddr(pasynUser, &channel);
+    if (channel >= pPvt->numAxes) {
+	epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+		      "drvMotorAsyn::readFloat64 Invalid axis %d", channel);
+	return(asynError);
+    }
+
     pAxis = &pPvt->axisData[channel];
+    if (!pAxis->axis) {
+	epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+		      "drvMotorAsyn::readFloat64 Uninitialised axis %d", pAxis->num);
+	return(asynError);
+    }
 
     switch(command) {
+    case -1:
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                      "drvMotorAsyn::readFloat64 invalid command=%d",
+                      command);
+        return(asynError);
     case motorVelocity:
 	*value = pAxis->max_velocity;
 	break;
@@ -343,16 +441,13 @@ static asynStatus readFloat64(void *drvPvt, asynUser *pasynUser,
 	break;
     case motorPosition:
     case motorEncoderPosition:
+    default:
 	(*pPvt->drvset->getDouble)(pAxis->axis, command, value);
 	break;
-    default:
-        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
-                      "drvMotorAsyn::readFloat64 invalid command=%d",
-                      command);
-        return(asynError);
     }
     asynPrint(pasynUser, ASYN_TRACEIO_DRIVER,
-              "drvMotorAsyn::readFloat64, value=%f\n", *value);
+              "drvMotorAsyn::readFloat64, reason=%d, value=%f\n", 
+	      command, *value);
     return(status);
 }
 
@@ -376,9 +471,25 @@ static asynStatus writeInt32(void *drvPvt, asynUser *pasynUser,
     asynStatus status;
 
     pasynManager->getAddr(pasynUser, &channel);
+    if (channel >= pPvt->numAxes) {
+	epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+		      "drvMotorAsyn::writeInt32 Invalid axis %d", channel);
+	return(asynError);
+    }
+
     pAxis = &pPvt->axisData[channel];
+    if (!pAxis->axis) {
+	epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+		      "drvMotorAsyn::writeInt32 Uninitialised axis %d", pAxis->num);
+	return(asynError);
+    }
 
     switch(command) {
+    case -1:
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                      "drvMotorAsyn::writeInt32D invalid command=%d",
+                      command);
+        return(asynError);
     case motorStop:
 	status = (*pPvt->drvset->stop)(pAxis->axis, pAxis->accel);
 	break;
@@ -392,14 +503,12 @@ static asynStatus writeInt32(void *drvPvt, asynUser *pasynUser,
 					     value);
 	break;
     default:
-        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
-                      "drvMotorAsyn::writeInt32D invalid command=%d",
-                      command);
-        return(asynError);
+	status = (*pPvt->drvset->setInteger)(pAxis->axis, command, value);
 	break;
     }
     asynPrint(pasynUser, ASYN_TRACEIO_DRIVER,
-	      "drvMotorAsyn::writeInt32, value=%d\n", value);
+	      "drvMotorAsyn::writeInt32, reason=%d, value=%d\n",
+	      command, value);
     return(status);
 }
 
@@ -413,13 +522,29 @@ static asynStatus writeFloat64(void *drvPvt, asynUser *pasynUser,
     asynStatus status = asynError;
 
     pasynManager->getAddr(pasynUser, &channel);
+    if (channel >= pPvt->numAxes) {
+	epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+		      "drvMotorAsyn::writeFloat64 Invalid axis %d", channel);
+	return(asynError);
+    }
+
     pAxis = &pPvt->axisData[channel];
+    if (!pAxis->axis) {
+	epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+		      "drvMotorAsyn::writeFloat64 Uninitialised axis %d", pAxis->num);
+	return(asynError);
+    }
 
     asynPrint(pasynUser, ASYN_TRACE_FLOW,
 	      "drvMotorAsyn::writeFloat64, reason=%d, pasynUser=%p pAxis=%p\n",
 	      command, pasynUser, pAxis);
 
     switch(command) {
+    case -1:
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                      "drvMotorAsyn::writeFloat64 invalid command=%d",
+                      command);
+        return(asynError);
     case motorMoveRel:
 	status = (*pPvt->drvset->move)(pAxis->axis, value, 1, pAxis->min_velocity,
 			       pAxis->max_velocity, pAxis->accel);
@@ -454,52 +579,81 @@ static asynStatus writeFloat64(void *drvPvt, asynUser *pasynUser,
     case motorDgain:
     case motorHighLim:
     case motorLowLim:
+    default:
 	status = (*pPvt->drvset->setDouble)(pAxis->axis, command, value);
 	break;
-    default:
-        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
-                      "drvMotorAsyn::writeFloat64 invalid command=%d",
-                      command);
-        return(asynError);
     }
     asynPrint(pasynUser, ASYN_TRACEIO_DRIVER,
               "drvMotorAsyn::writeFloat64, reason=%d, value=%f\n",
 	      command, value);
     return(status);
 }
-
-static void setDefaults(drvmotorAxisPvt *pAxis)
-{
-    pAxis->max_velocity = 200.0;
-    pAxis->min_velocity = 0.0;
-    pAxis->accel = 100.0;
-}
 
+static asynStatus readMotorStatus(void *drvPvt, asynUser *pasynUser, 
+				  struct MotorStatus *value)
+{
+    drvmotorPvt *pPvt = (drvmotorPvt *)drvPvt;
+    drvmotorAxisPvt *pAxis;
+    int channel;
+
+    pasynManager->getAddr(pasynUser, &channel);
+    if (channel >= pPvt->numAxes) {
+	epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+		      "drvMotorAsyn::readMotorStatus Invalid axis %d", channel);
+	return(asynError);
+    }
+
+    pAxis = &pPvt->axisData[channel];
+    if (!pAxis->axis) {
+	epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+		      "drvMotorAsyn::readMotorStatus Uninitialised axis %d", pAxis->num);
+	return(asynError);
+    }
+
+    if (value) {
+	value->status = pAxis->status.status;
+	(*pPvt->drvset->getDouble)(pAxis->axis, motorPosition,
+				   &(value->position));
+	(*pPvt->drvset->getDouble)(pAxis->axis, motorEncoderPosition,
+				   &(value->encoder_posn));
+	(*pPvt->drvset->getDouble)(pAxis->axis, motorVelocity,
+				   &(value->velocity));
+    }
+						     
+    asynPrint(pasynUser, ASYN_TRACEIO_DRIVER,
+              "drvMotorAsyn::readMotorStatus, [%08x,%f,%f,%f]\n",
+	      value->status, value->position, value->encoder_posn,
+	      value->velocity);
+    return(asynSuccess);
+}
+
 static int logFunc(void *userParam,
                    const motorAxisLogMask_t logMask,
                    const char *pFormat, ...)
 {
     va_list     pvar;
     asynUser    *pasynUser = (asynUser *)userParam;
-    int         reason;
 
-    reason=pasynTrace->getTraceMask(pasynUser);
+    if (!pasynUser) {
+	pasynUser = defaultAsynUser;
+    }
+
     va_start(pvar, pFormat);
     switch(logMask) {
     case motorAxisTraceError:
-        if (reason & ASYN_TRACE_ERROR) vfprintf(stdout, pFormat, pvar);
+        pasynTrace->vprint(pasynUser, ASYN_TRACE_ERROR, pFormat, pvar);
         break;
     case motorAxisTraceIODevice:
-        if (reason & ASYN_TRACEIO_DEVICE) vfprintf(stdout, pFormat, pvar);
+        pasynTrace->vprint(pasynUser, ASYN_TRACEIO_DEVICE, pFormat, pvar);
         break;
     case motorAxisTraceIOFilter:
-        if (reason & ASYN_TRACEIO_FILTER) vfprintf(stdout, pFormat, pvar);
+        pasynTrace->vprint(pasynUser, ASYN_TRACEIO_FILTER, pFormat, pvar);
         break;
     case motorAxisTraceIODriver:
-        if (reason & ASYN_TRACEIO_DRIVER) vfprintf(stdout, pFormat, pvar);
+        pasynTrace->vprint(pasynUser, ASYN_TRACEIO_DRIVER, pFormat, pvar);
         break;
     case motorAxisTraceFlow:
-        if (reason & ASYN_TRACE_FLOW) vfprintf(stdout, pFormat, pvar);
+        pasynTrace->vprint(pasynUser, ASYN_TRACE_FLOW, pFormat, pvar);
         break;
     default:
         asynPrint(pasynUser, ASYN_TRACE_ERROR, "drvMotorAsyn:logFunc unknown logMask %d\n", logMask);
@@ -532,9 +686,58 @@ static void intCallback(void *axisPvt, unsigned int nChanged,
 	    bit_num = changed[i] - motorAxisDirection;
 	    changedmask |= (1 << bit_num);
 	    (*pPvt->drvset->getInteger)(pAxis->axis, changed[i], &ivalue);
-	    BIT_SET(bit_num, &pAxis->status, ivalue);
+	    BIT_SET(bit_num, &(pAxis->status.status), ivalue);
 	}
+	if (changed[i] == motorPosition) {
+	    (*pPvt->drvset->getDouble)(pAxis->axis, changed[i], 
+				       &(pAxis->status.position));
+	}
+	if (changed[i] == motorEncoderPosition) {
+	    (*pPvt->drvset->getDouble)(pAxis->axis, changed[i], 
+				       &(pAxis->status.encoder_posn));
+	}
+	/*	if (changed[i] == motorVelocity) {
+	    (*pPvt->drvset->getDouble)(pAxis->axis, changed[i], 
+				       &(pAxis->status.velocity));
+				       }*/
     }
+
+    /* Pass float64 interrupts */
+    pasynManager->interruptStart(pPvt->float64InterruptPvt, &pclientList);
+    pnode = (interruptNode *)ellFirst(pclientList);
+    while (pnode) {
+	asynFloat64Interrupt *pfloat64Interrupt = pnode->drvPvt;
+	addr = pfloat64Interrupt->addr;
+	reason = pfloat64Interrupt->pasynUser->reason;
+	if (addr == pAxis->num) {
+	    for (i = 0; i < nChanged; i++) {
+		if (changed[i] == reason) {
+		    (*pPvt->drvset->getDouble)(pAxis->axis, changed[i], &dvalue);
+		    pfloat64Interrupt->callback(pfloat64Interrupt->userPvt, 
+						pfloat64Interrupt->pasynUser,
+						dvalue);
+		}
+	    }
+	}
+	pnode = (interruptNode *)ellNext(&pnode->node);
+    }
+    pasynManager->interruptEnd(pPvt->float64InterruptPvt);
+
+    /* Pass motorStatus interrupts */
+    pasynManager->interruptStart(pPvt->motorStatusInterruptPvt, &pclientList);
+    pnode = (interruptNode *)ellFirst(pclientList);
+    while (pnode) {
+	asynMotorStatusInterrupt *pmotorStatusInterrupt = pnode->drvPvt;
+	addr = pmotorStatusInterrupt->addr;
+	reason = pmotorStatusInterrupt->pasynUser->reason;
+	if (addr == pAxis->num) {
+	    pmotorStatusInterrupt->callback(pmotorStatusInterrupt->userPvt, 
+					    pmotorStatusInterrupt->pasynUser,
+					    &pAxis->status );
+	}
+	pnode = (interruptNode *)ellNext(&pnode->node);
+    }
+    pasynManager->interruptEnd(pPvt->motorStatusInterruptPvt);
 
     /* Pass int32 interrupts */
     pasynManager->interruptStart(pPvt->int32InterruptPvt, &pclientList);
@@ -555,59 +758,21 @@ static void intCallback(void *axisPvt, unsigned int nChanged,
 		}
 	    }
 	    /* If we've subscribed to the aggregate status */
-	    if (reason == motorStatus) {
+	    else if (reason == motorStatus) {
 		pint32Interrupt->callback(pint32Interrupt->userPvt,
 					  pint32Interrupt->pasynUser,
-					  pAxis->status);
+					  pAxis->status.status);
+	    }
+            else {
+	        (*pPvt->drvset->getInteger)(pAxis->axis, reason, &ivalue);
+		pint32Interrupt->callback(pint32Interrupt->userPvt, 
+					  pint32Interrupt->pasynUser,
+					  ivalue);
 	    }
 	}
 	pnode = (interruptNode *)ellNext(&pnode->node);
     }
     pasynManager->interruptEnd(pPvt->int32InterruptPvt);
-    
-    /* Pass float64 interrupts */
-    pasynManager->interruptStart(pPvt->float64InterruptPvt, &pclientList);
-    pnode = (interruptNode *)ellFirst(pclientList);
-    while (pnode) {
-	asynFloat64Interrupt *pfloat64Interrupt = pnode->drvPvt;
-	addr = pfloat64Interrupt->addr;
-	reason = pfloat64Interrupt->pasynUser->reason;
-	if (addr == pAxis->num) {
-	    switch(reason) {
-	    case motorPosition:
-	    case motorEncoderPosition:
-		for (i = 0; i < nChanged; i++) {
-		    if (changed[i] == reason) {
-			(*pPvt->drvset->getDouble)(pAxis->axis, changed[i], &dvalue);
-			pfloat64Interrupt->callback(pfloat64Interrupt->userPvt, 
-						    pfloat64Interrupt->pasynUser,
-						    dvalue);
-		    }
-		}
-		break;
-	    }
-	}
-	pnode = (interruptNode *)ellNext(&pnode->node);
-    }
-    pasynManager->interruptEnd(pPvt->float64InterruptPvt);
-
-    /* Pass float64Array interrupts */
-    pasynManager->interruptStart(pPvt->float64ArrayInterruptPvt, &pclientList);
-    pnode = (interruptNode *)ellFirst(pclientList);
-    while (pnode) {
-	asynFloat64ArrayInterrupt *pfloat64ArrayInterrupt = pnode->drvPvt;
-	reason = pfloat64ArrayInterrupt->pasynUser->reason;
-	switch(reason) {
-	case motorPosition:
-	    /*	    pfloat64ArrayInterrupt->callback(pfloat64ArrayInterrupt->userPvt, 
-		    pfloat64ArrayInterrupt->pasynUser,
-		    pPvt->position, 
-		    MAX_AXES);*/
-	    break;
-	}
-	pnode = (interruptNode *)ellNext(&pnode->node);
-    }
-    pasynManager->interruptEnd(pPvt->float64ArrayInterruptPvt);
 }
 
 
@@ -716,17 +881,17 @@ static void report(void *drvPvt, FILE *fp, int details)
         }
         pasynManager->interruptEnd(pPvt->float64InterruptPvt);
 
-        /* Report int32Array interrupts */
-        pasynManager->interruptStart(pPvt->float64ArrayInterruptPvt, &pclientList);
+        /* Report motorStatus interrupts */
+        pasynManager->interruptStart(pPvt->motorStatusInterruptPvt, &pclientList);
         pnode = (interruptNode *)ellFirst(pclientList);
         while (pnode) {
-            asynFloat64ArrayInterrupt *pfloat64ArrayInterrupt = pnode->drvPvt;
-            fprintf(fp, "    float64Array callback client address=%p, reason=%d\n",
-                    pfloat64ArrayInterrupt->callback, 
-                    pfloat64ArrayInterrupt->pasynUser->reason); 
+            asynMotorStatusInterrupt *pmotorStatusInterrupt = pnode->drvPvt;
+            fprintf(fp, "    motorStatus callback client address=%p, reason=%d\n",
+                    pmotorStatusInterrupt->callback, 
+                    pmotorStatusInterrupt->pasynUser->reason); 
             pnode = (interruptNode *)ellNext(&pnode->node);
         }
-        pasynManager->interruptEnd(pPvt->float64ArrayInterruptPvt);
+        pasynManager->interruptEnd(pPvt->motorStatusInterruptPvt);
     }
 }
 
