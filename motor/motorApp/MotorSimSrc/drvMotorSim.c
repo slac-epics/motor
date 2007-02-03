@@ -1,3 +1,20 @@
+/*
+FILENAME...	drvMotorSim.c
+USAGE...	Simulated Motor Support.
+
+Version:	1.7
+Modified By:	peterd
+Last Modified:	2007/02/03 12:07:17
+*/
+
+/*
+ *
+ *
+ * Modification Log:
+ * -----------------
+ * 20060506 npr Added prolog
+ */
+
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -23,15 +40,13 @@
 
 motorAxisDrvSET_t motorSim = 
   {
-    20,
+    14,
     motorAxisReport,            /**< Standard EPICS driver report function (optional) */
     motorAxisInit,              /**< Standard EPICS dirver initialisation function (optional) */
     motorAxisSetLog,            /**< Defines an external logging function (optional) */
-    motorAxisSetLogParam,       /**< Defines an external logging function user parameter (optional) */
     motorAxisOpen,              /**< Driver open function */
     motorAxisClose,             /**< Driver close function */
     motorAxisSetCallback,       /**< Provides a callback function the driver can call when the status updates */
-    motorAxisPrimitive,         /**< Passes a controller dependedent string */
     motorAxisSetDouble,         /**< Pointer to function to set a double value */
     motorAxisSetInteger,        /**< Pointer to function to set an integer value */
     motorAxisGetDouble,         /**< Pointer to function to get a double value */
@@ -64,6 +79,7 @@ typedef struct motorAxisHandle
   double enc_offset;
   double home;
   int homing;
+  motorAxisLogFunc print;
   void * logParam;
   epicsTimeStamp tLast;
   epicsMutexId axisMutex;
@@ -74,43 +90,43 @@ typedef struct
   AXIS_HDL pFirst;
   epicsThreadId motorThread;
   motorAxisLogFunc print;
+  void * logParam;
   epicsTimeStamp now;
 } motorSim_t;
 
 static int motorSimLogMsg( void * param, const motorAxisLogMask_t logMask, const char *pFormat, ...);
-#define PRINT   (drv.print)
-#define FLOW    motorAxisTraceFlow
-#define ERROR   motorAxisTraceError
+#define TRACE_FLOW    motorAxisTraceFlow
+#define TRACE_ERROR   motorAxisTraceError
 
-static motorSim_t drv={ NULL, NULL, motorSimLogMsg, { 0, 0 } };
+static motorSim_t drv={ NULL, NULL, motorSimLogMsg, NULL, { 0, 0 } };
 
 #define MAX(a,b) ((a)>(b)? (a): (b))
 #define MIN(a,b) ((a)<(b)? (a): (b))
 
 static void motorAxisReportAxis( AXIS_HDL pAxis, int level )
 {
-    printf( "Found driver for motorSim card %d, axis %d", pAxis->card, pAxis->axis );
+    printf( "Found driver for motorSim card %d, axis %d\n", pAxis->card, pAxis->axis );
 
     if (level > 0)
     {
         double lowSoftLimit=0.0;
         double hiSoftLimit=0.0;
 
-        printf( "Current position = %f, velocity = %f at current time: %f", 
+        printf( "Current position = %f, velocity = %f at current time: %f\n", 
                pAxis->nextpoint.axis[0].p, 
                pAxis->nextpoint.axis[0].v,
                pAxis->nextpoint.T );
-        printf( "Destination posn = %f, velocity = %f at desination time:  %f",
+        printf( "Destination posn = %f, velocity = %f at desination time:  %f\n",
                pAxis->endpoint.axis[0].p, 
                pAxis->endpoint.axis[0].v,
                pAxis->endpoint.T );
 
-        printf( "Hard limits: %f, %f", pAxis->lowHardLimit, pAxis->hiHardLimit );
+        printf( "Hard limits: %f, %f\n", pAxis->lowHardLimit, pAxis->hiHardLimit );
         motorParam->getDouble( pAxis->params, motorAxisHighLimit, &hiSoftLimit );
         motorParam->getDouble( pAxis->params, motorAxisLowLimit, &lowSoftLimit );
-        printf( "Soft limits: %f, %f", lowSoftLimit, hiSoftLimit );
+        printf( "Soft limits: %f, %f\n", lowSoftLimit, hiSoftLimit );
 
-        if (pAxis->homing) printf( "Currently homing axis" );
+        if (pAxis->homing) printf( "Currently homing axis\n" );
 
         motorParam->dump( pAxis->params );
     }
@@ -129,22 +145,35 @@ static int motorAxisInit( void )
   return MOTOR_AXIS_OK;
 }
 
-static int motorAxisSetLog( motorAxisLogFunc logFunc )
+static int motorAxisSetLog( AXIS_HDL pAxis, motorAxisLogFunc logFunc, void * param )
 {
-  if (logFunc == NULL) drv.print=motorSimLogMsg;
-  else drv.print = logFunc;
-
-  return MOTOR_AXIS_OK;
-}
-
-static int motorAxisSetLogParam( AXIS_HDL pAxis, void * param )
-{
-  if (pAxis == NULL) return MOTOR_AXIS_ERROR;
-  else
+    if (pAxis == NULL) 
     {
-      pAxis->logParam = param;
+        if (logFunc == NULL)
+        {
+            drv.print=motorSimLogMsg;
+            drv.logParam = NULL;
+        }
+        else
+        {
+            drv.print=logFunc;
+            drv.logParam = param;
+        }
     }
-  return MOTOR_AXIS_OK;
+    else
+    {
+        if (logFunc == NULL)
+        {
+            pAxis->print=motorSimLogMsg;
+            pAxis->logParam = NULL;
+        }
+        else
+        {
+            pAxis->print=logFunc;
+            pAxis->logParam = param;
+        }
+    }
+    return MOTOR_AXIS_OK;
 }
 
 static AXIS_HDL motorAxisOpen( int card, int axis, char * param )
@@ -190,11 +219,6 @@ static int motorAxisSetCallback( AXIS_HDL pAxis, motorAxisCallbackFunc callback,
     }
 }
 
-static int motorAxisPrimitive( AXIS_HDL pAxis, int length, char * string )
-{
-  return MOTOR_AXIS_OK;
-}
-
 static int motorAxisSetDouble( AXIS_HDL pAxis, motorAxisParam_t function, double value )
 {
     int status = MOTOR_AXIS_OK;
@@ -207,47 +231,47 @@ static int motorAxisSetDouble( AXIS_HDL pAxis, motorAxisParam_t function, double
         case motorAxisPosition:
         {
             pAxis->enc_offset = value - pAxis->nextpoint.axis[0].p;
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d to position %f", pAxis->card, pAxis->axis, value );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d to position %f", pAxis->card, pAxis->axis, value );
             break;
         }
         case motorAxisResolution:
         {
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d resolution to %f", pAxis->card, pAxis->axis, value );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d resolution to %f", pAxis->card, pAxis->axis, value );
             break;
         }
         case motorAxisEncoderRatio:
         {
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d to enc. ratio to %f", pAxis->card, pAxis->axis, value );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d to enc. ratio to %f", pAxis->card, pAxis->axis, value );
             break;
         }
         case motorAxisLowLimit:
         {
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d low limit to %f", pAxis->card, pAxis->axis, value );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d low limit to %f", pAxis->card, pAxis->axis, value );
             break;
         }
         case motorAxisHighLimit:
         {
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d high limit to %f", pAxis->card, pAxis->axis, value );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d high limit to %f", pAxis->card, pAxis->axis, value );
             break;
         }
         case motorAxisPGain:
         {
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d pgain to %f", pAxis->card, pAxis->axis, value );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d pgain to %f", pAxis->card, pAxis->axis, value );
             break;
         }
         case motorAxisIGain:
         {
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d igain to %f", pAxis->card, pAxis->axis, value );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d igain to %f", pAxis->card, pAxis->axis, value );
             break;
         }
         case motorAxisDGain:
         {
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d dgain to %f", pAxis->card, pAxis->axis, value );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d dgain to %f", pAxis->card, pAxis->axis, value );
             break;
         }
         case motorAxisClosedLoop:
         {
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d closed loop to %s", pAxis->card, pAxis->axis, (value!=0?"ON":"OFF") );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d closed loop to %s", pAxis->card, pAxis->axis, (value!=0?"ON":"OFF") );
             break;
         }
         default:
@@ -272,22 +296,22 @@ static int motorAxisSetInteger( AXIS_HDL pAxis, motorAxisParam_t function, int v
         case motorAxisPosition:
         {
             pAxis->enc_offset = (double) value - pAxis->nextpoint.axis[0].p;
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d to position %d", pAxis->card, pAxis->axis, value );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d to position %d", pAxis->card, pAxis->axis, value );
             break;
         }
         case motorAxisLowLimit:
         {
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d low limit to %d", pAxis->card, pAxis->axis, value );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d low limit to %d", pAxis->card, pAxis->axis, value );
             break;
         }
         case motorAxisHighLimit:
         {
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d high limit to %d", pAxis->card, pAxis->axis, value );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d high limit to %d", pAxis->card, pAxis->axis, value );
             break;
         }
         case motorAxisClosedLoop:
         {
-            PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d closed loop to %s", pAxis->card, pAxis->axis, (value?"ON":"OFF") );
+            pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d closed loop to %s", pAxis->card, pAxis->axis, (value?"ON":"OFF") );
             break;
         }
         default:
@@ -325,8 +349,8 @@ static int motorAxisMove( AXIS_HDL pAxis, double position, int relative, double 
           motorParam->setInteger( pAxis->params, motorAxisMoving, 1 );
 	  epicsMutexUnlock( pAxis->axisMutex );
 
-	  PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d move to %f, min vel=%f, max_vel=%f, accel=%f",
-		 pAxis->card, pAxis->axis, position, min_velocity, max_velocity, acceleration );
+	  pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d move to %f, min vel=%f, max_vel=%f, accel=%f",
+                        pAxis->card, pAxis->axis, position, min_velocity, max_velocity, acceleration );
 	}
     }
   return MOTOR_AXIS_OK;
@@ -370,8 +394,8 @@ static int motorAxisHome( AXIS_HDL pAxis, double min_velocity, double max_veloci
       status = motorAxisVelocity( pAxis, (forwards? max_velocity: -max_velocity), acceleration );
       pAxis->homing = 1;
 
-      PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d to home %s, min vel=%f, max_vel=%f, accel=%f",
-	     pAxis->card, pAxis->axis, (forwards?"FORWARDS":"REVERSE"), min_velocity, max_velocity, acceleration );
+      pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d to home %s, min vel=%f, max_vel=%f, accel=%f",
+                    pAxis->card, pAxis->axis, (forwards?"FORWARDS":"REVERSE"), min_velocity, max_velocity, acceleration );
     }
   return status;
 }
@@ -388,8 +412,8 @@ static int motorAxisVelocityMove(  AXIS_HDL pAxis, double min_velocity, double v
 	{
 	  status = motorAxisVelocity( pAxis, velocity, acceleration );
 	  epicsMutexUnlock( pAxis->axisMutex );
-	  PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d move with velocity of %f, accel=%f",
-		 pAxis->card, pAxis->axis, velocity, acceleration );
+	  pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d move with velocity of %f, accel=%f",
+                        pAxis->card, pAxis->axis, velocity, acceleration );
         }
     }
   return status;
@@ -412,8 +436,8 @@ static int motorAxisStop( AXIS_HDL pAxis, double acceleration )
     {
       motorAxisVelocity( pAxis, 0.0, acceleration );
 
-      PRINT( pAxis->logParam, FLOW, "Set card %d, axis %d to stop with accel=%f",
-	     pAxis->card, pAxis->axis, acceleration );
+      pAxis->print( pAxis->logParam, TRACE_FLOW, "Set card %d, axis %d to stop with accel=%f",
+                    pAxis->card, pAxis->axis, acceleration );
     }
   return MOTOR_AXIS_OK;
 }
@@ -515,10 +539,11 @@ static void motorSimTask( motorSim_t * pDrv )
     }
 }
 
-static int motorSimCreateAxis( motorSim_t * pDrv, int card, int axis, double lowLimit, double hiLimit, double home )
+static int motorSimCreateAxis( motorSim_t * pDrv, int card, int axis, double lowLimit, double hiLimit, double home, double start )
 {
   AXIS_HDL pAxis;
   AXIS_HDL * ppLast = &(pDrv->pFirst);
+  start=0;
 
   for ( pAxis = pDrv->pFirst;
 	pAxis != NULL &&
@@ -543,8 +568,9 @@ static int motorSimCreateAxis( motorSim_t * pDrv, int card, int axis, double low
 	  pars.axis[0].Vmax = 1.0;
 
 	  pAxis->endpoint.T = 0;
-	  pAxis->endpoint.axis[0].p = 0;
+	  pAxis->endpoint.axis[0].p = start;
 	  pAxis->endpoint.axis[0].v = 0;
+	  pAxis->nextpoint.axis[0].p = start;
 
 	  if ((pAxis->route = routeNew( &(pAxis->endpoint), &pars )) != NULL &&
 	      (pAxis->params = motorParam->create( 0, MOTOR_AXIS_NUM_PARAMS )) != NULL &&
@@ -555,8 +581,11 @@ static int motorSimCreateAxis( motorSim_t * pDrv, int card, int axis, double low
 	      pAxis->hiHardLimit = hiLimit;
 	      pAxis->lowHardLimit = lowLimit;
 	      pAxis->home = home;
+              pAxis->print = motorSimLogMsg;
+              pAxis->logParam = NULL;
+	      motorParam->setDouble(pAxis->params, motorAxisPosition, start);
 	      *ppLast = pAxis;
-	      PRINT( pAxis->logParam, FLOW, "Created motor for card %d, signal %d OK", card, axis );
+	      pAxis->print( pAxis->logParam, TRACE_FLOW, "Created motor for card %d, signal %d OK", card, axis );
 	    }
 	  else
 	    {
@@ -575,13 +604,13 @@ static int motorSimCreateAxis( motorSim_t * pDrv, int card, int axis, double low
     }
   else
     {
-      PRINT( pAxis->logParam, ERROR, "Motor for card %d, signal %d already exists", card, axis );
+      pAxis->print( pAxis->logParam, TRACE_ERROR, "Motor for card %d, signal %d already exists", card, axis );
       return MOTOR_AXIS_ERROR;
     }
 
   if (pAxis == NULL)
     {
-      PRINT( pAxis->logParam, ERROR, "Cannot create motor for card %d, signal %d", card, axis );
+      pAxis->print( pAxis->logParam, TRACE_ERROR, "Cannot create motor for card %d, signal %d", card, axis );
       return MOTOR_AXIS_ERROR;
     }
     
@@ -589,7 +618,7 @@ static int motorSimCreateAxis( motorSim_t * pDrv, int card, int axis, double low
 }
 
 
-void motorSimCreate( int card, int axis, double lowLimit, double hiLimit, double home, int nCards, int nAxes )
+void motorSimCreate( int card, int axis, int lowLimit, int hiLimit, int home, int nCards, int nAxes, int startPosn )
 {
   int i;
   int j;
@@ -597,8 +626,8 @@ void motorSimCreate( int card, int axis, double lowLimit, double hiLimit, double
   if (nCards < 1) nCards = 1;
   if (nAxes < 1 ) nAxes = 1;
 
-  PRINT( NULL, FLOW,
-	 "Creating motor simulator: card: %d, axis: %d, hi: %f, low %f, home: %f, ncards: %d, naxis: %d",
+  drv.print( drv.logParam, TRACE_FLOW,
+	 "Creating motor simulator: card: %d, axis: %d, hi: %d, low %d, home: %d, ncards: %d, naxis: %d",
 	 card, axis, hiLimit, lowLimit, home, nCards, nAxes );
 
   if (drv.motorThread==NULL)
@@ -610,7 +639,7 @@ void motorSimCreate( int card, int axis, double lowLimit, double hiLimit, double
 
       if (drv.motorThread == NULL)
 	{
-	  PRINT( NULL, ERROR, "Cannot start motor simulation thread" );
+	  drv.print( drv.logParam, TRACE_ERROR, "Cannot start motor simulation thread" );
 	  return;
 	}
     }
@@ -619,7 +648,7 @@ void motorSimCreate( int card, int axis, double lowLimit, double hiLimit, double
     {
       for (j = axis; j < axis+nAxes; j++ )
 	{
-	  motorSimCreateAxis( &drv, i, j, lowLimit, hiLimit, home );
+            motorSimCreateAxis( &drv, i, j, (double) lowLimit, (double) hiLimit, (double) home, (double) startPosn );
 	}
     }
 }
@@ -633,6 +662,6 @@ static int motorSimLogMsg( void * param, const motorAxisLogMask_t mask, const ch
     va_start(pvar, pFormat);
     nchar = vfprintf(stdout,pFormat,pvar);
     va_end (pvar);
-    printf("\n");
+    fprintf(stdout,"\n");
     return(nchar);
 }
