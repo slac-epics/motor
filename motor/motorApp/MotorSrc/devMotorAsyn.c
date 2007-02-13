@@ -1,5 +1,23 @@
-/* devMotorAsyn.c */
-/* Example device support module */
+/* 
+ * devMotorAsyn.c
+ * 
+ * Motor record common Asyn device support layer
+ * 
+ * Copyright (C) 2005-6 Peter Denison, Diamond Light Source
+ *
+ * This software is distributed subject to the EPICS Open Licence, which can
+ * be found at http://www.aps.anl.gov/epics/licence/open.php
+ * 
+ * Notwithstanding the above, explicit permission is granted for APS to 
+ * redistribute this software.
+ *
+ * Version: 1.17
+ * Modified by: rivers
+ * Last Modified: 2007/02/13 22:02:18
+ *
+ * Original Author: Peter Denison
+ * Current Author: Peter Denison
+ */
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -12,6 +30,7 @@
 #include <recSup.h>
 #include <devSup.h>
 #include <alarm.h>
+#include <epicsEvent.h>
 #include <cantProceed.h> /* !! for callocMustSucceed() */
 
 #include <asynDriver.h>
@@ -19,6 +38,7 @@
 #include <asynFloat64.h>
 #include <asynFloat64Array.h>
 #include <asynEpicsUtils.h>
+#include "asynMotorStatus.h"
 
 #include "motorRecord.h"
 #include "motor.h"
@@ -27,21 +47,20 @@
 #include "motor_interface.h"
 
 /*Create the dset for devMotor */
+static long init( int after );
 static long init_record(struct motorRecord *);
 static CALLBACK_VALUE update_values(struct motorRecord *);
 static long start_trans(struct motorRecord *);
 static RTN_STATUS build_trans( motor_cmnd, double *, struct motorRecord *);
 static RTN_STATUS end_trans(struct motorRecord *);
 static void asynCallback(asynUser *);
-static void statusCallback(void *, asynUser *, epicsInt32);
-static void positionCallback(void *, asynUser *, epicsFloat64);
-static void encoderCallback(void *, asynUser *, epicsFloat64);
+static void statusCallback(void *, asynUser *, struct MotorStatus *);
 
 typedef enum {int32Type, float64Type, float64ArrayType} interfaceType;
 
 struct motor_dset devMotorAsyn={ { 8,
 				NULL,
-				NULL,
+				(DEVSUPFUN) init,
 				(DEVSUPFUN) init_record,
                                   NULL },
 				update_values,
@@ -61,12 +80,8 @@ typedef struct {
 typedef struct
 {
     struct motorRecord * pmr;
-    epicsUInt32 status;  /**< bit mask of errors and other binary information. The
-			 bit positions are in motor.h */
-    epicsInt32 position; /**< Current motor position in motor steps (if not
-			 servoing) or demand position (if servoing) */
-    epicsInt32 encoder_position; /**< Current motor position in encoder units 
-				 (only available if a servo system). */
+    int moveRequestPending;
+    struct MotorStatus status;
     motor_cmnd move_cmd;
     double param;
     int needUpdate;
@@ -77,12 +92,49 @@ typedef struct
     void *asynFloat64Pvt;
     asynFloat64Array *pasynFloat64Array;
     void *asynFloat64ArrayPvt;
-    void *registrarPvt1;
-    void *registrarPvt2;
-    void *registrarPvt3;
+    asynMotorStatus *pasynMotorStatus;
+    void *asynMotorStatusPvt;
+    void *registrarPvt;
+    epicsEventId initEvent;
 } motorAsynPvt;
 
 
+
+/* The init routine is used to set a flag to indicate that it is OK to call dbScanLock */
+static int dbScanLockOK = 0;
+static long init( int after )
+{
+    dbScanLockOK = (after!=0);
+    return 0;
+}
+
+static void init_controller(struct motorRecord *pmr )
+{
+    /* This routine is copied out of the old motordevCom and initialises the controller
+       based on the record values. I think most of it should be transferred to init_record
+       which is one reason why I have separated it into another routine */
+    motorAsynPvt *pPvt = (motorAsynPvt *)pmr->dpvt;
+    double position = pPvt->status.position;
+
+    if ((fabs(pmr->dval) > pmr->rdbd && pmr->mres != 0) &&
+        ((position * pmr->mres) < pmr->rdbd))
+    {
+        double setPos = pmr->dval / pmr->mres;
+        epicsEventId initEvent = epicsEventCreate( epicsEventEmpty );
+
+        pPvt->initEvent = initEvent;
+
+        start_trans(pmr);
+        build_trans(LOAD_POS, &setPos, pmr);
+        end_trans(pmr);
+
+        if ( initEvent )
+        {
+            epicsEventMustWait(initEvent);
+            epicsEventDestroy(initEvent);
+        }
+    }
+}
 
 static long init_record(struct motorRecord * pmr )
 {
@@ -116,7 +168,7 @@ static long init_record(struct motorRecord * pmr )
     status = pasynManager->connectDevice(pasynUser, port, signal);
     if (status != asynSuccess) {
         asynPrint(pasynUser, ASYN_TRACE_ERROR,
-                  "devMcaAsyn::init_record, %s connectDevice failed to %s\n",
+                  "devMotorAsyn::init_record, %s connectDevice failed to %s\n",
                   pmr->name, port);
         goto bad;
     }
@@ -154,39 +206,29 @@ static long init_record(struct motorRecord * pmr )
     pPvt->pasynFloat64Array = (asynFloat64Array *)pasynInterface->pinterface;
     pPvt->asynFloat64ArrayPvt = pasynInterface->drvPvt;
 
-    /* Now connect the various callbacks, one for status, position and
-       encoder position */
+    /* Get the asynMotorStatus interface */
+    pasynInterface = pasynManager->findInterface(pasynUser,
+                                                 asynMotorStatusType, 1);
+    if (!pasynInterface) {
+        asynPrint(pasynUser, ASYN_TRACE_ERROR,
+                  "devMotorAsyn::init_record, %s find motorStatus interface failed\n",
+                  pmr->name);
+        goto bad;
+    }
+    pPvt->pasynMotorStatus = (asynMotorStatus *)pasynInterface->pinterface;
+    pPvt->asynMotorStatusPvt = pasynInterface->drvPvt;
+
+    /* Now connect the callback, to the combined MotorStatus interface */
     pasynUser = pasynManager->duplicateAsynUser(pPvt->pasynUser, asynCallback, 0);
     pasynUser->reason = motorStatus;
-    status = pPvt->pasynInt32->registerInterruptUser(pPvt->asynInt32Pvt,
-						     pasynUser,
-						     statusCallback,
-						     pPvt,&pPvt->registrarPvt1);
+    status = pPvt->pasynMotorStatus->registerInterruptUser(pPvt->asynMotorStatusPvt,
+							   pasynUser,
+							   statusCallback,
+							   pPvt,
+							   &pPvt->registrarPvt);
     if(status!=asynSuccess) {
 	printf("%s devMotorAsyn::init_record registerInterruptUser %s\n",
 	       pmr->name, pasynUser->errorMessage);
-    }
-
-    pasynUser = pasynManager->duplicateAsynUser(pPvt->pasynUser, asynCallback, 0);
-    pasynUser->reason = motorPosition;
-    status = pPvt->pasynFloat64->registerInterruptUser(pPvt->asynFloat64Pvt,
-						       pasynUser,
-						       positionCallback,
-						       pPvt,&pPvt->registrarPvt2);
-    if(status!=asynSuccess) {
-	printf("%s devMotorAsyn::init_record registerInterruptUser %s\n",
-	       pmr->name,pPvt->pasynUser->errorMessage);
-    }
-
-    pasynUser = pasynManager->duplicateAsynUser(pPvt->pasynUser, asynCallback, 0);
-    pasynUser->reason = motorEncoderPosition;
-    status = pPvt->pasynFloat64->registerInterruptUser(pPvt->asynFloat64Pvt,
-						       pasynUser,
-						       encoderCallback,
-						       pPvt,&pPvt->registrarPvt3);
-    if(status!=asynSuccess) {
-	printf("%s devMotorAsyn::init_record registerInterruptUser %s\n",
-	       pmr->name,pPvt->pasynUser->errorMessage);
     }
 
     /* Initiate calls to get the initial motor parameters
@@ -204,16 +246,12 @@ static long init_record(struct motorRecord * pmr )
 			      resolution);
 */
     pasynUser->reason = motorStatus;
-    pPvt->pasynInt32->read(pPvt->asynInt32Pvt, pasynUser,
-			   &pPvt->status);
-    pasynUser->reason = motorPosition;
-    pPvt->pasynInt32->read(pPvt->asynInt32Pvt, pasynUser,
-			   &pPvt->position);
-    pasynUser->reason = motorEncoderPosition;
-    pPvt->pasynInt32->read(pPvt->asynInt32Pvt, pasynUser,
-			   &pPvt->encoder_position);
+    pPvt->pasynMotorStatus->read(pPvt->asynMotorStatusPvt, pasynUser,
+				 &pPvt->status);
     pasynManager->freeAsynUser(pasynUser);
     pPvt->needUpdate = 1;
+
+    init_controller(pmr);
 
     return(0);
 bad:
@@ -228,11 +266,14 @@ CALLBACK_VALUE update_values(struct motorRecord * pmr)
 
     rc = NOTHING_DONE;
 
+    asynPrint(pPvt->pasynUser, ASYN_TRACEIO_DEVICE,
+        "%s devMotorAsyn::update_values, needUpdate=%d\n",
+        pmr->name, pPvt->needUpdate);
     if ( pPvt->needUpdate ) {
-	pmr->rmp = pPvt->position;
-	pmr->rep = pPvt->encoder_position;
-	/* pmr->rvel = ptrans->vel; */
-	pmr->msta = pPvt->status;
+	pmr->rmp = (epicsInt32)floor(pPvt->status.position + 0.5);
+	pmr->rep = (epicsInt32)floor(pPvt->status.encoder_posn + 0.5);
+	/* pmr->rvel = (epicsInt32)round(pPvt->status.velocity); */
+	pmr->msta = pPvt->status.status;
 	rc = CALLBACK_DATA;
 	pPvt->needUpdate = 0;
     }
@@ -319,6 +360,7 @@ static RTN_STATUS build_trans( motor_cmnd command,
 	pmsg->command = pPvt->move_cmd;
 	pmsg->dvalue = pPvt->param;
 	pPvt->move_cmd = -1;
+	pPvt->moveRequestPending++;
 	/* Do we need to set needUpdate and schedule a process here? */
 	/* or can we always guarantee to get at least one callback? */
 	/* Do we really need the callback? I assume so */
@@ -358,6 +400,12 @@ static RTN_STATUS build_trans( motor_cmnd command,
 	pmsg->ivalue = 0;
 	pmsg->interface = int32Type;
 	break;
+    case PRIMITIVE:
+	asynPrint(pasynUser, ASYN_TRACE_ERROR,
+		  "devMotorAsyn::send_msg: %s: PRIMITIVE no longer supported\n",
+		  pmr->name);
+	return(ERROR);
+	break;
     case SET_HIGH_LIMIT:
 	pmsg->command = motorHighLim;
 	pmsg->dvalue = *param;
@@ -369,16 +417,16 @@ static RTN_STATUS build_trans( motor_cmnd command,
     case GET_INFO:
 	pmsg->command = motorStatus;
 	pmsg->interface = float64ArrayType;
-	/* Check this - needUpdate can cause the callback mechanism to get
-	   stuck. Must ensure that the record will be processed after this */
-	pPvt->needUpdate = 1; 
 	break;
     case SET_RESOLUTION:
 	pmsg->command = motorResolution;
 	pmsg->dvalue = *param;
 	break;
     default:
-	status = ERROR;
+	asynPrint(pasynUser, ASYN_TRACE_ERROR,
+		  "devMotorAsyn::send_msg: %s: motor command %d not recognised\n",
+		  pmr->name, command);
+	return(ERROR);
     }
     
     /* Queue asyn request, so we get a callback when driver is ready */
@@ -398,12 +446,18 @@ static RTN_STATUS end_trans(struct motorRecord * pmr )
   return(OK);
 }
 
+/**
+ * Called once the request comes off the Asyn internal queue.
+ *
+ * The request is still "on its way down" at this point
+ */
 static void asynCallback(asynUser *pasynUser)
 {
     motorAsynPvt *pPvt = (motorAsynPvt *)pasynUser->userPvt;
     motorRecord *pmr = pPvt->pmr;
     motorAsynMessage *pmsg = pasynUser->userData;
     int status;
+    int commandIsMove = 0;
 
     asynPrint(pasynUser, ASYN_TRACE_FLOW,
               "devMotorAsyn::asynCallback: %s command=%d, ivalue=%d, dvalue=%f\n",
@@ -413,17 +467,15 @@ static void asynCallback(asynUser *pasynUser)
     switch (pmsg->command) {
     case motorStatus:
 	/* Read the current status of the device */
-	pPvt->pasynInt32->read(pPvt->asynInt32Pvt, pasynUser,
-			       &pPvt->status);
-	pasynUser->reason = motorPosition;
-	pPvt->pasynInt32->read(pPvt->asynInt32Pvt, pasynUser,
-			       &pPvt->position);
-	pasynUser->reason = motorEncoderPosition;
-	pPvt->pasynInt32->read(pPvt->asynInt32Pvt, pasynUser,
-			       &pPvt->encoder_position);
-	scanOnce(pmr);
+	pPvt->pasynMotorStatus->read(pPvt->asynMotorStatusPvt, pasynUser,
+				     &pPvt->status);
 	break;
 
+    case motorMoveAbs:
+    case motorMoveRel:
+    case motorHome:
+	commandIsMove = 1;
+	/* Intentional fall-through */
     default:
         if (pmsg->interface == int32Type) {
             pPvt->pasynInt32->write(pPvt->asynInt32Pvt, pasynUser,
@@ -434,6 +486,18 @@ static void asynCallback(asynUser *pasynUser)
         }
         break;
     }
+
+    if (dbScanLockOK) { /* effectively if iocInit has completed */
+	dbScanLock((dbCommon *)pmr);
+	if (commandIsMove) {
+	    pPvt->moveRequestPending--;
+	    if (!pPvt->moveRequestPending) {
+		pmr->rset->process((dbCommon*)pmr);
+	    }
+	}
+	dbScanUnlock((dbCommon *)pmr);
+    }
+
     pasynManager->memFree(pmsg, sizeof(*pmsg));
     status = pasynManager->freeAsynUser(pasynUser);
     if (status != asynSuccess) {
@@ -441,76 +505,34 @@ static void asynCallback(asynUser *pasynUser)
                   "devMotorAsyn::asynCallback: %s error in freeAsynUser, %s\n",
                   pmr->name, pasynUser->errorMessage);
     }
+
+    if ( pPvt->initEvent ) epicsEventSignal(  pPvt->initEvent );
 }
 
+/**
+ * True callback to notify that controller status has changed.
+ */
 static void statusCallback(void *drvPvt, asynUser *pasynUser,
-			   epicsInt32 value)
+			   struct MotorStatus *value)
 {
     motorAsynPvt *pPvt = (motorAsynPvt *)drvPvt;
     motorRecord *pmr = pPvt->pmr;
 
     asynPrint(pasynUser, ASYN_TRACEIO_DEVICE,
-        "%s devMotorAsyn::statusCallback new value=%d\n",
-        pmr->name, value);
+	      "%s devMotorAsyn::statusCallback new value=[p:%f,e:%f,s:%x] %c%c\n",
+	      pmr->name, value->position, value->encoder_posn, value->status,
+	      pPvt->needUpdate?'N':' ', pPvt->moveRequestPending?'P':' ');
 
-    if (interruptAccept) {
+    if (dbScanLockOK) {
         dbScanLock((dbCommon *)pmr);
-        pPvt->status = value;
-        dbScanUnlock((dbCommon*)pmr);
-        if (!pPvt->needUpdate) {
+        memcpy(&pPvt->status, value, sizeof(struct MotorStatus));
+        if (!pPvt->needUpdate && !pPvt->moveRequestPending) {
 	    pPvt->needUpdate = 1;
-	    scanOnce(pmr);
+	    pmr->rset->process((dbCommon*)pmr);
         }
-    } else {
-        pPvt->status = value;
-        pPvt->needUpdate = 1;
-    }
-}
-
-static void positionCallback(void *drvPvt, asynUser *pasynUser,
-			     epicsFloat64 value)
-{
-    motorAsynPvt *pPvt = (motorAsynPvt *)drvPvt;
-    motorRecord *pmr = pPvt->pmr;
-
-    asynPrint(pasynUser, ASYN_TRACEIO_DEVICE,
-        "%s devMotorAsyn::positionCallback new value=%f\n",
-        pmr->name, value);
-
-    if (interruptAccept) {
-        dbScanLock((dbCommon *)pmr);
-        pPvt->position = (epicsInt32)floor(value+0.5);
         dbScanUnlock((dbCommon*)pmr);
-        if (!pPvt->needUpdate) {
-	    pPvt->needUpdate = 1;
-	    scanOnce(pmr);
-        }
     } else {
-        pPvt->position = (epicsInt32)floor(value+0.5);
-        pPvt->needUpdate = 1;
-    }
-}
-
-static void encoderCallback(void *drvPvt, asynUser *pasynUser,
-			    epicsFloat64 value)
-{
-    motorAsynPvt *pPvt = (motorAsynPvt *)drvPvt;
-    motorRecord *pmr = pPvt->pmr;
-
-    asynPrint(pasynUser, ASYN_TRACEIO_DEVICE,
-        "%s devMotorAsyn::encoderCallback new value=%f\n",
-        pmr->name, value);
-
-    if (interruptAccept) {
-        dbScanLock((dbCommon *)pmr);
-        pPvt->encoder_position = (epicsInt32)floor(value+0.5);
-        dbScanUnlock((dbCommon*)pmr);
-        if (!pPvt->needUpdate) {
-   	    pPvt->needUpdate = 1;
-	    scanOnce(pmr);
-        }
-    } else {
-        pPvt->encoder_position = (epicsInt32)floor(value+0.5);
+        memcpy(&pPvt->status, value, sizeof(struct MotorStatus));
         pPvt->needUpdate = 1;
     }
 }
