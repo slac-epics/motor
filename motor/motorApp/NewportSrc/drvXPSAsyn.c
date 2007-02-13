@@ -1,5 +1,4 @@
 #include <stddef.h>
-#include "epicsThread.h"
 #include <stdlib.h>
 #include <stdarg.h>
 #include <math.h>
@@ -14,27 +13,30 @@
 #include "epicsThread.h"
 #include "epicsEvent.h"
 #include "epicsString.h"
+#include "epicsStdio.h"
 #include "epicsMutex.h"
 #include "ellLib.h"
-#include "asynDriver.h"
+#include "iocsh.h"
 
 #include "drvSup.h"
 #include "epicsExport.h"
 #define DEFINE_MOTOR_PROTOTYPES 1
 #include "motor_interface.h"
-#include "xps_c8_driver.h"
+#include "XPS_C8_drivers.h"
+#include "XPSAsynInterpose.h"
+#include "tclCall.h"
+
+extern int xps_gathering(int);
 
 motorAxisDrvSET_t motorXPS = 
   {
-    20,
+    14,
     motorAxisReport,            /**< Standard EPICS driver report function (optional) */
     motorAxisInit,              /**< Standard EPICS dirver initialisation function (optional) */
     motorAxisSetLog,            /**< Defines an external logging function (optional) */
-    motorAxisSetLogParam,       /**< Defines an external logging function user parameter (optional) */
     motorAxisOpen,              /**< Driver open function */
     motorAxisClose,             /**< Driver close function */
     motorAxisSetCallback,       /**< Provides a callback function the driver can call when the status updates */
-    motorAxisPrimitive,         /**< Passes a controller dependedent string */
     motorAxisSetDouble,         /**< Pointer to function to set a double value */
     motorAxisSetInteger,        /**< Pointer to function to set an integer value */
     motorAxisGetDouble,         /**< Pointer to function to get a double value */
@@ -53,7 +55,6 @@ typedef enum { none, positionMove, velocityMove, homeReverseMove, homeForwardsMo
 
 typedef struct {
     epicsMutexId XPSC8Lock;
-    asynUser *pasynUser;   /* For everything except moving */
     int numAxes;
     char firmwareVersion[100];
     double movingPollPeriod;
@@ -69,14 +70,10 @@ typedef struct motorAxisHandle
     int pollSocket;
     PARAMS params;
     double currentPosition;
-    double setpointPosition;
-    double targetPosition;
     double velocity;
     double accel;
     double minJerkTime; /* for the SGamma function */
     double maxJerkTime;
-    double jogVelocity;
-    double jogAccel;
     double highLimit;
     double lowLimit;
     double stepSize;
@@ -85,9 +82,9 @@ typedef struct motorAxisHandle
     char *groupName;
     int axisStatus;
     int positionerError;
-    int moving;         /* 1 = moving! */
     int card;
     int axis;
+    motorAxisLogFunc print;
     void *logParam;
     epicsMutexId mutexId;
 } motorAxis;
@@ -97,20 +94,22 @@ typedef struct
   AXIS_HDL pFirst;
   epicsThreadId motorThread;
   motorAxisLogFunc print;
+  void *logParam;
   epicsTimeStamp now;
 } motorXPS_t;
 
 static int motorXPSLogMsg(void * param, const motorAxisLogMask_t logMask, const char *pFormat, ...);
-#define PRINT   (drv.print)
+#define PRINT   (pAxis->print)
 #define FLOW    motorAxisTraceFlow
 #define ERROR   motorAxisTraceError
+#define IODRIVER  motorAxisTraceIODriver
 
 #define XPS_MAX_AXES 8
 #define XPSC8_END_OF_RUN_MINUS  0x00000100
 #define XPSC8_END_OF_RUN_PLUS   0x00000200
 
-#define TCP_TIMEOUT 0.5
-static motorXPS_t drv={ NULL, NULL, motorXPSLogMsg, { 0, 0 } };
+#define TCP_TIMEOUT 2.0
+static motorXPS_t drv={ NULL, NULL, motorXPSLogMsg, 0, { 0, 0 } };
 static int numXPSControllers;
 /* Pointer to array of controller strutures */
 static XPSController *pXPSController=NULL;
@@ -149,32 +148,44 @@ static int motorAxisInit(void)
   return MOTOR_AXIS_OK;
 }
 
-static int motorAxisSetLog(motorAxisLogFunc logFunc)
+static int motorAxisSetLog( AXIS_HDL pAxis, motorAxisLogFunc logFunc, void * param )
 {
-  if (logFunc == NULL) drv.print=motorXPSLogMsg;
-  else drv.print = logFunc;
-
-  return MOTOR_AXIS_OK;
-}
-
-static int motorAxisSetLogParam(AXIS_HDL pAxis, void * param)
-{
-  if (pAxis == NULL) return MOTOR_AXIS_ERROR;
-  else
+    if (pAxis == NULL) 
     {
-      pAxis->logParam = param;
+        if (logFunc == NULL)
+        {
+            drv.print=motorXPSLogMsg;
+            drv.logParam = NULL;
+        }
+        else
+        {
+            drv.print=logFunc;
+            drv.logParam = param;
+        }
     }
-  return MOTOR_AXIS_OK;
+    else
+    {
+        if (logFunc == NULL)
+        {
+            pAxis->print=motorXPSLogMsg;
+            pAxis->logParam = NULL;
+        }
+        else
+        {
+            pAxis->print=logFunc;
+            pAxis->logParam = param;
+        }
+    }
+    return MOTOR_AXIS_OK;
 }
 
 static AXIS_HDL motorAxisOpen(int card, int axis, char * param)
 {
   AXIS_HDL pAxis;
 
-  if (card > numXPSControllers) return(NULL);
-  if (axis > pXPSController[card].numAxes) return(NULL);
+  if (card >= numXPSControllers) return(NULL);
+  if (axis >= pXPSController[card].numAxes) return(NULL);
   pAxis = &pXPSController[card].pAxis[axis];
-  pAxis->params = motorParam->create(0, MOTOR_AXIS_NUM_PARAMS);
   return pAxis;
 }
 
@@ -210,11 +221,6 @@ static int motorAxisSetCallback(AXIS_HDL pAxis, motorAxisCallbackFunc callback, 
     }
 }
 
-static int motorAxisPrimitive(AXIS_HDL pAxis, int length, char * string)
-{
-  return MOTOR_AXIS_OK;
-}
-
 static int motorAxisSetDouble(AXIS_HDL pAxis, motorAxisParam_t function, double value)
 {
     int ret_status = MOTOR_AXIS_ERROR;
@@ -245,6 +251,14 @@ static int motorAxisSetDouble(AXIS_HDL pAxis, motorAxisParam_t function, double 
         case motorAxisLowLimit:
         {
             deviceValue = value*pAxis->stepSize;
+            /* We need to read the current highLimit because otherwise we could be setting it to an invalid value */
+            status = PositionerUserTravelLimitsGet(pAxis->pollSocket,
+                                                   pAxis->positionerName,
+                                                   &pAxis->lowLimit, &pAxis->highLimit);
+            if (status != 0) {
+                PRINT(pAxis->logParam, ERROR, "motorAxisSetDouble: error performing PositionerUserTravelLimitsGet "
+                      "for high limit=%f, status=%d\n", deviceValue, status);
+            }
             status = PositionerUserTravelLimitsSet(pAxis->pollSocket,
                                                    pAxis->positionerName,
                                                    deviceValue, pAxis->highLimit);
@@ -261,6 +275,14 @@ static int motorAxisSetDouble(AXIS_HDL pAxis, motorAxisParam_t function, double 
         case motorAxisHighLimit:
         {
             deviceValue = value*pAxis->stepSize;
+            /* We need to read the current highLimit because otherwise we could be setting it to an invalid value */
+            status = PositionerUserTravelLimitsGet(pAxis->pollSocket,
+                                                   pAxis->positionerName,
+                                                   &pAxis->lowLimit, &pAxis->highLimit);
+            if (status != 0) {
+                PRINT(pAxis->logParam, ERROR, "motorAxisSetDouble: error performing PositionerUserTravelLimitsGet "
+                      "for high limit=%f, status=%d\n", deviceValue, status);
+            }
             status = PositionerUserTravelLimitsSet(pAxis->pollSocket,
                                                    pAxis->positionerName,
                                                    pAxis->lowLimit, deviceValue);
@@ -292,6 +314,18 @@ static int motorAxisSetDouble(AXIS_HDL pAxis, motorAxisParam_t function, double 
         case motorAxisClosedLoop:
         {
             PRINT(pAxis->logParam, ERROR, "XPS does not support changing closed loop or torque\n");
+            break;
+        }
+        case minJerkTime:
+        {
+            pAxis->minJerkTime = value;
+            ret_status = MOTOR_AXIS_OK;
+            break;
+        }
+        case maxJerkTime:
+        {
+            pAxis->maxJerkTime = value;
+            ret_status = MOTOR_AXIS_OK;
             break;
         }
         default:
@@ -352,6 +386,9 @@ static int motorAxisMove(AXIS_HDL pAxis, double position, int relative,
 
     if (pAxis == NULL) return MOTOR_AXIS_ERROR;
 
+    PRINT(pAxis->logParam, FLOW, "Set card %d, axis %d move to %f, min vel=%f, max_vel=%f, accel=%f\n",
+          pAxis->card, pAxis->axis, position, min_velocity, max_velocity, acceleration);
+
     /* Look at the last poll value of the positioner status.  If it is disabled, then enable it */
     if (pAxis->axisStatus >= 20 && pAxis->axisStatus <= 36) {
         status = GroupMotionEnable(pAxis->pollSocket, pAxis->groupName);
@@ -396,11 +433,12 @@ static int motorAxisMove(AXIS_HDL pAxis, double position, int relative,
             return MOTOR_AXIS_ERROR;
         }
     }
+    /* Tell paramLib that the motor is moving.  
+     * This will force a callback on the next poll, even if the poll says the motor is already done. */
+    motorParam->setInteger(pAxis->params, motorAxisDone, 0);
     /* Send a signal to the poller task which will make it do a poll, and switch to the moving poll rate */
     epicsEventSignal(pAxis->pController->pollEventId);
 
-    PRINT(pAxis->logParam, FLOW, "Set card %d, axis %d move to %f, min vel=%f, max_vel=%f, accel=%f\n",
-          pAxis->card, pAxis->axis, position, min_velocity, max_velocity, acceleration);
     return MOTOR_AXIS_OK;
 }
 
@@ -440,6 +478,9 @@ static int motorAxisHome(AXIS_HDL pAxis, double min_velocity, double max_velocit
         return MOTOR_AXIS_ERROR;
     }
 
+    /* Tell paramLib that the motor is moving.  
+     * This will force a callback on the next poll, even if the poll says the motor is already done. */
+    motorParam->setInteger(pAxis->params, motorAxisDone, 0);
     /* Send a signal to the poller task which will make it do a poll, and switch to the moving poll rate */
     epicsEventSignal(pAxis->pController->pollEventId);
     PRINT(pAxis->logParam, FLOW, "motorAxisHome: set card %d, axis %d to home\n",
@@ -468,6 +509,9 @@ static int motorAxisVelocityMove(AXIS_HDL pAxis, double min_velocity, double vel
               status);
         return MOTOR_AXIS_ERROR;
     }
+    /* Tell paramLib that the motor is moving.  
+     * This will force a callback on the next poll, even if the poll says the motor is already done. */
+    motorParam->setInteger(pAxis->params, motorAxisDone, 0);
     /* Send a signal to the poller task which will make it do a poll, and switch to the moving poll rate */
     epicsEventSignal(pAxis->pController->pollEventId);
     PRINT(pAxis->logParam, FLOW, "motorAxisVelocityMove card %d, axis %d move velocity=%f, accel=%f\n",
@@ -512,7 +556,7 @@ static int motorAxisStop(AXIS_HDL pAxis, double acceleration)
     }
     
     if (pAxis->axisStatus == 44) {
-        status = GroupMoveAbort(pAxis->pollSocket, pAxis->groupName);
+        status = GroupMoveAbort(pAxis->moveSocket, pAxis->groupName);
         if (status != 0) {
             PRINT(pAxis->logParam, ERROR, " Error performing GroupMoveAbort axis=%s status=%d\n",\
                   pAxis->positionerName, status);
@@ -562,10 +606,10 @@ static void XPSPoller(XPSController *pController)
                                     pAxis->groupName, 
                                     &pAxis->axisStatus);
             if (status != 0) {
-                PRINT(pAxis->logParam, ERROR, "XPSPoller: error calling GroupStatusGet, status=%d\n");
+                PRINT(pAxis->logParam, ERROR, "XPSPoller: error calling GroupStatusGet, status=%d\n", status);
                 motorParam->setInteger(pAxis->params, motorAxisCommError, 1);
-                continue;
             } else {
+                PRINT(pAxis->logParam, IODRIVER, "XPSPoller: %s axisStatus=%d\n", pAxis->positionerName, pAxis->axisStatus);
                 motorParam->setInteger(pAxis->params, motorAxisCommError, 0);
                 /* Set done flag by default */
                 axisDone = 1;
@@ -595,6 +639,8 @@ static void XPSPoller(XPSController *pController)
                         }
                     }
                 }
+                /* Set the status */
+                motorParam->setInteger(pAxis->params, XPSStatus, pAxis->axisStatus);
                 /* Set the axis done parameter */
                 motorParam->setInteger(pAxis->params, motorAxisDone, axisDone);
                 if (pAxis->axisStatus == 11) {
@@ -657,16 +703,16 @@ static void XPSPoller(XPSController *pController)
 
             epicsMutexUnlock(pAxis->mutexId);
 
-            if (forcedFastPolls > 0) {
-                timeout = pController->movingPollPeriod;
-                forcedFastPolls--;
-            } else if (anyMoving) {
-                timeout = pController->movingPollPeriod;
-            } else {
-                timeout = pController->idlePollPeriod;
-            }
-
         } /* Next axis */
+
+        if (forcedFastPolls > 0) {
+            timeout = pController->movingPollPeriod;
+            forcedFastPolls--;
+        } else if (anyMoving) {
+            timeout = pController->movingPollPeriod;
+        } else {
+            timeout = pController->idlePollPeriod;
+        }
 
     } /* End while */
 
@@ -759,9 +805,11 @@ int XPSConfig(int card,           /* Controller number */
         }
         /* Set the poll rate on the moveSocket to a negative number, which means that SendAndReceive should do only a write, no read */
         TCP_SetTimeout(pAxis->moveSocket, -0.1);
-        printf("XPSConfig: pollSocket=%d, moveSocket=%d, ip=%s, port=%d,"
-              " axis=%d controller=%d\n",
-              pAxis->pollSocket, pAxis->moveSocket, ip, port, axis, card);
+        /* printf("XPSConfig: pollSocket=%d, moveSocket=%d, ip=%s, port=%d,"
+         *     " axis=%d controller=%d\n",
+         *     pAxis->pollSocket, pAxis->moveSocket, ip, port, axis, card);
+         */
+        pAxis->params = motorParam->create(0, MOTOR_AXIS_NUM_PARAMS + XPS_NUM_PARAMS);
     }
 
     FirmwareVersionGet(pollSocket, pController->firmwareVersion);
@@ -830,4 +878,92 @@ int XPSConfigAxis(int card,                   /* specify which controller 0-up*/
     
     return MOTOR_AXIS_OK;
 }
+
+
+/* Code for iocsh registration */
+
+/* Newport XPS Gathering Test */
+static const iocshArg XPSGatheringArg0 = {"Element Period*10^4", iocshArgInt};
+static const iocshArg * const XPSGatheringArgs[1] = {&XPSGatheringArg0};
+static const iocshFuncDef XPSC8GatheringTest = {"xps_gathering", 1, XPSGatheringArgs};
+static void XPSC8GatheringTestCallFunc(const iocshArgBuf *args)
+{
+    xps_gathering(args[0].ival);
+}
+
+/* XPS tcl execute function */
+static const iocshArg tclcallArg0 = {"tcl name", iocshArgString};
+static const iocshArg tclcallArg1 = {"Task name", iocshArgString};
+static const iocshArg tclcallArg2 = {"Function args", iocshArgString};
+static const iocshArg * const tclcallArgs[3] = {&tclcallArg0,
+                                                &tclcallArg1,
+                                                &tclcallArg2};
+static const iocshFuncDef TCLRun = {"tclcall", 3, tclcallArgs};
+static void TCLRunCallFunc(const  iocshArgBuf *args)
+{
+    tclcall(args[0].sval, args[1].sval, args[2].sval);
+}
+
+
+/* XPSSetup */
+static const iocshArg XPSSetupArg0 = {"Number of XPS controllers", iocshArgInt};
+static const iocshArg * const XPSSetupArgs[1] =  {&XPSSetupArg0};
+static const iocshFuncDef setupXPS = {"XPSSetup", 1, XPSSetupArgs};
+static void setupXPSCallFunc(const iocshArgBuf *args)
+{
+    XPSSetup(args[0].ival);
+}
+
+
+/* XPSConfig */
+static const iocshArg XPSConfigArg0 = {"Card being configured", iocshArgInt};
+static const iocshArg XPSConfigArg1 = {"IP", iocshArgString};
+static const iocshArg XPSConfigArg2 = {"Port", iocshArgInt};
+static const iocshArg XPSConfigArg3 = {"Number of Axes", iocshArgInt};
+static const iocshArg XPSConfigArg4 = {"Moving poll rate", iocshArgInt};
+static const iocshArg XPSConfigArg5 = {"Idle poll rate", iocshArgInt};
+static const iocshArg * const XPSConfigArgs[6] = {&XPSConfigArg0,
+                                                  &XPSConfigArg1,
+                                                  &XPSConfigArg2,
+                                                  &XPSConfigArg2,
+                                                  &XPSConfigArg4,
+                                                  &XPSConfigArg5};
+static const iocshFuncDef configXPS = {"XPSConfig", 6, XPSConfigArgs};
+static void configXPSCallFunc(const iocshArgBuf *args)
+{
+    XPSConfig(args[0].ival, args[1].sval, args[2].ival, args[3].ival,
+              args[4].ival, args[5].ival);
+}
+
+
+/* XPSConfigAxis */
+static const iocshArg XPSConfigAxisArg0 = {"Card number", iocshArgInt};
+static const iocshArg XPSConfigAxisArg1 = {"Axis number", iocshArgInt};
+static const iocshArg XPSConfigAxisArg2 = {"Axis name", iocshArgString};
+static const iocshArg XPSConfigAxisArg3 = {"Steps per unit", iocshArgInt};
+static const iocshArg * const XPSConfigAxisArgs[4] = {&XPSConfigAxisArg0,
+                                                      &XPSConfigAxisArg1,
+                                                      &XPSConfigAxisArg2,
+                                                      &XPSConfigAxisArg3};
+static const iocshFuncDef configXPSAxis = {"XPSConfigAxis", 4, XPSConfigAxisArgs};
+
+static void configXPSAxisCallFunc(const iocshArgBuf *args)
+{
+    XPSConfigAxis(args[0].ival, args[1].ival, args[2].sval, args[3].ival);
+}
+
+
+static void XPSRegister(void)
+{
+
+    iocshRegister(&setupXPS,      setupXPSCallFunc);
+    iocshRegister(&configXPS,     configXPSCallFunc);
+    iocshRegister(&configXPSAxis, configXPSAxisCallFunc);
+    iocshRegister(&TCLRun,        TCLRunCallFunc);
+#ifdef vxWorks
+    iocshRegister(&XPSC8GatheringTest, XPSC8GatheringTestCallFunc);
+#endif
+}
+
+epicsExportRegistrar(XPSRegister);
 
