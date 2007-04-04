@@ -6,9 +6,10 @@ include $(TOP)/configure/CONFIG
 # must be uncommented to use diagnostic debugging messages.
 #!USR_CXXFLAGS += -DDEBUG
 
-DBD += devNewport.dbd
+# Install the XPS header file in case applications in another module need to use it
+INC += XPS_C8_drivers.h
 
-INC += xps_c8_driver.h
+DBD += devNewport.dbd
 
 LIBRARY_IOC = Newport
 
@@ -19,8 +20,8 @@ SRCS += devMM3000.cc drvMM3000.cc
 
 # MM4000/5 (i.e., MM4000) device driver.
 SRCS += devMM4000.cc drvMM4000.cc
+SRCS += drvMM4000Asyn.c
 SRCS += MM4005_trajectoryScan.st
-SRCS_vxWorks += XPS_trajectoryScan.st
 
 # PM500 device driver.
 SRCS += devPM500.cc  drvPM500.cc
@@ -29,20 +30,25 @@ SRCS += devPM500.cc  drvPM500.cc
 SRCS += devESP300.cc drvESP300.cc
 
 # XPS C8 device driver
-#SRCS += Socket.cpp 
 SRCS += asynOctetSocket.cpp 
-#SRCS += xps_c8_driver.cpp 
-SRCS += devXPSC8.cc  drvXPSC8.cc 
-SRCS += XPS_C8_drivers.cpp drvXPSAsyn.cc
+SRCS += XPS_C8_drivers.cpp drvXPSAsyn.c drvXPSAsynAux.c XPSAsynInterpose.c xps_ftp.c
+SRCS += XPS_trajectoryScan.st
 
-# XPS Gathering Test C script function -> int xpsgathering(void)
-SRCS_vxWorks += XPSGathering.cc
+# XPS Gathering test function
+SRCS += XPSGathering.c
+SRCS += XPSGatheringRegister.c
 
 # Function which will run a tcl script on an XPS
 SRCS += tclCall.cc
 
 Newport_LIBS += motor asyn seq pv
 Newport_LIBS += $(EPICS_BASE_IOC_LIBS)
+
+PROD_IOC += XPSGatheringMain
+XPSGatheringMain_SRCS += XPSGatheringMain.c
+XPSGatheringMain_LIBS += Newport motor asyn seq pv
+XPSGatheringMain_LIBS += $(EPICS_BASE_IOC_LIBS)
+XPSGatheringMain_SYS_LIBS_solaris += socket nsl
 
 include $(TOP)/configure/RULES
 
