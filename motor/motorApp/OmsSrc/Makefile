@@ -5,7 +5,7 @@ include $(TOP)/configure/CONFIG
 #  ADD MACRO DEFINITIONS AFTER THIS LINE
 
 # The following are used for debugging messages.
-USR_CXXFLAGS += -DDEBUG
+#!USR_CXXFLAGS += -DDEBUG
 
 DBD += devOms.dbd
 
@@ -28,6 +28,7 @@ SRCS += devMAXv.cc drvMAXv.cc
 SRCS += devOmsCom.cc
 
 oms_LIBS += motor
+oms_LIBS += asyn
 oms_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 include $(TOP)/configure/RULES
