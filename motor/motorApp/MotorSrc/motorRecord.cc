@@ -2,9 +2,9 @@
 FILENAME...	motorRecord.cc
 USAGE...	Motor Record Support.
 
-Version:	1.30
-Modified By:	rivers
-Last Modified:	2006/03/21 22:45:05
+Version:	1.38.2.1
+Modified By:	sluiter
+Last Modified:	2007/04/06 18:37:38
 */
 
 /*
@@ -87,9 +87,14 @@ Last Modified:	2006/03/21 22:45:05
  * .28 03-08-06 rls - Moved STUP processing to top of do_work() so that things
  *                    like LVIO true and SPMG set to PAUSE do not prevent
  *                    status update.
+ * .29 06-30-06 rls - Change do_work() test for "don't move if within RDBD",
+ *                    from float to integer; avoid equality test errors.
+ * .30 03-16-07 rls - Clear home request when soft-limit violation occurs.
+ * .31 04-06-07 rls - RDBD was being used in motordevCom.cc
+ *                    motor_init_record_com() before the validation check.
  */
 
-#define VERSION 5.9
+#define VERSION 6.22
 
 #include	<stdlib.h>
 #include	<string.h>
@@ -139,7 +144,7 @@ static void check_speed_and_resolution(motorRecord *);
 static void set_dial_highlimit(motorRecord *, struct motor_dset *);
 static void set_dial_lowlimit(motorRecord *, struct motor_dset *);
 static void set_userlimits(motorRecord *);
-static void range_check(motorRecord *, float *, double, double);
+static void range_check(motorRecord *, double *, double, double);
 static void clear_buttons(motorRecord *);
 
 /*** Record Support Entry Table (RSET) functions. ***/
@@ -387,7 +392,7 @@ Make RDBD >= MRES.
 ******************************************************************************/
 static void enforceMinRetryDeadband(motorRecord * pmr)
 {
-    float min_rdbd;
+    double min_rdbd;
 
     min_rdbd = fabs(pmr->mres);
 
@@ -469,6 +474,7 @@ static long init_record(dbCommon* arg, int pass)
      * sure things are sane.
      */
     check_speed_and_resolution(pmr);
+    enforceMinRetryDeadband(pmr);
 
     /* Call device support to initialize itself and the driver */
     if (pdset->base.init_record)
@@ -524,7 +530,6 @@ static long init_record(dbCommon* arg, int pass)
     }
 
     process_motor_info(pmr, true);
-    enforceMinRetryDeadband(pmr);
 
     /*
      * If we're in closed-loop mode, initializing the user- and dial-coordinate
@@ -562,7 +567,7 @@ static long init_record(dbCommon* arg, int pass)
     pmr->lrvl = pmr->rval;
     pmr->lvio = 0;		/* init limit-violation field */
 
-    if ((pmr->dhlm == pmr->dllm) && (pmr->dllm == (float) 0.0))
+    if ((pmr->dhlm == pmr->dllm) && (pmr->dllm == 0.0))
 	;
     else if ((pmr->drbv > pmr->dhlm + pmr->mres) || (pmr->drbv < pmr->dllm - pmr->mres))
     {
@@ -1197,7 +1202,7 @@ static long process(dbCommon *arg)
 		    pmr->mip |= MIP_DELAY_REQ;
 		    MARK(M_MIP);
 
-                    callbackRequestDelayed(&pcallback->dly_callback, (double) pmr->dly);
+                    callbackRequestDelayed(&pcallback->dly_callback, pmr->dly);
 
 		    pmr->dmov = FALSE;
 		    pmr->pact = 0;
@@ -1210,7 +1215,7 @@ static long process(dbCommon *arg)
 enter_do_work:
 
     /* check for soft-limit violation */
-    if ((pmr->dhlm == pmr->dllm) && (pmr->dllm == (float) 0.0))
+    if ((pmr->dhlm == pmr->dllm) && (pmr->dllm == 0.0))
 	pmr->lvio = false;
     else
     {
@@ -1691,7 +1696,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 	/** If we're in CLOSED_LOOP mode, get value from input link. **/
 	long status;
 
-	status = dbGetLink(&(pmr->dol), DBR_DOUBLE, &(pmr->val), NULL, NULL);
+	status = dbGetLink(&(pmr->dol), DBR_DOUBLE, &(pmr->val), 0, 0);
 	if (!RTN_SUCCESS(status))
 	{
 	    pmr->udf = TRUE;
@@ -1716,13 +1721,23 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
     		return(OK);
 	    }
 	    /* check for limit violation */
-	    if ((pmr->dhlm == pmr->dllm) && (pmr->dllm == (float) 0.0))
+	    if ((pmr->dhlm == pmr->dllm) && (pmr->dllm == 0.0))
 		;
 	    else if ((pmr->homf && (pmr->dval > pmr->dhlm - pmr->velo)) ||
 		     (pmr->homr && (pmr->dval < pmr->dllm + pmr->velo)))
 	    {
-		pmr->lvio = 1;
+		pmr->lvio = 1;  /* Set limit violation ON. */
 		MARK(M_LVIO);
+                if (pmr->homf)
+                {
+                    pmr->homf = 0; /* Clear Home Forward request. */
+                    MARK_AUX(M_HOMF);
+                }
+                if (pmr->homr)
+                {
+                    pmr->homr = 0; /* Clear Home Reverse request. */
+                    MARK_AUX(M_HOMR);
+                }
 		return(OK);
 	    }
 	    pmr->mip = pmr->homf ? MIP_HOMF : MIP_HOMR;
@@ -1778,7 +1793,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 	    (pmr->mip & MIP_JOG_REQ))
 	{
 	    /* check for limit violation */
-	    if ((pmr->dhlm == pmr->dllm) && (pmr->dllm == (float) 0.0))
+	    if ((pmr->dhlm == pmr->dllm) && (pmr->dllm == 0.0))
 		;
 	    else if ((pmr->jogf && (pmr->dval > pmr->dhlm - pmr->velo)) ||
 		     (pmr->jogr && (pmr->dval < pmr->dllm + pmr->velo)))
@@ -1911,7 +1926,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
     }
 
     /* Record limit violation */
-    if ((pmr->dhlm == pmr->dllm) && (pmr->dllm == (float) 0.0))
+    if ((pmr->dhlm == pmr->dllm) && (pmr->dllm == 0.0))
 	pmr->lvio = false;
     else
 	pmr->lvio = (pmr->dval > pmr->dhlm) ||
@@ -1975,8 +1990,8 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 	    bool use_rel, preferred_dir;
 	    double relpos = pmr->diff / pmr->mres;
 	    double relbpos = ((pmr->dval - pmr->bdst) - pmr->drbv) / pmr->mres;
+            long rdbdpos = NINT(pmr->rdbd / pmr->mres); /* retry deadband steps */
 	    long rpos, npos;
-
 	    msta_field msta;
 	    msta.All = pmr->msta;
 
@@ -1999,9 +2014,11 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 	    if (pmr->rval != pmr->lrvl)
 		MARK(M_RVAL);
 
+	    /* Don't move if we're within retry deadband. */
+
 	    rpos = NINT(rbvpos);
 	    npos = NINT(newpos);
-	    if (npos == rpos)
+	    if (abs(npos - rpos) < rdbdpos)
 	    {
 		if (pmr->dmov == FALSE && (pmr->mip == MIP_DONE || pmr->mip == MIP_RETRY))
 		{
@@ -2032,23 +2049,6 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 		preferred_dir = true;
 	    else
 		preferred_dir = false;
-
-	    /*
-	     * Don't move if we're within retry deadband.
-	     */
-            if (fabs(pmr->diff) <= pmr->rdbd)
-            {
-                if (pmr->mip == MIP_DONE)
-                {
-                    pmr->ldvl = pmr->dval;
-                    pmr->lval = pmr->val;
-                    pmr->lrvl = pmr->rval;
-
-                    pmr->dmov = TRUE;
-                    MARK(M_DMOV);
-                }
-                return(OK);
-            }
 
 	    if (pmr->mip == MIP_DONE || pmr->mip == MIP_RETRY)
 	    {
@@ -2166,7 +2166,7 @@ static long special(DBADDR *paddr, int after)
     RTN_STATUS rtnval;
     motor_cmnd command;
     double temp_dbl;
-    float *temp_flt;
+    double *pcoeff;
     msta_field msta;
 
     msta.All = pmr->msta;
@@ -2365,15 +2365,28 @@ static long special(DBADDR *paddr, int after)
 	offset = pmr->off;
 	if (dir_positive)
 	{
-	    command = SET_HIGH_LIMIT;
 	    tmp_limit = pmr->hlm - offset;
 	    MARK(M_DHLM);
 	}
 	else
 	{
-	    command = SET_LOW_LIMIT;
 	    tmp_limit = -(pmr->hlm) + offset;
 	    MARK(M_DLLM);
+	}
+
+	/* Which controller limit we set depends not only on dir, but
+	   also on the sign of MRES */
+	/* Direction +ve AND +ve MRES OR
+	   Direction -ve AND -ve MRES */
+	if (dir_positive ^ (pmr->mres < 0))
+	{
+	    command = SET_HIGH_LIMIT;
+	}
+	else
+	/* Direction -ve AND +ve MRES OR
+	   Direction +ve AND -ve MRES */
+	{
+	    command = SET_LOW_LIMIT;
 	}
 
 	tmp_raw = tmp_limit / pmr->mres;
@@ -2406,15 +2419,28 @@ static long special(DBADDR *paddr, int after)
 	offset = pmr->off;
 	if (dir_positive)
 	{
-	    command = SET_LOW_LIMIT;
 	    tmp_limit = pmr->llm - offset;
 	    MARK(M_DLLM);
 	}
 	else
 	{
-	    command = SET_HIGH_LIMIT;
 	    tmp_limit = -(pmr->llm) + offset;
 	    MARK(M_DHLM);
+	}
+
+	/* Which controller limit we set depends not only on dir, but
+	   also on the sign of MRES */
+	/* Direction +ve AND +ve MRES OR
+	   Direction -ve AND -ve MRES */
+	if (dir_positive ^ (pmr->mres < 0))
+	{
+	    command = SET_LOW_LIMIT;
+	}
+	else
+	/* Direction -ve AND +ve MRES OR
+	   Direction +ve AND -ve MRES */
+	{
+	    command = SET_HIGH_LIMIT;
 	}
 
 	tmp_raw = tmp_limit / pmr->mres;
@@ -2578,34 +2604,32 @@ velcheckB:
 	break;
 
     case motorRecordPCOF:
-	temp_flt = &pmr->pcof;
+	pcoeff = &pmr->pcof;
 	command = SET_PGAIN;
 	goto pidcof;
     case motorRecordICOF:
-	temp_flt = &pmr->icof;
+	pcoeff = &pmr->icof;
 	command = SET_IGAIN;
 	goto pidcof;
     case motorRecordDCOF:
-	temp_flt = &pmr->dcof;
+	pcoeff = &pmr->dcof;
 	command = SET_DGAIN;
 pidcof:
 	if (msta.Bits.GAIN_SUPPORT != 0)
 	{
-	    if (*temp_flt < 0.0)	/* Validity check;  0.0 <= gain <= 1.0 */
+	    if (*pcoeff < 0.0)	/* Validity check;  0.0 <= gain <= 1.0 */
 	    {
-		*temp_flt = 0.0;
+		*pcoeff = 0.0;
 		changed = true;
 	    }
-	    else if (*temp_flt > 1.0)
+	    else if (*pcoeff > 1.0)
 	    {
-		*temp_flt = 1.0;
+		*pcoeff = 1.0;
 		changed = true;
 	    }
-
-	    temp_dbl = *temp_flt;
 
 	    INIT_MSG();
-	    rtnval = (*pdset->build_trans)(command, &temp_dbl, pmr);
+	    rtnval = (*pdset->build_trans)(command, pcoeff, pmr);
             /* If an error occured, build_trans() has reset the gain
 	     * parameter to a valid value for this controller. */
 	    if (rtnval != OK)
@@ -2613,21 +2637,19 @@ pidcof:
 
 	    SEND_MSG();
 	    if (changed == 1)
-		db_post_events(pmr, temp_flt, DBE_VAL_LOG);
+		db_post_events(pmr, pcoeff, DBE_VAL_LOG);
 	}
 	break;
 
     case motorRecordCNEN:
 	if (msta.Bits.GAIN_SUPPORT != 0)
 	{
-	    double tempdbl;
-
 	    INIT_MSG();
-	    tempdbl = pmr->cnen;
+	    temp_dbl = pmr->cnen;
 	    if (pmr->cnen != 0)
-		WRITE_MSG(ENABLE_TORQUE, &tempdbl);
+		WRITE_MSG(ENABLE_TORQUE, &temp_dbl);
 	    else
-		WRITE_MSG(DISABL_TORQUE, &tempdbl);
+		WRITE_MSG(DISABL_TORQUE, &temp_dbl);
 	    SEND_MSG();
 	}
 
@@ -2750,8 +2772,15 @@ static long get_units(const DBADDR *paddr, char *units)
     case motorRecordVMAX:
     case motorRecordBVEL:
     case motorRecordVBAS:
+    case motorRecordJVEL:
+    case motorRecordHVEL:
 	strncpy(s, pmr->egu, DB_UNITS_SIZE);
 	strcat(s, "/sec");
+	break;
+
+    case motorRecordJAR:
+	strncpy(s, pmr->egu, DB_UNITS_SIZE);
+	strcat(s, "/s/s");
 	break;
 
     case motorRecordACCL:
@@ -2943,21 +2972,22 @@ static long get_alarm_double(const DBADDR  *paddr, struct dbr_alDouble * pad)
 static void alarm_sub(motorRecord * pmr)
 {
     msta_field msta;
+    int status;
 
     if (pmr->udf == TRUE)
     {
-	recGblSetSevr((dbCommon *) pmr, UDF_ALARM, INVALID_ALARM);
+	status = recGblSetSevr((dbCommon *) pmr, UDF_ALARM, INVALID_ALARM);
 	return;
     }
     /* limit-switch and soft-limit violations */
     if (pmr->hlsv && (pmr->hls || (pmr->dval > pmr->dhlm)))
     {
-	recGblSetSevr((dbCommon *) pmr, HIGH_ALARM, pmr->hlsv);
+	status = recGblSetSevr((dbCommon *) pmr, HIGH_ALARM, pmr->hlsv);
 	return;
     }
     if (pmr->hlsv && (pmr->lls || (pmr->dval < pmr->dllm)))
     {
-	recGblSetSevr((dbCommon *) pmr, LOW_ALARM, pmr->hlsv);
+	status = recGblSetSevr((dbCommon *) pmr, LOW_ALARM, pmr->hlsv);
 	return;
     }
     
@@ -2968,7 +2998,7 @@ static void alarm_sub(motorRecord * pmr)
 	msta.Bits.CNTRL_COMM_ERR =  0;
 	pmr->msta = msta.All;
 	MARK(M_MSTA);
-	recGblSetSevr((dbCommon *) pmr, COMM_ALARM, INVALID_ALARM);
+	status = recGblSetSevr((dbCommon *) pmr, COMM_ALARM, INVALID_ALARM);
     }
     return;
 }
@@ -3263,7 +3293,7 @@ static void
 	long rtnstat;
 
 	old_drbv = pmr->drbv;
-	rtnstat = dbGetLink(&(pmr->rdbl), DBR_DOUBLE, &(pmr->drbv), NULL, NULL);
+	rtnstat = dbGetLink(&(pmr->rdbl), DBR_DOUBLE, &(pmr->drbv), 0, 0 );
 	if (!RTN_SUCCESS(rtnstat))
 	    pmr->drbv = old_drbv;
 	else
@@ -3519,11 +3549,17 @@ static void set_dial_highlimit(motorRecord *pmr, struct motor_dset *pdset)
 {
     int dir_positive = (pmr->dir == motorDIR_Pos);
     double offset, tmp_raw;
+    motor_cmnd command;
     RTN_STATUS rtnval;
 
     tmp_raw = pmr->dhlm / pmr->mres;
     INIT_MSG();
-    rtnval = (*pdset->build_trans)(SET_HIGH_LIMIT, &tmp_raw, pmr);
+    if (pmr->mres < 0) {
+	command = SET_LOW_LIMIT;
+    } else {
+	command = SET_HIGH_LIMIT;
+    }
+    rtnval = (*pdset->build_trans)(command, &tmp_raw, pmr);
     offset = pmr->off;
     if (rtnval == OK)
 	SEND_MSG();
@@ -3553,12 +3589,18 @@ static void set_dial_lowlimit(motorRecord *pmr, struct motor_dset *pdset)
 {
     int dir_positive = (pmr->dir == motorDIR_Pos);
     double offset, tmp_raw;
+    motor_cmnd command;
     RTN_STATUS rtnval;
 
     tmp_raw = pmr->dllm / pmr->mres;
 
     INIT_MSG();
-    rtnval = (*pdset->build_trans)(SET_LOW_LIMIT, &tmp_raw, pmr);
+    if (pmr->mres < 0) {
+	command = SET_HIGH_LIMIT;
+    } else {
+	command = SET_LOW_LIMIT;
+    }
+    rtnval = (*pdset->build_trans)(command, &tmp_raw, pmr);
     offset = pmr->off;
     if (rtnval == OK)
 	SEND_MSG();
@@ -3597,14 +3639,14 @@ static void set_userlimits(motorRecord *pmr)
 }
 
 /*
-FUNCTION... void range_check(motorRecord *, float *, double, double)
+FUNCTION... void range_check(motorRecord *, double *, double, double)
 USAGE... Limit parameter to valid range; i.e., min. <= parameter <= max.
 
 INPUT...	parm - pointer to parameter to be range check.
 		min  - minimum value.
 		max  - 0 = max. range check disabled; !0 = maximum value.
 */
-static void range_check(motorRecord *pmr, float *parm_ptr, double min, double max)
+static void range_check(motorRecord *pmr, double *parm_ptr, double min, double max)
 {
     bool changed = false;
     double parm_val = *parm_ptr;
