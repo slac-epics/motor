@@ -2,9 +2,9 @@
 FILENAME...     motorUtil.cc
 USAGE...        Motor Record Utility Support.
 
-Version:        1.2
-Modified By:    peterd
-Last Modified:  2007/02/02 13:58:58
+Version:        $Revision: 1.2.2.1 $
+Modified By:    $Author: sluiter $
+Last Modified:  $Date: 2007/05/10 19:47:06 $
 */
 
 
@@ -19,6 +19,12 @@ Last Modified:  2007/02/02 13:58:58
 *  Argonne National Laboratory
 *
 *  Current Author: Ron Sluiter
+*
+* Modification Log:
+* -----------------
+* .01 05-10-07 rls - Bug fix for motorUtilInit()'s PVNAME_SZ error check using
+*                    an uninitialized variable.
+*
 */
 
 #include <stdio.h>
@@ -82,7 +88,7 @@ RTN_STATUS motorUtilInit(char *vme_name)
 {
     RTN_STATUS status = OK;
     
-    if (strlen(vme) > PVNAME_SZ - 7 )
+    if (strlen(vme_name) > PVNAME_SZ - 7 )
     {
         printf( "motorUtilInit: Prefix %s has more than %d characters. Exiting",
                 vme_name, PVNAME_SZ - 7 );
