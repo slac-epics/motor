@@ -26,9 +26,9 @@ motorSimSupport_LIBS += $(EPICS_BASE_IOC_LIBS)
 #=============================
 # build an ioc application
 
-PROD_IOC = motorSim
+#PROD_IOC = motorSim
 # motorSim.dbd will be created and installed
-DBD += motorSim.dbd
+#DBD += motorSim.dbd
 
 # motorSim.dbd will be made up from these files:
 motorSim_DBD += base.dbd

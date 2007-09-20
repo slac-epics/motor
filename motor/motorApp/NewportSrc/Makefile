@@ -44,7 +44,7 @@ SRCS += tclCall.cc
 Newport_LIBS += motor asyn seq pv
 Newport_LIBS += $(EPICS_BASE_IOC_LIBS)
 
-PROD_IOC += XPSGatheringMain
+#PROD_IOC += XPSGatheringMain
 XPSGatheringMain_SRCS += XPSGatheringMain.c
 XPSGatheringMain_LIBS += Newport motor asyn seq pv
 XPSGatheringMain_LIBS += $(EPICS_BASE_IOC_LIBS)
