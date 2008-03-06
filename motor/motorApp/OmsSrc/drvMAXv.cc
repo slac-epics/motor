@@ -583,10 +583,11 @@ RTN_STATUS send_mess(int card, char const *com, char *name)
     Debug(9, "send_mess: checking card %d status\n", card);
 
     /* see if junk at input port - should not be any data available */
-    if (readReg32(&pmotor->inGetIndex) != readReg32(&pmotor->inPutIndex))
+    while (readReg32(&pmotor->inGetIndex) != readReg32(&pmotor->inPutIndex))
     {
         Debug(1, "send_mess - clearing data in buffer\n");
         recv_mess(card, NULL, -1);
+        epicsThreadSleep(epicsThreadSleepQuantum());
     }
 
 
@@ -614,12 +615,14 @@ RTN_STATUS send_mess(int card, char const *com, char *name)
 
     writeReg32(&pmotor->outPutIndex, putIndex);	/* Message Sent */
 
+    
     while (readReg32(&pmotor->outPutIndex) != readReg32(&pmotor->outGetIndex))
     {
 #ifdef  DEBUG
         epicsInt16 deltaIndex, delta;
 
-	deltaIndex = readReg32(&pmotor->outPutIndex) - readReg32(&pmotor->outGetIndex);
+	deltaIndex = (epicsInt16)readReg32(&pmotor->outPutIndex) -
+                     (epicsInt16)readReg32(&pmotor->outGetIndex);
         delta = (deltaIndex < 0) ? BUFFER_SIZE + deltaIndex : deltaIndex;
         Debug(5, "send_mess: Waiting for ack: index delta=%d\n", delta);
 #endif
@@ -764,7 +767,8 @@ static char *readbuf(volatile struct MAXv_motor *pmotor, char *bufptr)
     while (getIndex != readReg32(&pmotor->inPutIndex))
     {
         Debug(1, "readbuf(): flushed - %d\n", readReg8(&pmotor->inBuffer[getIndex]));
-        if (++getIndex > BUFFER_SIZE)
+        getIndex++;
+        if (getIndex >= BUFFER_SIZE)
             getIndex = 0;
     }
 
