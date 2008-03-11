@@ -609,13 +609,8 @@ RTN_STATUS send_mess(int card, char const *com, char *name)
         if (putIndex >= BUFFER_SIZE)
             putIndex = 0;
     }
-
-    Debug(4, "send_mess: sent card %d message:", card);
-    Debug(4, "%s\n", outbuf);
-
     writeReg32(&pmotor->outPutIndex, putIndex);	/* Message Sent */
 
-    
     while (readReg32(&pmotor->outPutIndex) != readReg32(&pmotor->outGetIndex))
     {
 #ifdef  DEBUG
@@ -628,6 +623,8 @@ RTN_STATUS send_mess(int card, char const *com, char *name)
 #endif
         epicsThreadSleep(epicsThreadSleepQuantum());
     };
+    Debug(4, "send_mess: sent card %d message:", card);
+    Debug(4, "%s\n", outbuf);    
 
     return (return_code);
 }
