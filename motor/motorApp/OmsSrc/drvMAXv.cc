@@ -88,6 +88,8 @@ Last Modified:  2007/03/22 21:42:35
 #define DONE_QUERY      "RA"            /* ?? Is this needed?? */
 #define PID_QUERY       "?KA ID"
 
+#define MAX_ITERA       1000000
+
 extern "C" {
 RTN_VALUES MAXvSetup(int num_cards, int addrs_type, void *addrs, unsigned vector, int int_level, int scan_rate);
 RTN_VALUES MAXvConfig(int card, const char *initstr);
@@ -561,6 +563,7 @@ RTN_STATUS send_mess(int card, char const *com, char *name)
     epicsInt16 putIndex;
     char outbuf[MAX_MSG_SIZE], *p;
     RTN_STATUS return_code;
+    int itera;
 
     if (strlen(com) > MAX_MSG_SIZE)
     {
@@ -583,13 +586,17 @@ RTN_STATUS send_mess(int card, char const *com, char *name)
     Debug(9, "send_mess: checking card %d status\n", card);
 
     /* see if junk at input port - should not be any data available */
-    while (readReg32(&pmotor->inGetIndex) != readReg32(&pmotor->inPutIndex))
+    itera = 0;
+    while ((readReg32(&pmotor->inGetIndex) !=
+            readReg32(&pmotor->inPutIndex)) && (itera < MAX_ITERA))
     {
         Debug(1, "send_mess - clearing data in buffer\n");
         recv_mess(card, NULL, -1);
-        epicsThreadSleep(epicsThreadSleepQuantum());
-    }
-
+        epicsThreadSleep(quantum);
+        itera++;
+    };
+    if (itera >= MAX_ITERA)
+      Debug(4, "send_mess: timeout clearing data in buffer\n");
 
     if (name == NULL)
         strcpy(outbuf, com);
@@ -610,8 +617,9 @@ RTN_STATUS send_mess(int card, char const *com, char *name)
             putIndex = 0;
     }
     writeReg32(&pmotor->outPutIndex, putIndex);	/* Message Sent */
-
-    while (readReg32(&pmotor->outPutIndex) != readReg32(&pmotor->outGetIndex))
+    itera = 0;
+    while ((readReg32(&pmotor->outPutIndex) !=
+            readReg32(&pmotor->outGetIndex)) && (itera < MAX_ITERA))
     {
 #ifdef  DEBUG
         epicsInt16 deltaIndex, delta;
@@ -621,9 +629,14 @@ RTN_STATUS send_mess(int card, char const *com, char *name)
         delta = (deltaIndex < 0) ? BUFFER_SIZE + deltaIndex : deltaIndex;
         Debug(5, "send_mess: Waiting for ack: index delta=%d\n", delta);
 #endif
-        epicsThreadSleep(epicsThreadSleepQuantum());
-    };
-    Debug(4, "send_mess: sent card %d message:", card);
+        epicsThreadSleep(quantum);
+        itera++;
+    }
+    if (itera >= MAX_ITERA) {
+      Debug(4, "send_mess: timeout sending card %d message:", card);
+    } else {
+      Debug(4, "send_mess: sent card %d message:", card);
+    }
     Debug(4, "%s\n", outbuf);    
 
     return (return_code);
@@ -697,7 +710,7 @@ int recv_mess(int card, char *com, int amount)
         STATUS1 flag1;
         
         flag1.All = readReg32(&pmotor->status1_flag.All);
-        while (flag1.Bits.text_response == 0 && time < 0.100)
+        while ((flag1.Bits.text_response == 0) && (time < 0.100))
         {
             Debug(1, "recv_mess(): response wait - %d\n", itera);
             time += quantum * itera;
@@ -729,6 +742,7 @@ static char *readbuf(volatile struct MAXv_motor *pmotor, char *bufptr)
     epicsUInt32 getIndex, putIndex;
     int bufsize;
     volatile char *start, *end, *bufend;
+    int itera = 0;
     
     getIndex = readReg32(&pmotor->inGetIndex);
     putIndex = readReg32(&pmotor->inPutIndex);
@@ -761,13 +775,15 @@ static char *readbuf(volatile struct MAXv_motor *pmotor, char *bufptr)
     bufptr += (bufsize - 1);
     *bufptr = (char) NULL;
 
-    while (getIndex != readReg32(&pmotor->inPutIndex))
+    while ((getIndex != readReg32(&pmotor->inPutIndex)) && (itera < MAX_ITERA))
     {
         Debug(1, "readbuf(): flushed - %d\n", readReg8(&pmotor->inBuffer[getIndex]));
         getIndex++;
         if (getIndex >= BUFFER_SIZE)
             getIndex = 0;
+        itera++;
     }
+    if (itera >= MAX_ITERA) Debug(1, "readbuf(): timeout flushing\n");
 
     writeReg32(&pmotor->inGetIndex, getIndex);
     flag1.All = readReg32(&pmotor->status1_flag.All);
@@ -997,6 +1013,7 @@ static int motor_init()
     int total_encoders = 0, total_axis = 0, total_pidcnt = 0;
     volatile void *localaddr;
     void *probeAddr;
+    double time;
 
     tok_save = NULL;
 
@@ -1103,12 +1120,22 @@ static int motor_init()
 
                 /* Test if motor has an encoder. */
                 send_mess(card_index, ENCODER_QUERY, MAXv_axis[motor_index]);
-		do {	/* Wait for command to complete. */
-		    epicsThreadSleep(quantum);
-                    flag1.All = readReg32(&pmotor->status1_flag.All);                
-                } while (!flag1.Bits.done);
-
-                if (pmotor->status1_flag.Bits.cmndError)
+                /* Wait for command to complete. */
+                time = 0.0;
+                itera = 0;
+                while ((!flag1.Bits.done) && (time < 0.100))
+                {
+                  time += quantum * itera;
+                  epicsThreadSleep(quantum * itera);
+                  itera++;
+                  flag1.All = readReg32(&pmotor->status1_flag.All);
+                }
+                if (!flag1.Bits.done)
+                {
+                    Debug(2, "motor_init: command timeout for axis %d\n", motor_index);
+                    pmotorState->motor_info[motor_index].encoder_present = NO;
+                }
+                else if (pmotor->status1_flag.Bits.cmndError)
                 {
                     Debug(2, "motor_init: No encoder on axis %d\n", motor_index);
                     pmotorState->motor_info[motor_index].encoder_present = NO;
@@ -1124,11 +1151,22 @@ static int motor_init()
                 
                 /* Test if motor has PID parameters. */
                 send_mess(card_index, PID_QUERY, MAXv_axis[motor_index]);
-		do {	/* Wait for command to complete. */
-		    epicsThreadSleep(quantum);
-                    flag1.All = readReg32(&pmotor->status1_flag.All);                
-                } while (!flag1.Bits.done);
-                if (pmotor->status1_flag.Bits.cmndError)
+                /* Wait for command to complete. */
+                time = 0.0;
+                itera = 0;
+                while ((!flag1.Bits.done) && (time < 0.100))
+                {
+                  time += quantum * itera;
+                  epicsThreadSleep(quantum * itera);
+                  itera++;
+                  flag1.All = readReg32(&pmotor->status1_flag.All);
+                }
+                if (!flag1.Bits.done)
+                {
+                    Debug(2, "motor_init: command timeout for axis %d\n", motor_index);
+                    pmotorState->motor_info[motor_index].pid_present = NO;
+                }
+                else if (pmotor->status1_flag.Bits.cmndError)
                 {
                     Debug(2, "motor_init: No PID parameters on axis %d\n", motor_index);
                     pmotorState->motor_info[motor_index].pid_present = NO;
