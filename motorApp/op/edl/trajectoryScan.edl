@@ -419,7 +419,7 @@ controlPv "$(P)$(R)BuildState"
 font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
-fgColor index 50
+fgColor index 18
 fgAlarm
 bgColor index 13
 autoHeight
@@ -444,7 +444,7 @@ controlPv "$(P)$(R)ExecState"
 font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
-fgColor index 50
+fgColor index 18
 fgAlarm
 bgColor index 14
 autoHeight
@@ -469,7 +469,7 @@ controlPv "$(P)$(R)BuildStatus"
 font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
-fgColor index 50
+fgColor index 18
 fgAlarm
 bgColor index 14
 autoHeight
@@ -494,7 +494,7 @@ controlPv "$(P)$(R)ExecStatus"
 font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
-fgColor index 50
+fgColor index 18
 fgAlarm
 bgColor index 14
 autoHeight
@@ -688,7 +688,7 @@ controlPv "$(P)$(R)ReadState"
 font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
-fgColor index 50
+fgColor index 18
 fgAlarm
 bgColor index 14
 autoHeight
@@ -713,7 +713,7 @@ controlPv "$(P)$(R)ReadStatus"
 font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
-fgColor index 50
+fgColor index 18
 fgAlarm
 bgColor index 14
 autoHeight

@@ -102,7 +102,7 @@ w 48
 h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-fgColor index 50
+fgColor index 18
 useDisplayBg
 value {
  "Moving"
@@ -125,7 +125,7 @@ w 48
 h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-fgColor index 50
+fgColor index 18
 useDisplayBg
 value {
  "Moving"
@@ -148,7 +148,7 @@ w 48
 h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-fgColor index 50
+fgColor index 18
 useDisplayBg
 value {
  "Moving"
@@ -171,7 +171,7 @@ w 48
 h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-fgColor index 50
+fgColor index 18
 useDisplayBg
 value {
  "Moving"
@@ -194,7 +194,7 @@ w 48
 h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-fgColor index 50
+fgColor index 18
 useDisplayBg
 value {
  "Moving"
@@ -217,7 +217,7 @@ w 48
 h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-fgColor index 50
+fgColor index 18
 useDisplayBg
 value {
  "Moving"
@@ -240,7 +240,7 @@ w 48
 h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-fgColor index 50
+fgColor index 18
 useDisplayBg
 value {
  "Moving"
@@ -263,7 +263,7 @@ w 48
 h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-fgColor index 50
+fgColor index 18
 useDisplayBg
 value {
  "Moving"

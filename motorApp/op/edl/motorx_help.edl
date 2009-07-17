@@ -1,10 +1,10 @@
-4 0 0
+4 0 1
 beginScreenProperties
 major 4
 minor 0
-release 0
-x 10
-y 10
+release 1
+x 333
+y 60
 w 400
 h 200
 font "helvetica-medium-r-18.0"
@@ -23,31 +23,30 @@ snapToGrid
 gridSize 5
 endScreenProperties
 
-
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 21
 y 95
 w 76
 h 20
 controlPv "$(P)$(M).TWV"
+format "decimal"
 font "helvetica-bold-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Rectangle)
@@ -70,7 +69,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 35
 y 123
@@ -79,9 +78,10 @@ h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Moving"
+  "Moving"
 }
 endObjectProperties
 
@@ -89,7 +89,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 35
 y 117
@@ -98,9 +98,10 @@ h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Done"
+  "Done"
 }
 endObjectProperties
 
@@ -108,51 +109,51 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 8
 y 44
 w 100
 h 20
 controlPv "$(P)$(M).RBV"
+format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 19
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 8
 y 65
 w 100
 h 25
 controlPv "$(P)$(M).VAL"
+format "decimal"
 font "helvetica-bold-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Rectangle)
@@ -206,82 +207,82 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 0
 y 13
 w 115
 h 20
 controlPv "$(P)$(M).DESC"
+format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 19
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 20
 y 29
 w 98
 h 15
 controlPv "$(P)$(M).EGU"
+format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 19
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 0
 y 0
 w 115
 h 15
 controlPv "$(P)$(M).NAME"
+format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 19
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 120
 y 0
@@ -289,9 +290,10 @@ w 280
 h 15
 font "helvetica-bold-r-10.0"
 fgColor index 19
+bgColor index 0
 useDisplayBg
 value {
- "<- EPICS record name"
+  "<- EPICS record name"
 }
 endObjectProperties
 
@@ -299,7 +301,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 120
 y 15
@@ -307,9 +309,10 @@ w 280
 h 15
 font "helvetica-bold-r-10.0"
 fgColor index 19
+bgColor index 0
 useDisplayBg
 value {
- "<- user nickname"
+  "<- user nickname"
 }
 endObjectProperties
 
@@ -317,7 +320,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 120
 y 29
@@ -325,9 +328,10 @@ w 280
 h 15
 font "helvetica-bold-r-10.0"
 fgColor index 19
+bgColor index 0
 useDisplayBg
 value {
- "<- engineering units"
+  "<- engineering units"
 }
 endObjectProperties
 
@@ -335,7 +339,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 120
 y 45
@@ -343,9 +347,10 @@ w 150
 h 15
 font "helvetica-bold-r-10.0"
 fgColor index 19
+bgColor index 0
 useDisplayBg
 value {
- "<- readback value,"
+  "<- readback value,"
 }
 endObjectProperties
 
@@ -353,17 +358,18 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 120
 y 75
 w 130
 h 15
 font "helvetica-bold-r-10.0"
-fgColor index 50
+fgColor index 18
+bgColor index 0
 useDisplayBg
 value {
- "<- drive value,"
+  "<- drive value,"
 }
 endObjectProperties
 
@@ -371,17 +377,18 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 120
 y 97
 w 280
 h 15
 font "helvetica-bold-r-10.0"
-fgColor index 50
+fgColor index 18
+bgColor index 0
 useDisplayBg
 value {
- "<- tweak buttons and size"
+  "<- tweak buttons and size"
 }
 endObjectProperties
 
@@ -389,17 +396,18 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 120
 y 118
 w 140
 h 15
 font "helvetica-bold-r-10.0"
-fgColor index 50
+fgColor index 18
+bgColor index 0
 useDisplayBg
 value {
- "<- jog buttons,"
+  "<- jog buttons,"
 }
 endObjectProperties
 
@@ -407,7 +415,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 120
 y 60
@@ -415,9 +423,10 @@ w 280
 h 15
 font "helvetica-bold-r-10.0"
 fgColor index 20
+bgColor index 0
 useDisplayBg
 value {
- "<- limit switches"
+  "<- limit switches"
 }
 endObjectProperties
 
@@ -425,7 +434,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 260
 y 75
@@ -433,9 +442,10 @@ w 140
 h 15
 font "helvetica-bold-r-10.0"
 fgColor index 30
+bgColor index 0
 useDisplayBg
 value {
- "soft-limit"
+  "soft-limit"
 }
 endObjectProperties
 
@@ -443,7 +453,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 260
 y 118
@@ -451,9 +461,10 @@ w 140
 h 15
 font "helvetica-bold-r-10.0"
 fgColor index 10
+bgColor index 0
 useDisplayBg
 value {
- "done/moving flag"
+  "done/moving flag"
 }
 endObjectProperties
 
@@ -461,17 +472,18 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 120
 y 138
 w 280
 h 15
 font "helvetica-bold-r-10.0"
-fgColor index 50
+fgColor index 18
+bgColor index 0
 useDisplayBg
 value {
- "<- user/dial calibration"
+  "<- user/dial calibration"
 }
 endObjectProperties
 
@@ -479,7 +491,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 300
 y 160
@@ -487,9 +499,10 @@ w 100
 h 15
 font "helvetica-bold-r-10.0"
 fgColor index 20
+bgColor index 0
 useDisplayBg
 value {
- "stop button"
+  "stop button"
 }
 endObjectProperties
 
@@ -497,17 +510,18 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 120
 y 160
 w 180
 h 15
 font "helvetica-bold-r-10.0"
-fgColor index 50
+fgColor index 18
+bgColor index 0
 useDisplayBg
 value {
- "<- related displays,"
+  "<- related displays,"
 }
 endObjectProperties
 
@@ -515,17 +529,18 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 120
 y 180
 w 280
 h 15
 font "helvetica-bold-r-10.0"
-fgColor index 50
+fgColor index 18
+bgColor index 0
 useDisplayBg
 value {
- "<- disable motor software"
+  "<- disable motor software"
 }
 endObjectProperties
 
@@ -542,7 +557,6 @@ h 22
 
 beginGroup
 
-
 # (Rectangle)
 object activeRectangleClass
 beginObjectProperties
@@ -558,8 +572,8 @@ fillColor index 14
 lineWidth 2
 visPv "CALC\\\{(A)\}($(P)$(M).SET)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Rectangle)
@@ -577,20 +591,19 @@ fillColor index 30
 lineWidth 2
 visPv "CALC\\\{(A)\}($(P)$(M).SET)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 endGroup
 
 endObjectProperties
 
-
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 0
 y 32
@@ -599,21 +612,22 @@ h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
+bgColor index 0
 useDisplayBg
-value {
- "SET"
-}
 visPv "CALC\\\{(A)\}($(P)$(M).SET)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
+value {
+  "SET"
+}
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 285
 y 45
@@ -621,9 +635,10 @@ w 120
 h 15
 font "helvetica-bold-r-10.0"
 fgColor index 30
+bgColor index 0
 useDisplayBg
 value {
- "in SET mode"
+  "in SET mode"
 }
 endObjectProperties
 
@@ -644,7 +659,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M).TWR"
 pressValue "1"
-releaseValue 
 onLabel "<"
 offLabel "<"
 3d
@@ -669,7 +683,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M).TWF"
 pressValue "1"
-releaseValue 
 onLabel ">"
 offLabel ">"
 3d
@@ -744,7 +757,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M).STOP"
 pressValue "1"
-releaseValue 
 onLabel "STOP"
 offLabel "STOP"
 3d
@@ -756,7 +768,7 @@ endObjectProperties
 object relatedDisplayClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 5
 y 157
@@ -767,21 +779,21 @@ bgColor index 51
 topShadowColor index 2
 botShadowColor index 12
 font "helvetica-medium-r-10.0"
-icon
 numPvs 4
 numDsps 2
 displayFileName {
-  0 motorx_more.edl
-  1 motorx_all.edl
+  0 "motorx_more.edl"
+  1 "motorx_all.edl"
 }
 menuLabel {
-  0 More
-  1 All
+  0 "More"
+  1 "All"
 }
 symbols {
   0 "P=$(P),M=$(M)"
   1 "P=$(P),M=$(M)"
 }
+icon
 endObjectProperties
 
 # (Choice Button)
@@ -825,22 +837,4 @@ controlPv "$(P)$(M)_able.VAL"
 font "helvetica-medium-r-10.0"
 orientation "horizontal"
 endObjectProperties
-# (Group)
-object activeGroupClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 7
-y 41
-w 102
-h 22
-
-beginGroup
-
-
-endGroup
-
-endObjectProperties
-
 

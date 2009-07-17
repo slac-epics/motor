@@ -1,10 +1,10 @@
-4 0 0
+4 0 1
 beginScreenProperties
 major 4
 minor 0
-release 0
-x 55
-y 140
+release 1
+x 672
+y 674
 w 243
 h 181
 font "helvetica-medium-r-18.0"
@@ -23,30 +23,29 @@ snapToGrid
 gridSize 5
 endScreenProperties
 
-
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 0
 y 0
 w 116
 h 20
 controlPv "$(P)$(M1).DESC"
+format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 19
 bgColor index 0
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Rectangle)
@@ -64,8 +63,8 @@ fill
 fillColor index 60
 lineWidth 2
 visPv "CALC\\\{(A)\}($(P)$(M1).DMOV)"
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Rectangle)
@@ -84,8 +83,8 @@ fillColor index 30
 lineWidth 2
 visPv "CALC\\\{(A)\}($(P)$(M1).LVIO)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Rectangle)
@@ -104,8 +103,8 @@ fillColor index 14
 lineWidth 2
 visPv "CALC\\\{(A)\}($(P)$(M1)_able.VAL)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Rectangle)
@@ -128,7 +127,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 28
 y 121
@@ -137,20 +136,21 @@ h 15
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 60
+bgColor index 0
 useDisplayBg
-value {
- "Moving"
-}
 visPv "CALC\\\{(A)\}($(P)$(M1).DMOV)"
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
+value {
+  "Moving"
+}
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 28
 y 127
@@ -159,14 +159,15 @@ h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
+bgColor index 0
 useDisplayBg
-value {
- "Calibrate"
-}
 visPv "CALC\\\{(A)\}($(P)$(M1).SET)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
+value {
+  "Calibrate"
+}
 endObjectProperties
 
 # (Rectangle)
@@ -189,7 +190,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 0
 y 163
@@ -198,9 +199,10 @@ h 13
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 15
+bgColor index 0
 useDisplayBg
 value {
- "Scan"
+  "Scan"
 }
 endObjectProperties
 
@@ -208,7 +210,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 27
 y 139
@@ -217,9 +219,10 @@ h 18
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "More"
+  "More"
 }
 endObjectProperties
 
@@ -227,52 +230,52 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 28
 y 99
 w 60
 h 20
 controlPv "$(P)$(M1).TWV"
+format "decimal"
 font "helvetica-bold-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 9
 y 69
 w 98
 h 25
 controlPv "$(P)$(M1).VAL"
+format "decimal"
 font "helvetica-bold-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Rectangle)
@@ -291,8 +294,8 @@ fillColor index 20
 lineWidth 0
 visPv "CALC\\\{(A)\}($(P)$(M1).LLS)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Rectangle)
@@ -311,33 +314,33 @@ fillColor index 20
 lineWidth 0
 visPv "CALC\\\{(A)\}($(P)$(M1).HLS)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 0
 y 32
 w 116
 h 12
 controlPv "$(P)$(M1).EGU"
+format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 19
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Rectangle)
@@ -360,7 +363,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 0
 y 21
@@ -369,9 +372,10 @@ h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 0
+bgColor index 0
 useDisplayBg
 value {
- "($(P)$(M1))"
+  "($(P)$(M1))"
 }
 endObjectProperties
 
@@ -390,8 +394,8 @@ fillColor index 14
 lineWidth 2
 visPv "CALC\\\{(A)\}($(P)$(M1).SET)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Rectangle)
@@ -409,40 +413,40 @@ fillColor index 30
 lineWidth 2
 visPv "CALC\\\{(A)\}($(P)$(M1).SET)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 11
 y 45
 w 94
 h 17
 controlPv "$(P)$(M1).RBV"
+format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 19
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 28
 y 119
@@ -451,14 +455,15 @@ h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
+bgColor index 0
 useDisplayBg
-value {
- "Soft limit"
-}
 visPv "CALC\\\{(A)\}($(P)$(M1).LVIO)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
+value {
+  "Soft limit"
+}
 endObjectProperties
 
 # (Rectangle)
@@ -477,33 +482,33 @@ lineWidth 2
 lineStyle "dash"
 visPv "CALC\\\{(A)\}($(P)$(M1)_able.VAL)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 127
 y 0
 w 116
 h 20
 controlPv "$(P)$(M2).DESC"
+format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 19
 bgColor index 0
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Rectangle)
@@ -521,8 +526,8 @@ fill
 fillColor index 60
 lineWidth 2
 visPv "CALC\\\{(A)\}($(P)$(M2).DMOV)"
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Rectangle)
@@ -541,8 +546,8 @@ fillColor index 30
 lineWidth 2
 visPv "CALC\\\{(A)\}($(P)$(M2).LVIO)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Rectangle)
@@ -561,8 +566,8 @@ fillColor index 14
 lineWidth 2
 visPv "CALC\\\{(A)\}($(P)$(M2)_able.VAL)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Rectangle)
@@ -585,7 +590,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 155
 y 121
@@ -594,20 +599,21 @@ h 15
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 60
+bgColor index 0
 useDisplayBg
-value {
- "Moving"
-}
 visPv "CALC\\\{(A)\}($(P)$(M2).DMOV)"
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
+value {
+  "Moving"
+}
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 155
 y 127
@@ -616,14 +622,15 @@ h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
+bgColor index 0
 useDisplayBg
-value {
- "Calibrate"
-}
 visPv "CALC\\\{(A)\}($(P)$(M2).SET)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
+value {
+  "Calibrate"
+}
 endObjectProperties
 
 # (Rectangle)
@@ -646,7 +653,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 127
 y 163
@@ -655,9 +662,10 @@ h 13
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 15
+bgColor index 0
 useDisplayBg
 value {
- "Scan"
+  "Scan"
 }
 endObjectProperties
 
@@ -665,7 +673,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 154
 y 139
@@ -674,9 +682,10 @@ h 18
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "More"
+  "More"
 }
 endObjectProperties
 
@@ -684,52 +693,52 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 155
 y 99
 w 60
 h 20
 controlPv "$(P)$(M2).TWV"
+format "decimal"
 font "helvetica-bold-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 136
 y 69
 w 98
 h 25
 controlPv "$(P)$(M2).VAL"
+format "decimal"
 font "helvetica-bold-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Rectangle)
@@ -748,8 +757,8 @@ fillColor index 20
 lineWidth 0
 visPv "CALC\\\{(A)\}($(P)$(M2).LLS)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Rectangle)
@@ -768,33 +777,33 @@ fillColor index 20
 lineWidth 0
 visPv "CALC\\\{(A)\}($(P)$(M2).HLS)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 127
 y 32
 w 116
 h 12
 controlPv "$(P)$(M2).EGU"
+format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 19
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Rectangle)
@@ -817,7 +826,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 127
 y 21
@@ -826,9 +835,10 @@ h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 0
+bgColor index 0
 useDisplayBg
 value {
- "($(P)$(M2))"
+  "($(P)$(M2))"
 }
 endObjectProperties
 
@@ -847,8 +857,8 @@ fillColor index 14
 lineWidth 2
 visPv "CALC\\\{(A)\}($(P)$(M2).SET)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Rectangle)
@@ -866,40 +876,40 @@ fillColor index 30
 lineWidth 2
 visPv "CALC\\\{(A)\}($(P)$(M2).SET)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 138
 y 45
 w 94
 h 17
 controlPv "$(P)$(M2).RBV"
+format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 19
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 155
 y 119
@@ -908,14 +918,15 @@ h 10
 font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
+bgColor index 0
 useDisplayBg
-value {
- "Soft limit"
-}
 visPv "CALC\\\{(A)\}($(P)$(M2).LVIO)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
+value {
+  "Soft limit"
+}
 endObjectProperties
 
 # (Rectangle)
@@ -934,8 +945,8 @@ lineWidth 2
 lineStyle "dash"
 visPv "CALC\\\{(A)\}($(P)$(M2)_able.VAL)"
 visInvert
-visMin 0
-visMax 1
+visMin "0"
+visMax "1"
 endObjectProperties
 
 # (Lines)
@@ -943,7 +954,7 @@ object activeLineClass
 beginObjectProperties
 major 4
 minor 0
-release 0
+release 1
 x 121
 y 0
 w 0
@@ -951,14 +962,14 @@ h 180
 lineColor index 14
 fillColor index 14
 lineWidth 4
-numPoints 2 {
-xPoints  {
-0 121
-1 121
+numPoints 2
+xPoints {
+  0 121
+  1 121
 }
-yPoints  {
-0 0
-1 180
+yPoints {
+  0 0
+  1 180
 }
 endObjectProperties
 
@@ -979,7 +990,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)allstop.VAL"
 pressValue "1"
-releaseValue 
 onLabel "Abort"
 offLabel "Abort"
 3d
@@ -1004,7 +1014,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M1):scanParms.GO"
 pressValue "1"
-releaseValue 
 onLabel "Go"
 offLabel "Go"
 3d
@@ -1029,7 +1038,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M1):scanParms.LOAD"
 pressValue "1"
-releaseValue 
 onLabel "Ld"
 offLabel "Ld"
 3d
@@ -1054,7 +1062,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M1).STOP"
 pressValue "1"
-releaseValue 
 onLabel "STOP"
 offLabel "STOP"
 3d
@@ -1066,7 +1073,7 @@ endObjectProperties
 object relatedDisplayClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 5
 y 137
@@ -1077,22 +1084,21 @@ bgColor index 51
 topShadowColor index 2
 botShadowColor index 12
 font "helvetica-medium-r-10.0"
-icon
-numPvs 10
+numPvs 4
 numDsps 5
 displayFileName {
-  0 motorx_help.edl
-  1 motorx_more.edl
-  2 motorx_setup.edl
-  3 motorx_all.edl
-  4 scanParms.adl
+  0 "motorx_help.edl"
+  1 "motorx_more.edl"
+  2 "motorx_setup.edl"
+  3 "motorx_all.edl"
+  4 "scanParms.adl"
 }
 menuLabel {
-  0 Help
-  1 More
-  2 Setup
-  3 All
-  4 Setup scan parameters
+  0 "Help"
+  1 "More"
+  2 "Setup"
+  3 "All"
+  4 "Setup scan parameters"
 }
 symbols {
   0 "P=$(P),M=$(M1)"
@@ -1101,6 +1107,7 @@ symbols {
   3 "P=$(P),M=$(M1)"
   4 "P=$(P),Q=$(M1),PV=$(M1)"
 }
+icon
 endObjectProperties
 
 # (Message Button)
@@ -1120,7 +1127,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M1).TWR"
 pressValue "1"
-releaseValue 
 onLabel "<"
 offLabel "<"
 3d
@@ -1145,7 +1151,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M1).TWF"
 pressValue "1"
-releaseValue 
 onLabel ">"
 offLabel ">"
 3d
@@ -1170,7 +1175,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)allstop.VAL"
 pressValue "1"
-releaseValue 
 onLabel "Abort"
 offLabel "Abort"
 3d
@@ -1195,7 +1199,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M2):scanParms.GO"
 pressValue "1"
-releaseValue 
 onLabel "Go"
 offLabel "Go"
 3d
@@ -1220,7 +1223,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M2):scanParms.LOAD"
 pressValue "1"
-releaseValue 
 onLabel "Ld"
 offLabel "Ld"
 3d
@@ -1245,7 +1247,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M2).STOP"
 pressValue "1"
-releaseValue 
 onLabel "STOP"
 offLabel "STOP"
 3d
@@ -1257,7 +1258,7 @@ endObjectProperties
 object relatedDisplayClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 132
 y 137
@@ -1268,22 +1269,21 @@ bgColor index 51
 topShadowColor index 2
 botShadowColor index 12
 font "helvetica-medium-r-10.0"
-icon
-numPvs 10
+numPvs 4
 numDsps 5
 displayFileName {
-  0 motorx_help.edl
-  1 motorx_more.edl
-  2 motorx_setup.edl
-  3 motorx_all.edl
-  4 scanParms.adl
+  0 "motorx_help.edl"
+  1 "motorx_more.edl"
+  2 "motorx_setup.edl"
+  3 "motorx_all.edl"
+  4 "scanParms.adl"
 }
 menuLabel {
-  0 Help
-  1 More
-  2 Setup
-  3 All
-  4 Setup scan parameters
+  0 "Help"
+  1 "More"
+  2 "Setup"
+  3 "All"
+  4 "Setup scan parameters"
 }
 symbols {
   0 "P=$(P),M=$(M2)"
@@ -1292,6 +1292,7 @@ symbols {
   3 "P=$(P),M=$(M2)"
   4 "P=$(P),Q=$(M2),PV=$(M2)"
 }
+icon
 endObjectProperties
 
 # (Message Button)
@@ -1311,7 +1312,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M2).TWR"
 pressValue "1"
-releaseValue 
 onLabel "<"
 offLabel "<"
 3d
@@ -1336,7 +1336,6 @@ topShadowColor index 0
 botShadowColor index 14
 controlPv "$(P)$(M2).TWF"
 pressValue "1"
-releaseValue 
 onLabel ">"
 offLabel ">"
 3d
