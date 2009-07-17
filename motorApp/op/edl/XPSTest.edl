@@ -8,7 +8,7 @@ y 30
 w 200
 h 175
 font "helvetica-medium-r-18.0"
-ctlFont "helvetica-medium-r-8.0"
+ctlFont "helvetica-bold-r-10.0"
 btnFont "helvetica-medium-r-18.0"
 fgColor index 14
 bgColor index 4
@@ -34,7 +34,7 @@ x 6
 y 11
 w 150
 h 25
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {

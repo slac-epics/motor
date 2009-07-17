@@ -8,7 +8,7 @@ y 624
 w 600
 h 181
 font "helvetica-medium-r-18.0"
-ctlFont "helvetica-medium-r-8.0"
+ctlFont "helvetica-bold-r-10.0"
 btnFont "helvetica-medium-r-18.0"
 fgColor index 14
 bgColor index 3
@@ -35,11 +35,11 @@ y 0
 w 116
 h 20
 controlPv "$(P)$(M1).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 0
 autoHeight
 format decimal
@@ -134,7 +134,7 @@ x 28
 y 121
 w 60
 h 15
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 60
 useDisplayBg
@@ -156,7 +156,7 @@ x 28
 y 127
 w 60
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
 useDisplayBg
@@ -195,7 +195,7 @@ x 0
 y 163
 w 30
 h 13
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 15
 useDisplayBg
@@ -214,7 +214,7 @@ x 27
 y 139
 w 30
 h 18
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 14
 useDisplayBg
@@ -234,7 +234,7 @@ y 99
 w 60
 h 20
 controlPv "$(P)$(M1).TWV"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -260,7 +260,7 @@ y 69
 w 98
 h 25
 controlPv "$(P)$(M1).VAL"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -326,11 +326,11 @@ y 32
 w 116
 h 12
 controlPv "$(P)$(M1).EGU"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
@@ -350,9 +350,9 @@ x 1
 y 21
 w 113
 h 9
-lineColor index 54
+lineColor index 19
 fill
-fillColor index 54
+fillColor index 19
 lineWidth 2
 endObjectProperties
 
@@ -366,7 +366,7 @@ x 0
 y 21
 w 116
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 0
 useDisplayBg
@@ -424,11 +424,11 @@ y 45
 w 94
 h 17
 controlPv "$(P)$(M1).RBV"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
@@ -448,7 +448,7 @@ x 28
 y 119
 w 60
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
 useDisplayBg
@@ -492,11 +492,11 @@ y 0
 w 116
 h 20
 controlPv "$(P)$(M2).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 0
 autoHeight
 format decimal
@@ -591,7 +591,7 @@ x 148
 y 121
 w 60
 h 15
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 60
 useDisplayBg
@@ -613,7 +613,7 @@ x 148
 y 127
 w 60
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
 useDisplayBg
@@ -652,7 +652,7 @@ x 120
 y 163
 w 30
 h 13
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 15
 useDisplayBg
@@ -671,7 +671,7 @@ x 147
 y 139
 w 30
 h 18
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 14
 useDisplayBg
@@ -691,7 +691,7 @@ y 99
 w 60
 h 20
 controlPv "$(P)$(M2).TWV"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -717,7 +717,7 @@ y 69
 w 98
 h 25
 controlPv "$(P)$(M2).VAL"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -783,11 +783,11 @@ y 32
 w 116
 h 12
 controlPv "$(P)$(M2).EGU"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
@@ -807,9 +807,9 @@ x 121
 y 21
 w 113
 h 9
-lineColor index 54
+lineColor index 19
 fill
-fillColor index 54
+fillColor index 19
 lineWidth 2
 endObjectProperties
 
@@ -823,7 +823,7 @@ x 120
 y 21
 w 116
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 0
 useDisplayBg
@@ -881,11 +881,11 @@ y 45
 w 94
 h 17
 controlPv "$(P)$(M2).RBV"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
@@ -905,7 +905,7 @@ x 148
 y 119
 w 60
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
 useDisplayBg
@@ -949,11 +949,11 @@ y 0
 w 116
 h 20
 controlPv "$(P)$(M3).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 0
 autoHeight
 format decimal
@@ -1048,7 +1048,7 @@ x 268
 y 121
 w 60
 h 15
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 60
 useDisplayBg
@@ -1070,7 +1070,7 @@ x 268
 y 127
 w 60
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
 useDisplayBg
@@ -1109,7 +1109,7 @@ x 240
 y 163
 w 30
 h 13
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 15
 useDisplayBg
@@ -1128,7 +1128,7 @@ x 267
 y 139
 w 30
 h 18
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 14
 useDisplayBg
@@ -1148,7 +1148,7 @@ y 99
 w 60
 h 20
 controlPv "$(P)$(M3).TWV"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -1174,7 +1174,7 @@ y 69
 w 98
 h 25
 controlPv "$(P)$(M3).VAL"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -1240,11 +1240,11 @@ y 32
 w 116
 h 12
 controlPv "$(P)$(M3).EGU"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
@@ -1264,9 +1264,9 @@ x 241
 y 21
 w 113
 h 9
-lineColor index 54
+lineColor index 19
 fill
-fillColor index 54
+fillColor index 19
 lineWidth 2
 endObjectProperties
 
@@ -1280,7 +1280,7 @@ x 240
 y 21
 w 116
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 0
 useDisplayBg
@@ -1338,11 +1338,11 @@ y 45
 w 94
 h 17
 controlPv "$(P)$(M3).RBV"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
@@ -1362,7 +1362,7 @@ x 268
 y 119
 w 60
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
 useDisplayBg
@@ -1406,11 +1406,11 @@ y 0
 w 116
 h 20
 controlPv "$(P)$(M4).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 0
 autoHeight
 format decimal
@@ -1505,7 +1505,7 @@ x 388
 y 121
 w 60
 h 15
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 60
 useDisplayBg
@@ -1527,7 +1527,7 @@ x 388
 y 127
 w 60
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
 useDisplayBg
@@ -1566,7 +1566,7 @@ x 360
 y 163
 w 30
 h 13
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 15
 useDisplayBg
@@ -1585,7 +1585,7 @@ x 387
 y 139
 w 30
 h 18
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 14
 useDisplayBg
@@ -1605,7 +1605,7 @@ y 99
 w 60
 h 20
 controlPv "$(P)$(M4).TWV"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -1631,7 +1631,7 @@ y 69
 w 98
 h 25
 controlPv "$(P)$(M4).VAL"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -1697,11 +1697,11 @@ y 32
 w 116
 h 12
 controlPv "$(P)$(M4).EGU"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
@@ -1721,9 +1721,9 @@ x 361
 y 21
 w 113
 h 9
-lineColor index 54
+lineColor index 19
 fill
-fillColor index 54
+fillColor index 19
 lineWidth 2
 endObjectProperties
 
@@ -1737,7 +1737,7 @@ x 360
 y 21
 w 116
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 0
 useDisplayBg
@@ -1795,11 +1795,11 @@ y 45
 w 94
 h 17
 controlPv "$(P)$(M4).RBV"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
@@ -1819,7 +1819,7 @@ x 388
 y 119
 w 60
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
 useDisplayBg
@@ -1863,11 +1863,11 @@ y 0
 w 116
 h 20
 controlPv "$(P)$(M5).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 0
 autoHeight
 format decimal
@@ -1962,7 +1962,7 @@ x 508
 y 121
 w 60
 h 15
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 60
 useDisplayBg
@@ -1984,7 +1984,7 @@ x 508
 y 127
 w 60
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
 useDisplayBg
@@ -2023,7 +2023,7 @@ x 480
 y 163
 w 30
 h 13
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 15
 useDisplayBg
@@ -2042,7 +2042,7 @@ x 507
 y 139
 w 30
 h 18
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 14
 useDisplayBg
@@ -2062,7 +2062,7 @@ y 99
 w 60
 h 20
 controlPv "$(P)$(M5).TWV"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -2088,7 +2088,7 @@ y 69
 w 98
 h 25
 controlPv "$(P)$(M5).VAL"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -2154,11 +2154,11 @@ y 32
 w 116
 h 12
 controlPv "$(P)$(M5).EGU"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
@@ -2178,9 +2178,9 @@ x 481
 y 21
 w 113
 h 9
-lineColor index 54
+lineColor index 19
 fill
-fillColor index 54
+fillColor index 19
 lineWidth 2
 endObjectProperties
 
@@ -2194,7 +2194,7 @@ x 480
 y 21
 w 116
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 0
 useDisplayBg
@@ -2252,11 +2252,11 @@ y 45
 w 94
 h 17
 controlPv "$(P)$(M5).RBV"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
@@ -2276,7 +2276,7 @@ x 508
 y 119
 w 60
 h 10
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 30
 useDisplayBg

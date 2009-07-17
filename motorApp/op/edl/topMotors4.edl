@@ -8,7 +8,7 @@ y 25
 w 145
 h 125
 font "helvetica-medium-r-18.0"
-ctlFont "helvetica-medium-r-8.0"
+ctlFont "helvetica-bold-r-10.0"
 btnFont "helvetica-medium-r-18.0"
 fgColor index 64
 bgColor index 3
@@ -34,7 +34,7 @@ x 0
 y 0
 w 30
 h 14
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -53,11 +53,11 @@ y 0
 w 20
 h 14
 controlPv "$(P)$(M1).CARD"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 0
 autoHeight
 format decimal
@@ -77,7 +77,7 @@ x 60
 y 0
 w 75
 h 14
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -96,11 +96,11 @@ y 14
 w 100
 h 10
 controlPv "$(P)$(M1).DTYP"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
@@ -531,7 +531,7 @@ y 85
 w 100
 h 20
 controlPv "$(P)$(M4).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -557,7 +557,7 @@ y 65
 w 100
 h 20
 controlPv "$(P)$(M3).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -583,7 +583,7 @@ y 45
 w 100
 h 20
 controlPv "$(P)$(M2).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -609,7 +609,7 @@ y 25
 w 100
 h 20
 controlPv "$(P)$(M1).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14

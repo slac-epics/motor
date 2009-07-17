@@ -8,7 +8,7 @@ y 113
 w 1015
 h 365
 font "helvetica-medium-r-18.0"
-ctlFont "helvetica-medium-r-8.0"
+ctlFont "helvetica-bold-r-10.0"
 btnFont "helvetica-medium-r-18.0"
 fgColor index 14
 bgColor index 4
@@ -50,7 +50,7 @@ x 272
 y 13
 w 396
 h 25
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 14
 useDisplayBg
@@ -85,7 +85,7 @@ y 334
 w 100
 h 20
 controlPv "$(P)$(R)TimeTraj"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -110,7 +110,7 @@ x 7
 y 334
 w 170
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -128,7 +128,7 @@ x 199
 y 66
 w 50
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -146,7 +146,7 @@ x 435
 y 67
 w 160
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -164,7 +164,7 @@ x 395
 y 95
 w 70
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -182,7 +182,7 @@ x 493
 y 96
 w 60
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -200,7 +200,7 @@ x 565
 y 96
 w 60
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -218,7 +218,7 @@ x 659
 y 97
 w 60
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -236,7 +236,7 @@ x 737
 y 97
 w 60
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -254,7 +254,7 @@ x 667
 y 68
 w 120
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -272,7 +272,7 @@ x 840
 y 97
 w 60
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -290,7 +290,7 @@ x 922
 y 97
 w 60
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -308,7 +308,7 @@ x 829
 y 68
 w 150
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -326,7 +326,7 @@ x 194
 y 91
 w 60
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -344,7 +344,7 @@ x 299
 y 66
 w 50
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -362,7 +362,7 @@ x 284
 y 91
 w 80
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {
@@ -381,11 +381,11 @@ y 195
 w 90
 h 20
 controlPv "$(P)$(R)M4Actual"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -406,7 +406,7 @@ y 195
 w 90
 h 20
 controlPv "$(P)$(R)M4Traj"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -432,7 +432,7 @@ y 195
 w 90
 h 20
 controlPv "$(P)$(R)M4MDVS"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -458,11 +458,11 @@ y 195
 w 50
 h 20
 controlPv "$(P)$(R)M4MDVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -483,11 +483,11 @@ y 195
 w 50
 h 20
 controlPv "$(P)$(R)M4MVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -508,11 +508,11 @@ y 195
 w 50
 h 20
 controlPv "$(P)$(R)M4MAE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -533,11 +533,11 @@ y 195
 w 80
 h 20
 controlPv "$(P)$(R)M4MAA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -558,11 +558,11 @@ y 195
 w 80
 h 20
 controlPv "$(P)$(R)M4MVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -583,11 +583,11 @@ y 195
 w 80
 h 20
 controlPv "$(P)$(R)M4MDVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -608,11 +608,11 @@ y 220
 w 90
 h 20
 controlPv "$(P)$(R)M5Actual"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -633,7 +633,7 @@ y 220
 w 90
 h 20
 controlPv "$(P)$(R)M5Traj"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -659,7 +659,7 @@ y 220
 w 90
 h 20
 controlPv "$(P)$(R)M5MDVS"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -685,11 +685,11 @@ y 220
 w 50
 h 20
 controlPv "$(P)$(R)M5MDVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -710,11 +710,11 @@ y 220
 w 50
 h 20
 controlPv "$(P)$(R)M5MVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -735,11 +735,11 @@ y 220
 w 50
 h 20
 controlPv "$(P)$(R)M5MAE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -760,11 +760,11 @@ y 220
 w 80
 h 20
 controlPv "$(P)$(R)M5MAA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -785,11 +785,11 @@ y 220
 w 80
 h 20
 controlPv "$(P)$(R)M5MVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -810,11 +810,11 @@ y 220
 w 80
 h 20
 controlPv "$(P)$(R)M5MDVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -835,11 +835,11 @@ y 245
 w 90
 h 20
 controlPv "$(P)$(R)M6Actual"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -860,7 +860,7 @@ y 245
 w 90
 h 20
 controlPv "$(P)$(R)M6Traj"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -886,7 +886,7 @@ y 245
 w 90
 h 20
 controlPv "$(P)$(R)M6MDVS"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -912,11 +912,11 @@ y 245
 w 50
 h 20
 controlPv "$(P)$(R)M6MDVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -937,11 +937,11 @@ y 245
 w 50
 h 20
 controlPv "$(P)$(R)M6MVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -962,11 +962,11 @@ y 245
 w 50
 h 20
 controlPv "$(P)$(R)M6MAE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -987,11 +987,11 @@ y 245
 w 80
 h 20
 controlPv "$(P)$(R)M6MAA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1012,11 +1012,11 @@ y 245
 w 80
 h 20
 controlPv "$(P)$(R)M6MVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1037,11 +1037,11 @@ y 245
 w 80
 h 20
 controlPv "$(P)$(R)M6MDVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1062,11 +1062,11 @@ y 120
 w 90
 h 20
 controlPv "$(P)$(R)M1Actual"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1087,7 +1087,7 @@ y 120
 w 90
 h 20
 controlPv "$(P)$(R)M1Traj"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -1113,7 +1113,7 @@ y 120
 w 90
 h 20
 controlPv "$(P)$(R)M1MDVS"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -1139,11 +1139,11 @@ y 120
 w 50
 h 20
 controlPv "$(P)$(R)M1MDVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1164,11 +1164,11 @@ y 120
 w 50
 h 20
 controlPv "$(P)$(R)M1MVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1189,11 +1189,11 @@ y 120
 w 50
 h 20
 controlPv "$(P)$(R)M1MAE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1214,11 +1214,11 @@ y 120
 w 80
 h 20
 controlPv "$(P)$(R)M1MAA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1239,11 +1239,11 @@ y 120
 w 80
 h 20
 controlPv "$(P)$(R)M1MVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1264,11 +1264,11 @@ y 120
 w 80
 h 20
 controlPv "$(P)$(R)M1MDVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1289,11 +1289,11 @@ y 145
 w 90
 h 20
 controlPv "$(P)$(R)M2Actual"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1314,7 +1314,7 @@ y 145
 w 90
 h 20
 controlPv "$(P)$(R)M2Traj"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -1340,7 +1340,7 @@ y 145
 w 90
 h 20
 controlPv "$(P)$(R)M2MDVS"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -1366,11 +1366,11 @@ y 145
 w 50
 h 20
 controlPv "$(P)$(R)M2MDVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1391,11 +1391,11 @@ y 145
 w 50
 h 20
 controlPv "$(P)$(R)M2MVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1416,11 +1416,11 @@ y 145
 w 50
 h 20
 controlPv "$(P)$(R)M2MAE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1441,11 +1441,11 @@ y 145
 w 80
 h 20
 controlPv "$(P)$(R)M2MAA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1466,11 +1466,11 @@ y 145
 w 80
 h 20
 controlPv "$(P)$(R)M2MVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1491,11 +1491,11 @@ y 145
 w 80
 h 20
 controlPv "$(P)$(R)M2MDVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1516,11 +1516,11 @@ y 170
 w 90
 h 20
 controlPv "$(P)$(R)M3Actual"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1541,7 +1541,7 @@ y 170
 w 90
 h 20
 controlPv "$(P)$(R)M3Traj"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -1567,7 +1567,7 @@ y 170
 w 90
 h 20
 controlPv "$(P)$(R)M3MDVS"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -1593,11 +1593,11 @@ y 170
 w 50
 h 20
 controlPv "$(P)$(R)M3MDVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1618,11 +1618,11 @@ y 170
 w 50
 h 20
 controlPv "$(P)$(R)M3MVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1643,11 +1643,11 @@ y 170
 w 50
 h 20
 controlPv "$(P)$(R)M3MAE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1668,11 +1668,11 @@ y 170
 w 80
 h 20
 controlPv "$(P)$(R)M3MAA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1693,11 +1693,11 @@ y 170
 w 80
 h 20
 controlPv "$(P)$(R)M3MVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1718,11 +1718,11 @@ y 170
 w 80
 h 20
 controlPv "$(P)$(R)M3MDVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1822,11 +1822,11 @@ y 295
 w 90
 h 20
 controlPv "$(P)$(R)M8Actual"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1847,7 +1847,7 @@ y 295
 w 90
 h 20
 controlPv "$(P)$(R)M8Traj"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -1873,7 +1873,7 @@ y 295
 w 90
 h 20
 controlPv "$(P)$(R)M8MDVS"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -1899,11 +1899,11 @@ y 295
 w 50
 h 20
 controlPv "$(P)$(R)M8MDVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1924,11 +1924,11 @@ y 295
 w 50
 h 20
 controlPv "$(P)$(R)M8MVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1949,11 +1949,11 @@ y 295
 w 50
 h 20
 controlPv "$(P)$(R)M8MAE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1974,11 +1974,11 @@ y 295
 w 80
 h 20
 controlPv "$(P)$(R)M8MAA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -1999,11 +1999,11 @@ y 295
 w 80
 h 20
 controlPv "$(P)$(R)M8MVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -2024,11 +2024,11 @@ y 295
 w 80
 h 20
 controlPv "$(P)$(R)M8MDVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -2049,11 +2049,11 @@ y 270
 w 90
 h 20
 controlPv "$(P)$(R)M7Actual"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -2074,7 +2074,7 @@ y 270
 w 90
 h 20
 controlPv "$(P)$(R)M7Traj"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -2100,7 +2100,7 @@ y 270
 w 90
 h 20
 controlPv "$(P)$(R)M7MDVS"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -2126,11 +2126,11 @@ y 270
 w 50
 h 20
 controlPv "$(P)$(R)M7MDVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -2151,11 +2151,11 @@ y 270
 w 50
 h 20
 controlPv "$(P)$(R)M7MVE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -2176,11 +2176,11 @@ y 270
 w 50
 h 20
 controlPv "$(P)$(R)M7MAE"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -2201,11 +2201,11 @@ y 270
 w 80
 h 20
 controlPv "$(P)$(R)M7MAA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -2226,11 +2226,11 @@ y 270
 w 80
 h 20
 controlPv "$(P)$(R)M7MVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -2251,11 +2251,11 @@ y 270
 w 80
 h 20
 controlPv "$(P)$(R)M7MDVA"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 4
 autoHeight
 format decimal
@@ -2276,7 +2276,7 @@ y 120
 w 150
 h 20
 controlPv "$(P)$(M1).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
@@ -2301,7 +2301,7 @@ y 145
 w 150
 h 20
 controlPv "$(P)$(M2).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
@@ -2326,7 +2326,7 @@ y 170
 w 150
 h 20
 controlPv "$(P)$(M3).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
@@ -2351,7 +2351,7 @@ y 195
 w 150
 h 20
 controlPv "$(P)$(M4).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
@@ -2376,7 +2376,7 @@ y 220
 w 150
 h 20
 controlPv "$(P)$(M5).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
@@ -2401,7 +2401,7 @@ y 245
 w 150
 h 20
 controlPv "$(P)$(M6).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
@@ -2426,7 +2426,7 @@ y 270
 w 150
 h 20
 controlPv "$(P)$(M7).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
@@ -2451,7 +2451,7 @@ y 295
 w 150
 h 20
 controlPv "$(P)$(M8).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate

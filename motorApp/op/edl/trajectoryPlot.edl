@@ -8,7 +8,7 @@ y 391
 w 400
 h 230
 font "helvetica-medium-r-18.0"
-ctlFont "helvetica-medium-r-8.0"
+ctlFont "helvetica-bold-r-10.0"
 btnFont "helvetica-medium-r-18.0"
 fgColor index 14
 bgColor index 0
@@ -83,7 +83,7 @@ y 11
 w 85
 h 20
 controlPv "$(M).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "right"
 smartRefresh
 fastUpdate
@@ -107,7 +107,7 @@ x 161
 y 11
 w 80
 h 20
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fgColor index 14
 useDisplayBg
 value {

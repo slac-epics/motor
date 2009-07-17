@@ -79,7 +79,7 @@ controlPv "$(P)$(M).DESC"
 format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-fgColor index 54
+fgColor index 19
 bgColor index 0
 autoHeight
 nullColor index 32
@@ -354,7 +354,7 @@ controlPv "$(P)$(M).EGU"
 format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 nullColor index 32
@@ -375,9 +375,9 @@ x 1
 y 21
 w 113
 h 9
-lineColor index 54
+lineColor index 19
 fill
-fillColor index 54
+fillColor index 19
 lineWidth 2
 endObjectProperties
 
@@ -453,7 +453,7 @@ controlPv "$(P)$(M).RBV"
 format "decimal"
 font "helvetica-bold-r-10.0"
 fontAlign "center"
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 nullColor index 32

@@ -8,7 +8,7 @@ y 10
 w 128
 h 105
 font "helvetica-medium-r-18.0"
-ctlFont "helvetica-medium-r-8.0"
+ctlFont "helvetica-bold-r-10.0"
 btnFont "helvetica-medium-r-18.0"
 fgColor index 14
 bgColor index 3
@@ -74,7 +74,7 @@ y 54
 w 98
 h 25
 controlPv "$(P)$(M).VAL"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 smartRefresh
 fastUpdate
 fgColor index 14
@@ -178,11 +178,11 @@ y 32
 w 94
 h 16
 controlPv "$(P)$(M).RBV"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
@@ -243,11 +243,11 @@ y 0
 w 128
 h 14
 controlPv "$(P)$(M).DESC"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 0
 autoHeight
 format decimal
@@ -267,8 +267,8 @@ x 0
 y 14
 w 127
 h 3
-lineColor index 54
-fillColor index 54
+lineColor index 19
+fillColor index 19
 lineWidth 3
 numPoints 2 {
 xPoints  {
@@ -292,11 +292,11 @@ y 18
 w 128
 h 10
 controlPv "$(P)$(M).EGU"
-font "helvetica-medium-r-8.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 smartRefresh
 fastUpdate
-fgColor index 54
+fgColor index 19
 bgColor index 3
 autoHeight
 format decimal
