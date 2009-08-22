@@ -2,9 +2,9 @@
 FILENAME...	devSoftAux.cc
 USAGE...	Motor record device level support for Soft channel.
 
-Version:	1.11
-Modified By:	peterd
-Last Modified:	2007/09/19 15:57:41
+Version:	1.12
+Modified By:	sluiter
+Last Modified:	2008/03/14 20:23:27
 */
 
 /*
@@ -79,7 +79,8 @@ STATIC void soft_rinp(struct event_handler_args args)
 
 long soft_init(void *after)
 {
-    long before_after = (long) after;
+    int before_after = (after == 0) ? 0 : 1;
+
     if (before_after == 0)
     {
 	epicsThreadId dbCaTask_tid;

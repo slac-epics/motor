@@ -21,12 +21,7 @@ DB += basic_asyn_motor.db
 DB += XPS_extra.db
 DB += TransPos.db
 DB += motorUtil.db
-DB += XPSAuxAi.db
-DB += XPSAuxAo.db
-DB += XPSAuxBi.db
-DB += XPSAuxBo.db
-DB += XPSAuxLi.db
-DB += XPSAuxLo.db
+DB += asyn_motor.db
 
 #----------------------------------------------------
 # Declare template files which do not show up in DB

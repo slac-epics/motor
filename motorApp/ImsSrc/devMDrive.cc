@@ -3,9 +3,9 @@ FILENAME...	devMDrive.cc
 USAGE...	Motor record device level support for Intelligent Motion
 		Systems, Inc. MDrive series of controllers.
 
-Version:	1.6
+Version:	1.7
 Modified By:	sluiter
-Last Modified:	2005/04/14 20:31:05
+Last Modified:	2008/03/14 20:10:01
 */
 
 /*
@@ -115,7 +115,7 @@ static struct board_stat **MDrive_cards;
 STATIC long MDrive_init(void *arg)
 {
     long rtnval;
-    long after = (long) arg;
+    int after = (arg == 0) ? 0 : 1;
 
     if (after == 0)
     {

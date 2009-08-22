@@ -2,9 +2,9 @@
 FILENAME... devSmartMotor.cc
 USAGE...    Motor record driver level support for Animatics Corporation SmartMotors.
 
-Version:        1.1
+Version:        1.2
 Modified By:    sluiter
-Last Modified:  2007/05/08 14:45:16
+Last Modified:  2008/03/14 20:21:56
 */
 
 /*
@@ -132,7 +132,7 @@ static struct board_stat **SmartMotor_cards;
 static long SmartMotor_init(void *arg)
 {
     long rtnval;
-    long after = (long) arg;
+    int after = (arg == 0) ? 0 : 1;
 
     if (after == 0)
     {

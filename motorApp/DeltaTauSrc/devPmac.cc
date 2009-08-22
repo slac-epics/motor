@@ -2,9 +2,9 @@
 FILENAME...	devPmac.cc
 USAGE... Device level support for Delta Tau PMAC.
 
-Version:	1.4
+Version:	1.5
 Modified By:	sluiter
-Last Modified:	2004/12/20 21:05:19
+Last Modified:	2008/03/14 20:09:01
 */
 
 /*
@@ -102,7 +102,7 @@ static const char errmsg[] = {"\n\n!!!ERROR!!! - Oms driver uninitialized.\n"};
 
 static long Pmac_init(void *arg)
 {
-    long after = (long) arg;
+    int after = (arg == 0) ? 0 : 1;
 
     if (*(Pmac_access.init_indicator) == NO)
     {

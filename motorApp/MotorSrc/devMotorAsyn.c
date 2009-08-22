@@ -11,12 +11,25 @@
  * Notwithstanding the above, explicit permission is granted for APS to 
  * redistribute this software.
  *
- * Version: 1.21
- * Modified by: peterd
- * Last Modified: 2007/09/20 10:34:47
+ * Version: 1.25.2.3
+ * Modified by: sluiter
+ * Last Modified: 2009/06/22 14:55:44
  *
  * Original Author: Peter Denison
  * Current Author: Peter Denison
+ *
+ * Modification Log:
+ * -----------------
+ * .01 2009-04-15 rls
+ * Added logic to asynCallback() to prevent moveRequestPending left nonzero
+ * after motor record LOAD_POS command before dbScanLockOK is true (i.e., from
+ * save/restore at boot-up).
+ * Eliminated compiler warnings.
+ *
+ * .02 2009-04-29 MRP
+ * Fix for motor simulator stuck in Moving state after multiple LOAD_POS
+ * commands to the same position; set needUpdate = 1 in asynCallback() before
+ * dbProcess.
  */
 
 #include <stddef.h>
@@ -82,7 +95,7 @@ typedef struct
     struct motorRecord * pmr;
     int moveRequestPending;
     struct MotorStatus status;
-    motor_cmnd move_cmd;
+    motorCommand move_cmd;
     double param;
     int needUpdate;
     asynUser *pasynUser;
@@ -108,16 +121,17 @@ static long init( int after )
     return 0;
 }
 
-static void init_controller(struct motorRecord *pmr )
+static void init_controller(struct motorRecord *pmr, asynUser *pasynUser )
 {
     /* This routine is copied out of the old motordevCom and initialises the controller
        based on the record values. I think most of it should be transferred to init_record
        which is one reason why I have separated it into another routine */
     motorAsynPvt *pPvt = (motorAsynPvt *)pmr->dpvt;
     double position = pPvt->status.position;
+    double rdbd = (fabs(pmr->rdbd) < fabs(pmr->mres) ? fabs(pmr->mres) : fabs(pmr->rdbd) );
 
-    if ((fabs(pmr->dval) > pmr->rdbd && pmr->mres != 0) &&
-        ((position * pmr->mres) < pmr->rdbd))
+    if ((fabs(pmr->dval) > rdbd && pmr->mres != 0) &&
+        (fabs(position * pmr->mres) < rdbd))
     {
         double setPos = pmr->dval / pmr->mres;
         epicsEventId initEvent = epicsEventCreate( epicsEventEmpty );
@@ -128,6 +142,10 @@ static void init_controller(struct motorRecord *pmr )
         build_trans(LOAD_POS, &setPos, pmr);
         end_trans(pmr);
 
+        asynPrint(pasynUser, ASYN_TRACE_FLOW,
+                  "devMotorAsyn::init_controller, %s set position to %f\n",
+                  pmr->name, setPos );
+
         if ( initEvent )
         {
             epicsEventMustWait(initEvent);
@@ -135,6 +153,11 @@ static void init_controller(struct motorRecord *pmr )
             pPvt->initEvent = 0;
         }
     }
+    else
+        asynPrint(pasynUser, ASYN_TRACE_FLOW,
+                  "devMotorAsyn::init_controller, %s setting of position not required, position=%f, mres=%f, dval=%f, rdbd=%f",
+                  pmr->name, position, pmr->mres, pmr->dval, rdbd );
+
 }
 
 static long init_record(struct motorRecord * pmr )
@@ -145,6 +168,7 @@ static long init_record(struct motorRecord * pmr )
     asynStatus status;
     asynInterface *pasynInterface;
     motorAsynPvt *pPvt;
+    /*    double resolution;*/
 
     /* Allocate motorAsynPvt private structure */
     pPvt = callocMustSucceed(1, sizeof(motorAsynPvt), "devMotorAsyn init_record()");
@@ -231,12 +255,6 @@ static long init_record(struct motorRecord * pmr )
 	       pmr->name, pasynUser->errorMessage);
     }
 
-    /* Once everything is set-up, we can do the initial setting of position.
-       This should be the first thing that pushes onto the Asyn queue.
-       It needs to be done before we get the initial values back from the
-       controller.*/
-    init_controller(pmr);
-
     /* Initiate calls to get the initial motor parameters
        Have to do it the long-winded way, because before iocInit, none of the
        locks or scan queues are initialised, so calls to scanOnce(),
@@ -259,6 +277,17 @@ static long init_record(struct motorRecord * pmr )
 		  "%s devMotorAsyn.c::init_record: pasynMotorStatus->read "
 		  "returned %s", pmr->name, pasynUser->errorMessage);
     }
+
+    /* We must get the first set of status values from the controller before
+     * the initial setting of position. Otherwise we won't be able to decide
+     * whether or not to write new position values to the controller.
+     */
+    init_controller(pmr, pasynUser);
+    /* Do not need to manually retrieve the new status values, as if they are
+     * set, a callback will be generated
+     */
+
+    /* Finally, indicate to the motor record that these values can be used. */
     pasynManager->freeAsynUser(pasynUser);
     pPvt->needUpdate = 1;
 
@@ -298,7 +327,8 @@ static RTN_STATUS build_trans( motor_cmnd command,
 			       double * param,
 			       struct motorRecord * pmr )
 {
-    RTN_STATUS status = OK;
+    RTN_STATUS rtnind = OK;
+    asynStatus status;
     motorAsynPvt *pPvt = (motorAsynPvt *)pmr->dpvt;
     asynUser *pasynUser = pPvt->pasynUser;
     motorAsynMessage *pmsg;
@@ -337,7 +367,8 @@ static RTN_STATUS build_trans( motor_cmnd command,
 
     /* If we are already in COMM_ALARM then this server is not reachable,
      * return */
-    if ((pmr->nsta == COMM_ALARM) || (pmr->stat == COMM_ALARM)) return(-1);
+    if ((pmr->nsta == COMM_ALARM) || (pmr->stat == COMM_ALARM))
+        return(ERROR);
 
    /* Make a copy of asynUser.  This is needed because we can have multiple
     * requests queued.  It will be freed in the callback */
@@ -352,6 +383,7 @@ static RTN_STATUS build_trans( motor_cmnd command,
     case LOAD_POS:
 	pmsg->command = motorPosition;
 	pmsg->dvalue = *param;
+	pPvt->moveRequestPending++;
 	break;
     case SET_VEL_BASE:
 	pmsg->command = motorVelBase;
@@ -414,7 +446,6 @@ static RTN_STATUS build_trans( motor_cmnd command,
 		  "devMotorAsyn::send_msg: %s: PRIMITIVE no longer supported\n",
 		  pmr->name);
 	return(ERROR);
-	break;
     case SET_HIGH_LIMIT:
 	pmsg->command = motorHighLim;
 	pmsg->dvalue = *param;
@@ -424,8 +455,8 @@ static RTN_STATUS build_trans( motor_cmnd command,
 	pmsg->dvalue = *param;
 	break;
     case GET_INFO:
-	pmsg->command = motorStatus;
-	pmsg->interface = float64ArrayType;
+	pmsg->command = motorUpStatus;
+	pmsg->interface = int32Type;
 	break;
     case SET_RESOLUTION:
 	pmsg->command = motorResolution;
@@ -445,9 +476,9 @@ static RTN_STATUS build_trans( motor_cmnd command,
 	asynPrint(pasynUser, ASYN_TRACE_ERROR,
 		  "devMotorAsyn::send_msg: %s error calling queueRequest, %s\n",
 		  pmr->name, pasynUser->errorMessage);
-	return(ERROR);
+	rtnind = ERROR;
     }
-    return(OK);
+    return(rtnind);
 }
 
 static RTN_STATUS end_trans(struct motorRecord * pmr )
@@ -486,9 +517,15 @@ static void asynCallback(asynUser *pasynUser)
 	}
 	break;
 
+    case motorUpStatus:
+        status = pPvt->pasynInt32->write(pPvt->asynInt32Pvt, pasynUser,
+                                         pmsg->ivalue);
+        break;
+
     case motorMoveAbs:
     case motorMoveRel:
     case motorHome:
+    case motorPosition:
 	commandIsMove = 1;
 	/* Intentional fall-through */
     default:
@@ -512,11 +549,15 @@ static void asynCallback(asynUser *pasynUser)
 	if (commandIsMove) {
 	    pPvt->moveRequestPending--;
 	    if (!pPvt->moveRequestPending) {
-		pmr->rset->process((dbCommon*)pmr);
+	      pPvt->needUpdate = 1;
+                /* pmr->rset->process((dbCommon*)pmr); */
+                dbProcess((dbCommon*)pmr);
 	    }
 	}
 	dbScanUnlock((dbCommon *)pmr);
     }
+    else if (pmsg->command == motorPosition)
+        pPvt->moveRequestPending = 0;
 
     pasynManager->memFree(pmsg, sizeof(*pmsg));
     status = pasynManager->freeAsynUser(pasynUser);
@@ -546,9 +587,10 @@ static void statusCallback(void *drvPvt, asynUser *pasynUser,
     if (dbScanLockOK) {
         dbScanLock((dbCommon *)pmr);
         memcpy(&pPvt->status, value, sizeof(struct MotorStatus));
-        if (!pPvt->needUpdate && !pPvt->moveRequestPending) {
+        if (!pPvt->moveRequestPending) {
 	    pPvt->needUpdate = 1;
-	    pmr->rset->process((dbCommon*)pmr);
+	    /* pmr->rset->process((dbCommon*)pmr); */
+            dbProcess((dbCommon*)pmr);
         }
         dbScanUnlock((dbCommon*)pmr);
     } else {

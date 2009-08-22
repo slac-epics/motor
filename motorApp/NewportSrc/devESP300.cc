@@ -2,9 +2,9 @@
 FILENAME...	devESP300.cc
 USAGE...	Motor record device level support for Newport ESP300.
 
-Version:	1.3
+Version:	1.4
 Modified By:	sluiter
-Last Modified:	2004/12/20 21:10:53
+Last Modified:	2008/03/14 20:17:14
 */
 
 /*
@@ -109,7 +109,7 @@ static struct board_stat **ESP300_cards;
 static long ESP300_init(void *arg)
 {
     long rtnval;
-    long after = (long) arg;
+    int after = (arg == 0) ? 0 : 1;
 
     if (after == 0)
     {

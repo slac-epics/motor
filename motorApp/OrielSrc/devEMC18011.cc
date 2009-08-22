@@ -2,9 +2,9 @@
 FILENAME...	devEMC18011.cc
 USAGE...	Motor record device level support for Parker Compumotor drivers
 
-Version:	1.3
-Modified By:	sullivan
-Last Modified:	2006/11/02 21:05:56
+Version:	1.4
+Modified By:	sluiter
+Last Modified:	2008/03/14 20:19:25
 */
 
 /*
@@ -110,7 +110,7 @@ static struct board_stat **EMC18011_cards;
 STATIC long EMC18011_init(void *arg)
 {
     long rtnval;
-    long after = (long) arg;
+    int after = (arg == 0) ? 0 : 1;
 
     if (after == 0)
     {

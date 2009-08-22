@@ -2,9 +2,9 @@
 FILENAME...	devPC6K.cc
 USAGE...	Motor record device level support for Parker Compumotor drivers
 
-Version:	1.3
-Modified By:	sullivan
-Last Modified:	2007/01/16 17:15:31
+Version:	1.4
+Modified By:	sluiter
+Last Modified:	2008/03/14 20:19:43
 */
 
 /*
@@ -109,7 +109,7 @@ static struct board_stat **PC6K_cards;
 STATIC long PC6K_init(void *arg)
 {
     long rtnval;
-    long after = (long) arg;
+    int after = (arg == 0) ? 0 : 1;
 
     if (after == 0)
     {

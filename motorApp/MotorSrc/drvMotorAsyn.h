@@ -27,19 +27,20 @@ typedef enum {
     motorLowLim = motorAxisLowLimit,
     motorSetClosedLoop = motorAxisClosedLoop,
     motorEncoderPosition = motorAxisEncoderPosn,
+    motorDeferMoves = motorAxisDeferMoves,
     /* Not exposed by the driver */
     motorVelocity=100, motorVelBase, motorAccel, 
     /* Commands */
     motorMoveRel, motorMoveAbs, motorMoveVel, motorHome, motorStop,
     /* Status readback */
-    motorStatus,
+    motorStatus, motorUpStatus,
     /* Status bits split out */
     motorStatusDirection=motorAxisDirection,
     motorStatusDone, motorStatusHighLimit, motorStatusAtHome,
     motorStatusSlip, motorStatusPowerOn, motorStatusFollowingError,
     motorStatusHome, motorStatusHasEncoder, motorStatusProblem,
     motorStatusMoving, motorStatusGainSupport, motorStatusCommsError,
-    motorStatusLowLimit, motorStatusLast
+    motorStatusLowLimit, motorStatusHomed, motorStatusLast
 } motorCommand; 
 
 #endif

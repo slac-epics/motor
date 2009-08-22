@@ -19,9 +19,9 @@
  *     of this distribution.
  *     ************************************************************************
  *
- * Version: 1.17
- * Modified by: peterd
- * Last Modified: 2007/11/23 13:47:00
+ * Version: 1.21
+ * Modified by: mp49
+ * Last Modified: 2008/11/14 14:27:41
  *
  * Original Author: Peter Denison
  * Current Author: Peter Denison
@@ -48,6 +48,7 @@
 
 #include <asynDriver.h>
 #include <asynInt32.h>
+#include <asynUInt32Digital.h>
 #include <asynFloat64.h>
 #include <asynFloat64Array.h>
 #include <asynMotorStatus.h>
@@ -85,6 +86,7 @@ static motorCommandStruct motorCommands[] = {
     {motorHighLim,    "HIGH_LIMIT"},
     {motorLowLim,     "LOW_LIMIT"},
     {motorSetClosedLoop, "SET_CLOSED_LOOP"},
+    {motorDeferMoves, "DEFER"},
     {motorStatus,     "STATUS"},
     {motorStatusDirection, "STATUS_DIRECTION"}, 
     {motorStatusDone, "STATUS_DONE"},
@@ -100,6 +102,7 @@ static motorCommandStruct motorCommands[] = {
     {motorStatusGainSupport, "STATUS_GAINSUPPORT"},
     {motorStatusCommsError, "STATUS_COMMSERROR"},
     {motorStatusLowLimit, "STATUS_LOWLIMIT"},
+    {motorStatusHomed, "STATUS_HOMED"},
 };
 
 typedef enum{typeInt32, typeFloat64, typeFloat64Array} dataType;
@@ -135,6 +138,8 @@ typedef struct drvmotorPvt {
     asynInterface common;
     asynInterface int32;
     void *int32InterruptPvt;
+    asynInterface uint32digital;
+    void *uint32digitalInterruptPvt;
     asynInterface float64;
     void *float64InterruptPvt;
     asynInterface float64Array;
@@ -149,6 +154,10 @@ static asynStatus readInt32         (void *drvPvt, asynUser *pasynUser,
                                      epicsInt32 *value);
 static asynStatus writeInt32        (void *drvPvt, asynUser *pasynUser,
                                      epicsInt32 value);
+static asynStatus readUInt32Digital	(void *drvPvt, asynUser *pasynUser,
+                                     epicsUInt32 *value, epicsUInt32 mask);
+static asynStatus writeUInt32Digital (void *drvPvt, asynUser *pasynUser,
+                                     epicsUInt32 value, epicsUInt32 mask);
 static asynStatus getBounds         (void *drvPvt, asynUser *pasynUser,
                                      epicsInt32 *low, epicsInt32 *high);
 static asynStatus readFloat64       (void *drvPvt, asynUser *pasynUser,
@@ -186,6 +195,16 @@ static asynInt32 drvMotorInt32 = {
     writeInt32,
     readInt32,
     getBounds
+};
+
+static asynUInt32Digital drvMotorUInt32Digital = {
+	writeUInt32Digital,
+	readUInt32Digital,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL
 };
 
 static asynFloat64 drvMotorFloat64 = {
@@ -237,6 +256,9 @@ int drvAsynMotorConfigure(const char *portName, const char *driverName,
     pPvt->int32.interfaceType = asynInt32Type;
     pPvt->int32.pinterface  = (void *)&drvMotorInt32;
     pPvt->int32.drvPvt = pPvt;
+    pPvt->uint32digital.interfaceType = asynUInt32DigitalType;
+    pPvt->uint32digital.pinterface  = (void *)&drvMotorUInt32Digital;
+    pPvt->uint32digital.drvPvt = pPvt;
     pPvt->float64.interfaceType = asynFloat64Type;
     pPvt->float64.pinterface  = (void *)&drvMotorFloat64;
     pPvt->float64.drvPvt = pPvt;
@@ -273,6 +295,14 @@ int drvAsynMotorConfigure(const char *portName, const char *driverName,
     pasynManager->registerInterruptSource(portName, &pPvt->int32,
                                           &pPvt->int32InterruptPvt);
 
+    status = pasynUInt32DigitalBase->initialize(pPvt->portName,&pPvt->uint32digital);
+    if (status != asynSuccess) {
+        errlogPrintf("drvAsynMotorConfigure ERROR: Can't register uint32digital\n");
+        return -1;
+    }
+    pasynManager->registerInterruptSource(portName, &pPvt->uint32digital,
+                                          &pPvt->uint32digitalInterruptPvt);
+    
     status = pasynFloat64Base->initialize(pPvt->portName,&pPvt->float64);
     if (status != asynSuccess) {
         errlogPrintf("drvAsynMotorConfigure ERROR: Can't register float64\n");
@@ -399,6 +429,45 @@ static asynStatus readInt32(void *drvPvt, asynUser *pasynUser,
     return(asynSuccess);
 }
 
+static asynStatus readUInt32Digital(void *drvPvt, asynUser *pasynUser,
+                                    epicsUInt32 *value, epicsUInt32 mask)
+{
+    drvmotorPvt *pPvt = (drvmotorPvt *)drvPvt;
+    drvmotorAxisPvt *pAxis;
+    int channel;
+    motorCommand command = pasynUser->reason;
+
+    pasynManager->getAddr(pasynUser, &channel);
+    if (channel >= pPvt->numAxes) {
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                "drvMotorAsyn::readInt32 Invalid axis %d", channel);
+        return(asynError);
+    }
+
+    pAxis = &pPvt->axisData[channel];
+    if (!pAxis->axis) {
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+		      "drvMotorAsyn::readInt32 Uninitialised axis %d", pAxis->num);
+        return(asynError);
+    }
+
+    switch(command) {
+    case -1:   /* This is commands we know about but don't want uint32digital interface for */
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                      "drvMotorAsyn::readUInt32Digital invalid command=%d",
+                      command);
+        return(asynError);
+    default:
+    	(*pPvt->drvset->getInteger)(pAxis->axis, command, value);
+    	break;
+    }
+    
+    *value = *value & mask;
+    asynPrint(pasynUser, ASYN_TRACEIO_DRIVER,
+              "drvMotorAsyn::readUInt32Digital, reason=%d, value=%d\n", 
+          command, *value);
+    return(asynSuccess);    
+}
 
 static asynStatus readFloat64(void *drvPvt, asynUser *pasynUser,
                               epicsFloat64 *value)
@@ -486,7 +555,7 @@ static asynStatus writeInt32(void *drvPvt, asynUser *pasynUser,
     switch(command) {
     case -1:
         epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
-                      "drvMotorAsyn::writeInt32D invalid command=%d",
+                      "drvMotorAsyn::writeInt32 invalid command=%d",
                       command);
         return(asynError);
     case motorStop:
@@ -501,6 +570,10 @@ static asynStatus writeInt32(void *drvPvt, asynUser *pasynUser,
 	status = (*pPvt->drvset->setInteger)(pAxis->axis, motorAxisClosedLoop,
 					     value);
 	break;
+    case motorUpStatus:
+        if (pPvt->drvset->forceCallback != NULL)
+	    status = (*pPvt->drvset->forceCallback)(pAxis->axis);
+	break;
     default:
 	status = (*pPvt->drvset->setInteger)(pAxis->axis, command, value);
 	break;
@@ -511,6 +584,49 @@ static asynStatus writeInt32(void *drvPvt, asynUser *pasynUser,
     return(status);
 }
 
+static asynStatus writeUInt32Digital(void *drvPvt, asynUser *pasynUser, 
+                                     epicsUInt32 value, epicsUInt32 mask)
+{
+    drvmotorPvt *pPvt = (drvmotorPvt *)drvPvt;
+    drvmotorAxisPvt *pAxis;
+    int channel;
+    motorCommand command = pasynUser->reason;
+    asynStatus status;
+    epicsUInt32 temp = 0;
+
+    pasynManager->getAddr(pasynUser, &channel);
+    if (channel >= pPvt->numAxes) {
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                      "drvMotorAsyn::writeInt32 Invalid axis %d", channel);
+        return(asynError);
+    }
+
+    pAxis = &pPvt->axisData[channel];
+    if (!pAxis->axis) {
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                      "drvMotorAsyn::writeInt32 Uninitialised axis %d", pAxis->num);
+        return(asynError);
+    }
+
+    switch(command) {
+    case -1:
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                      "drvMotorAsyn::writeUInt32Digital invalid command=%d",
+                      command);
+        return(asynError);
+    default:
+        (*pPvt->drvset->getInteger)(pAxis->axis, command, &temp);
+        temp &= ~mask;
+        temp |= (value & mask);
+        status = (*pPvt->drvset->setInteger)(pAxis->axis, command, temp);
+        break;
+    }
+    asynPrint(pasynUser, ASYN_TRACEIO_DRIVER,
+          "drvMotorAsyn::writeUInt32Digital, reason=%d, value=%d\n",
+          command, temp);
+    return(status);
+}
+        
 static asynStatus writeFloat64(void *drvPvt, asynUser *pasynUser, 
                                epicsFloat64 value)
 {
@@ -684,7 +800,7 @@ static void intCallback(void *axisPvt, unsigned int nChanged,
        correct */
     for (i = 0; i < nChanged; i++) {
 	if (changed[i] >= motorAxisDirection && 
-	    changed[i] <= motorAxisLowHardLimit) {
+	    changed[i] <= motorAxisHomed) {
 	    bit_num = changed[i] - motorAxisDirection;
 	    changedmask |= (1 << bit_num);
 	    (*pPvt->drvset->getInteger)(pAxis->axis, changed[i], &ivalue);
