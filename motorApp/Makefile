@@ -9,29 +9,29 @@ include $(TOP)/configure/CONFIG
 DIRS += MotorSrc
 
 # Select individual device/driver modules by removing the "#!" comment.
-DIRS += DeltaTauSrc
-DIRS += OmsSrc
-DIRS += SoftMotorSrc
-DIRS += MotorSimSrc
+#!DIRS += DeltaTauSrc
+#!DIRS += OmsSrc
+#!DIRS += SoftMotorSrc
+#!DIRS += MotorSimSrc
 
 # All the following modules require ASYN.
 ifdef ASYN
-DIRS += NewportSrc
+#!DIRS += NewportSrc
 DIRS += ImsSrc
-DIRS += AcsSrc
-DIRS += MclennanSrc
-DIRS += PiSrc
-DIRS += MicroMoSrc
-DIRS += MicosSrc
-DIRS += FaulhaberSrc
-DIRS += PC6KSrc
-DIRS += NewFocusSrc
-DIRS += AcsTech80Src
-DIRS += OrielSrc
-DIRS += ThorLabsSrc
+#!DIRS += AcsSrc
+#!DIRS += MclennanSrc
+#!DIRS += PiSrc
+#!DIRS += MicroMoSrc
+#!DIRS += MicosSrc
+#!DIRS += FaulhaberSrc
+#!DIRS += PC6KSrc
+#!DIRS += NewFocusSrc
+#!DIRS += AcsTech80Src
+#!DIRS += OrielSrc
+#!DIRS += ThorLabsSrc
 DIRS += SmartMotorSrc
-DIRS += PiJenaSrc
-DIRS += KohzuSrc
+#!DIRS += PiJenaSrc
+#!DIRS += KohzuSrc
 endif
 
 # Install the edl files
