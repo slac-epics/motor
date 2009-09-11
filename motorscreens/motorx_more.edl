@@ -1183,11 +1183,11 @@ buttonLabel "More"
 numPvs 4
 numDsps 5
 displayFileName {
-  0 "motorx_tiny.edl"
-  1 "motorx.edl"
-  2 "motorx_setup.edl"
-  3 "scanParms.edl"
-  4 "motorx_all.edl"
+  0 "motorscreens/motorx_tiny.edl"
+  1 "motorscreens/motorx.edl"
+  2 "motorscreens/motorx_setup.edl"
+  3 "motorscreens/scanParms.edl"
+  4 "motorscreens/motorx_all.edl"
 }
 menuLabel {
   0 "$(M) (Tiny)"
