@@ -1247,7 +1247,7 @@ buttonLabel "SETUP"
 numPvs 4
 numDsps 1
 displayFileName {
-  0 "motorx_setup.edl"
+  0 "motorscreens/motorx_setup.edl"
 }
 symbols {
   0 "P=$(P),M=$(M)"

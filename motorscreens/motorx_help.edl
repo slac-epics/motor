@@ -782,8 +782,8 @@ font "helvetica-medium-r-10.0"
 numPvs 4
 numDsps 2
 displayFileName {
-  0 "etofscreens/motorx_more.edl"
-  1 "etofscreens/motorx_all.edl"
+  0 "motorscreens/motorx_more.edl"
+  1 "motorscreens/motorx_all.edl"
 }
 menuLabel {
   0 "More"

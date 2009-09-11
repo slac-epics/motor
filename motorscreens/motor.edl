@@ -1345,7 +1345,7 @@ buttonLabel "SETUP"
 numPvs 4
 numDsps 1
 displayFileName {
-  0 "motor_setup.edl"
+  0 "motorscreens/motor_setup.edl"
 }
 endObjectProperties
 

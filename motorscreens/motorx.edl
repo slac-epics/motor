@@ -621,12 +621,12 @@ buttonLabel "More"
 numPvs 12
 numDsps 6
 displayFileName {
-  0 motorx_tiny.edl
-  1 motorx_help.edl
-  2 motorx_more.edl
-  3 motorx_setup.edl
-  4 scanParms.edl
-  5 motorx_all.edl
+  0 "motorscreens/motorx_tiny.edl"
+  1 "motorscreens/motorx_help.edl"
+  2 "motorscreens/motorx_more.edl"
+  3 "motorscreens/motorx_setup.edl"
+  4 "motorscreens/scanParms.edl"
+  5 "motorscreens/motorx_all.edl"
 }
 menuLabel {
   0 $(M) (Tiny)

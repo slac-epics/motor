@@ -325,11 +325,11 @@ buttonLabel "More"
 numPvs 10
 numDsps 5
 displayFileName {
-  0 etofscreens/motorx.edl
-  1 etofscreens/motorx_more.edl
-  2 etofscreens/motorx_setup.edl
-  3 etofscreens/scanParms.adl
-  4 etofscreens/motorx_all.edl
+  0 "motorscreens/motorx.edl"
+  1 "motorscreens/motorx_more.edl"
+  2 "motorscreens/motorx_setup.edl"
+  3 "motorscreens/scanParms.adl"
+  4 "motorscreens/motorx_all.edl"
 }
 menuLabel {
   0 $(M) (Small)
