@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 129
-y 456
+x 941
+y 460
 w 560
 h 259
 font "helvetica-medium-r-10.0"
@@ -186,7 +186,7 @@ x 0
 y 0
 w 560
 h 24
-font "helvetica-medium-r-12.0"
+font "helvetica-bold-r-14.0"
 fgColor index 14
 bgColor index 56
 value {
@@ -219,7 +219,7 @@ x 8
 y 32
 w 48
 h 16
-font "helvetica-medium-r-12.0"
+font "helvetica-bold-r-12.0"
 fontAlign "center"
 fgColor index 14
 bgColor index 3
@@ -234,7 +234,7 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 480
+x 512
 y 0
 w 48
 h 24
@@ -344,7 +344,7 @@ x 288
 y 32
 w 56
 h 16
-font "helvetica-medium-r-12.0"
+font "helvetica-bold-r-12.0"
 fontAlign "center"
 fgColor index 14
 bgColor index 3
@@ -379,9 +379,9 @@ beginObjectProperties
 major 4
 minor 2
 release 0
-x 168
+x 176
 y 0
-w 240
+w 232
 h 24
 controlPv "$(MOTOR).DESC"
 font "helvetica-medium-r-12.0"
@@ -1340,12 +1340,41 @@ fgColor index 14
 bgColor index 3
 topShadowColor index 1
 botShadowColor index 11
-font "helvetica-bold-r-10.0"
+font "helvetica-medium-r-10.0"
 buttonLabel "SETUP"
 numPvs 4
 numDsps 1
 displayFileName {
   0 "motorscreens/motor_setup.edl"
+}
+endObjectProperties
+
+# (Related Display)
+object relatedDisplayClass
+beginObjectProperties
+major 4
+minor 2
+release 0
+x 456
+y 0
+w 56
+h 24
+fgColor index 14
+bgColor index 4
+topShadowColor index 1
+botShadowColor index 11
+font "helvetica-medium-r-12.0"
+buttonLabel "Home"
+numPvs 4
+numDsps 1
+displayFileName {
+  0 "AMOHome"
+}
+setPosition {
+  0 "parentWindow"
+}
+replaceSymbols {
+  0 1
 }
 endObjectProperties
 
