@@ -4568,25 +4568,28 @@ buttonLabel "More"
 numPvs 10
 numDsps 5
 displayFileName {
-  0 "motorscreens/motorx_tiny.edl"
-  1 "motorscreens/motorx.edl"
-  2 "motorscreens/motorx_more.edl"
-  3 "motorscreens/motorx_setup.edl"
-  4 "motorscreens/scanParms.edl"
+  # 0 "motorscreens/motorx_tiny.edl"
+  # 1 "motorscreens/motorx.edl"
+  # 2 "motorscreens/motorx_more.edl"
+  # 3 "motorscreens/motorx_setup.edl"
+  # 4 "motorscreens/scanParms.edl"
+  0 "motorscreens/motorx_setup.edl"
 }
 menuLabel {
-  0 $(M) (Tiny)
-  1 $(M) (Small)
-  2 $(M) (Medium)
-  3 $(M) (Setup)
-  4 Scan Parameters
+  # 0 $(M) (Tiny)
+  # 1 $(M) (Small)
+  # 2 $(M) (Medium)
+  # 3 $(M) (Setup)
+  # 4 Scan Parameters
+  0 $(M) (Setup)
 }
 symbols {
+  # 0 "P=$(P),M=$(M)"
+  # 1 "P=$(P),M=$(M)"
+  # 2 "P=$(P),M=$(M)"
+  # 3 "P=$(P),M=$(M)"
+  # 4 "P=$(P),Q=$(M),PV=$(M)"
   0 "P=$(P),M=$(M)"
-  1 "P=$(P),M=$(M)"
-  2 "P=$(P),M=$(M)"
-  3 "P=$(P),M=$(M)"
-  4 "P=$(P),Q=$(M),PV=$(M)"
 }
 closeAction {
   0 1

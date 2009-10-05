@@ -2066,25 +2066,27 @@ buttonLabel "More"
 numPvs 10
 numDsps 5
 displayFileName {
-  0 "motorscreens/motorx_tiny.edl"
-  1 "motorscreens/motorx.edl"
-  2 "motorscreens/motorx_more.edl"
-  3 "motorscreens/scanParms.edl"
-  4 "motorscreens/motorx_all.edl"
+  # 0 "motorscreens/motorx_tiny.edl"
+  # 1 "motorscreens/motorx.edl"
+  # 2 "motorscreens/motorx_more.edl"
+  # 3 "motorscreens/scanParms.edl"
+  # 4 "motorscreens/motorx_all.edl"
+  0 "motorscreens/motorx_all.edl"
 }
 menuLabel {
-  0 $(MOTOR) (Tiny)
-  1 $(MOTOR) (Small)
-  2 $(MOTOR) (Medium)
-  3 Scan Parameters
-  4 $(MOTOR) (Debug)
+  # 0 $(MOTOR) (Tiny)
+  # 1 $(MOTOR) (Small)
+  # 2 $(MOTOR) (Medium)
+  # 3 Scan Parameters
+  # 4 $(MOTOR) (Debug)
+  0 $(MOTOR) (Debug)
 }
 symbols {
   0 "MOTOR=$(MOTOR)"
-  1 "MOTOR=$(MOTOR)"
-  2 "MOTOR=$(MOTOR)"
-  3 "MOTOR=$(MOTOR)"
-  4 "MOTOR=$(MOTOR)"
+  # 1 "MOTOR=$(MOTOR)"
+  # 2 "MOTOR=$(MOTOR)"
+  # 3 "MOTOR=$(MOTOR)"
+  # 4 "MOTOR=$(MOTOR)"
 }
 closeAction {
   0 1
