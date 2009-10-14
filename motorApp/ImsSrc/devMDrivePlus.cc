@@ -24,7 +24,14 @@ STATIC RTN_STATUS MDrivePlus_end_trans(struct motorRecord *);
 
 struct motor_dset devMDrivePlus =
 {
+    // struct dset from base, devSup.
+    // 8: number - Total number of routines (function pointers).
+    // NULL: report - No 'print report' routine provided.
+    // MDrivePlus_init: init - 'init support layer'.
+    // MDrivePlus_init_record: init_record - 'init device for particular record'
+    // NULL: get_ioint_info - No 'get io interrupt information' routine provided.
     {8, NULL, (DEVSUPFUN) MDrivePlus_init, (DEVSUPFUN) MDrivePlus_init_record, NULL},
+    // The rest are from motor_dset in motor.h.
     motor_update_values,
     MDrivePlus_start_trans,
     MDrivePlus_build_trans,
@@ -77,8 +84,9 @@ STATIC long MDrivePlus_init(void *arg)
 
     if (after == 0)
     {
-    drvtabptr = &MDrivePlus_access;
-    (drvtabptr->init)();
+       printf( "** devMDrivePlus is @ 0x%p.\n", &devMDrivePlus );
+       drvtabptr = &MDrivePlus_access;
+       (drvtabptr->init)();
     }
 
     rtnval = motor_init_com(after, *drvtabptr->cardcnt_ptr, drvtabptr, &MDrivePlus_cards);
@@ -148,10 +156,12 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
     if (trans->state != BUILD_STATE)
     return(rtnval = ERROR);
 
-    if (command == PRIMITIVE && mr->init != NULL && strlen(mr->init) != 0)
+    if (   command == PRIMITIVE
+        && mr->init != NULL
+        && strlen(mr->init) != 0)
     {
-    strcat(motor_call->message, " ");
-    strcat(motor_call->message, mr->init);
+       strcat(motor_call->message, "INIT");
+       strcat(motor_call->message, mr->init);
     }
 
     switch (command)
@@ -173,7 +183,6 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
     default:
         break;
     }
-
 
     switch (command)
     {
@@ -197,14 +206,14 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
         sprintf(buff, "P=%d", intval);
         if (msta.Bits.EA_PRESENT == 1)
         {
-        /* Finish 1st message; MDrivePlus can only handle one msg. */
-                strcpy(motor_call->message, buff);
-                rtnval = motor_end_trans_com(mr, drvtabptr);
-        rtnval = (RTN_STATUS) motor_start_trans_com(mr, MDrivePlus_cards);
+           /* Finish 1st message; MDrivePlus can only handle one msg. */
+           strcpy(motor_call->message, buff);
+           rtnval = motor_end_trans_com(mr, drvtabptr);
+           rtnval = (RTN_STATUS) motor_start_trans_com(mr, MDrivePlus_cards);
 
-        intval = NINT(mr->dval / mr->eres);
-        sprintf(buff, "C2=%d", intval);
-        motor_call->type = MDrivePlus_table[command];
+           intval = NINT(mr->dval / mr->eres);
+           sprintf(buff, "C2=%d", intval);
+           motor_call->type = MDrivePlus_table[command];
         }
         break;
     
@@ -275,13 +284,19 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
 
     size = strlen(buff);
     if (send == false)
-    return(rtnval);
-    else if (size > sizeof(buff) || (strlen(motor_call->message) + size) > MAX_MSG_SIZE)
-    errlogMessage("MDrivePlus_build_trans(): buffer overflow.\n");
+    {
+       return(rtnval);
+    }
+    else if (   size > sizeof(buff)
+             || (strlen(motor_call->message) + size) > MAX_MSG_SIZE)
+    {
+       errlogMessage("MDrivePlus_build_trans(): buffer overflow.\n");
+    }
     else
     {
-    strcat(motor_call->message, buff);
-    motor_end_trans_com(mr, drvtabptr);
+       strcat(motor_call->message, buff);
+       motor_end_trans_com(mr, drvtabptr);
     }
+
     return(rtnval);
 }
