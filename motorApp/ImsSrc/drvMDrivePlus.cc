@@ -40,6 +40,7 @@ static char *MDrivePlus_axis[] = {"1", "2", "3", "4", "5", "6", "7", "8"};
 #include    "motordrvComCode.h"
 
 /*----------------functions-----------------*/
+static int detectIoConfig( int card, char* name );
 static int recv_mess(int, char *, int);
 static RTN_STATUS send_mess(int, char const *, char *);
 static int set_status(int, int);
@@ -353,32 +354,77 @@ static RTN_STATUS send_mess(int card, char const *com, char *name)
 
     if ((comsize + namesize) > MAX_MSG_SIZE)
     {
-    errlogMessage("drvMDrivePlus.c:send_mess(); message size violation.\n");
-    return(ERROR);
+       errlogMessage("drvMDrivePlus.c:send_mess(); message size violation.\n");
+       return(ERROR);
     }
     else if (comsize == 0)  /* Normal exit on empty input message. */
-    return(OK);
+    {
+       return(OK);
+    }
 
     if (!motor_state[card])
     {
-    errlogPrintf("drvMDrivePlus.c:send_mess() - invalid card #%d\n", card);
-    return(ERROR);
+       errlogPrintf("drvMDrivePlus.c:send_mess() - invalid card #%d\n", card);
+       return(ERROR);
+    }
+
+    // JT 10/13/09: Allow a single com string to contain multiple
+    // commands.  This is in support of using INIT to completely
+    // configure the motor.
+
+    char* sep = NULL;
+    bool doIoDetect = false;
+#   define SEP_CHAR (';')
+
+    // Should we perform additional initialization after these
+    // commands are executed?
+    if( strncmp( com, "INIT", 4 ) == 0 )
+    {  // Yes.  Remember and strip off INIT.
+       errlogPrintf("drvMDrivePlus.c:send_mess() - late INIT\n");
+       doIoDetect = true;
+       com += 4;
+    }
+
+    // Does this string have multiple commands in it?
+    while( ( sep = strchr( com, SEP_CHAR ) ) != NULL )
+    {  // Yes, it does.
+       // Loop over the embedded commands, stripping them off and
+       // calling ourselves recursively.
+       char cmd[40];
+       int cmd_len = sep - com; // Strip the ';'.
+
+       strncpy( cmd, com, cmd_len );
+       cmd[cmd_len] = '\0';     // Don't forget the terminator!
+
+       // Call again for this individual command.  Note that we can't
+       // possibly fail - the only possible failure conditions will
+       // happen on the initial call before we get here.
+       send_mess( card, (const char*) cmd, name );
+
+       com += cmd_len + 1; // Skip the ';'.
     }
 
     /* Make a local copy of the string and add the command line terminator. */
     if (namesize != 0)
     {
-    strcpy(local_buff, name);    /* put in axis */
-    strcat(local_buff, com);
+       strcpy(local_buff, name);    /* put in axis */
+       strcat(local_buff, com);
     }
     else
-    strcpy(local_buff, com);
+    {
+       strcpy(local_buff, com);
+    }
 
     Debug(2, "send_mess(): message = %s\n", local_buff);
 
     cntrl = (struct IM483controller *) motor_state[card]->DevicePrivate;
     pasynOctetSyncIO->write(cntrl->pasynUser, local_buff, strlen(local_buff),
                 COMM_TIMEOUT, &nwrite);
+
+    if( doIoDetect )
+    {
+       detectIoConfig( card, name );
+    }
 
     return(OK);
 }
@@ -500,147 +546,215 @@ static int motor_init()
 
     /* Check for setup */
     if (MDrivePlus_num_cards <= 0)
-    return(ERROR);
+    {
+       return(ERROR);
+ }
 
     for (card_index = 0; card_index < MDrivePlus_num_cards; card_index++)
     {
-    if (!motor_state[card_index])
-        continue;
+      if (!motor_state[card_index])
+      {
+          continue;
+      }
 
-    brdptr = motor_state[card_index];
-    brdptr->ident[0] = (char) NULL;    /* No controller identification message. */
-    brdptr->cmnd_response = false;
-    total_cards = card_index + 1;
-    cntrl = (struct IM483controller *) brdptr->DevicePrivate;
+      brdptr = motor_state[card_index];
+      brdptr->ident[0] = (char) NULL;    /* No controller ID message. */
+      brdptr->cmnd_response = false;
+      total_cards = card_index + 1;
+      cntrl = (struct IM483controller *) brdptr->DevicePrivate;
 
-    /* Initialize communications channel */
-    success_rtn = pasynOctetSyncIO->connect(cntrl->asyn_port, 0,
-                        &cntrl->pasynUser, NULL);
+      /* Initialize communications channel */
+      success_rtn = pasynOctetSyncIO->connect(cntrl->asyn_port, 0,
+                          &cntrl->pasynUser, NULL);
 
-    if (success_rtn == asynSuccess)
-    {
-        pasynOctetSyncIO->setOutputEos(cntrl->pasynUser, output_terminator,
-                       strlen(output_terminator));
-        pasynOctetSyncIO->setInputEos(cntrl->pasynUser, input_terminator,
-                      strlen(input_terminator));
-        /* Send a message to the board, see if it exists */
-        /* flush any junk at input port - should not be any data available */
-        pasynOctetSyncIO->flush(cntrl->pasynUser);
+      if (success_rtn == asynSuccess)
+      {
+          pasynOctetSyncIO->setOutputEos(cntrl->pasynUser, output_terminator,
+                         strlen(output_terminator));
+          pasynOctetSyncIO->setInputEos(cntrl->pasynUser, input_terminator,
+                        strlen(input_terminator));
+          /* Send a message to the board, see if it exists */
+          /* flush any junk at input port - should not be any data available */
+          pasynOctetSyncIO->flush(cntrl->pasynUser);
 
-        for (total_axis = 0; total_axis < MAX_AXES; total_axis++)
-        {
-        int retry = 0;
+          for (total_axis = 0; total_axis < MAX_AXES; total_axis++)
+          {
+             int retry = 0;
 
-        /* Try 3 times to connect to controller. */
-        do
-        {
-            send_mess(card_index, "PR VR", MDrivePlus_axis[total_axis]);
-            status = recv_mess(card_index, buff, 1);
-            retry++;
-        } while (status == 0 && retry < 3);
+             /* Try 3 times to connect to controller. */
+             do
+             {
+                 send_mess(card_index, "PR VR", MDrivePlus_axis[total_axis]);
+                 status = recv_mess(card_index, buff, 1);
+                 retry++;
+             } while (status == 0 && retry < 3);
 
-        if (status <= 0)
-            break;
-        else if (total_axis == 0)
-            strcpy(brdptr->ident, buff);
-        }
-        brdptr->total_axis = total_axis;
-        cntrl->inconfig = (input_config *) malloc(
-                             sizeof(struct IM483controller) * total_axis);
-    }
+             if (status <= 0)
+                 break;
+             else if (total_axis == 0)
+                 strcpy(brdptr->ident, buff);
+          }
+          brdptr->total_axis = total_axis;
+          cntrl->inconfig = (input_config *) malloc(
+                               sizeof(struct IM483controller) * total_axis);
+      }
 
-    if (success_rtn == asynSuccess && total_axis > 0)
-    {
-        input_config *confptr = cntrl->inconfig;
+      if (success_rtn == asynSuccess && total_axis > 0)
+      {
+          input_config *confptr = cntrl->inconfig;
 
-        brdptr->localaddr = (char *) NULL;
-        brdptr->motor_in_motion = 0;
+          brdptr->localaddr = (char *) NULL;
+          brdptr->motor_in_motion = 0;
 
-        for (motor_index = 0; motor_index < total_axis; motor_index++)
-        {
-        int itera;
-        struct mess_info *motor_info = &brdptr->motor_info[motor_index];
+          for (motor_index = 0; motor_index < total_axis; motor_index++)
+          {
+             struct mess_info *motor_info = &brdptr->motor_info[motor_index];
 
-        motor_info->status.All = 0;
-        motor_info->no_motion_count = 0;
-        motor_info->encoder_position = 0;
-        motor_info->position = 0;
-        brdptr->motor_info[motor_index].motor_motion = NULL;
-        /* Assume no encoder support. */
-        motor_info->encoder_present = NO;
+             motor_info->status.All = 0;
+             motor_info->no_motion_count = 0;
+             motor_info->encoder_position = 0;
+             motor_info->position = 0;
+             brdptr->motor_info[motor_index].motor_motion = NULL;
+             /* Assume no encoder support. */
+             motor_info->encoder_present = NO;
 
-        /* Determine if encoder present based last character of "ident". */
-        if (brdptr->ident[strlen(brdptr->ident) - 1] == 'E')
-        {
-            motor_info->pid_present = YES;
-            motor_info->status.Bits.GAIN_SUPPORT = 1;
-            motor_info->encoder_present = YES;
-            motor_info->status.Bits.EA_PRESENT = 1;
-        }
+             /* Determine if encoder present based last character of "ident". */
+             if (brdptr->ident[strlen(brdptr->ident) - 1] == 'E')
+             {
+                 motor_info->pid_present = YES;
+                 motor_info->status.Bits.GAIN_SUPPORT = 1;
+                 motor_info->encoder_present = YES;
+                 motor_info->status.Bits.EA_PRESENT = 1;
+             }
 
-        /* Determine input configuration. */
-        confptr->homeLS = confptr->minusLS = confptr->plusLS = 0;
+             // JT 10/13/09 - Defer this until the motor's INIT string is
+             // written to the motor.
+             /* Determine input configuration. */
+             confptr->homeLS = confptr->minusLS = confptr->plusLS = 0;
 
-        for (itera = 1; itera <= 4; itera++)
-        {
-            int type, active;
+             // for (itera = 1; itera <= 4; itera++)
+             // {
+             //     int type, active;
+             // 
+             //     sprintf(buff, "PR S%d", itera);
+             //     send_mess(card_index, buff, MDrivePlus_axis[motor_index]);
+             //     status = recv_mess(card_index, buff, 1);
+             //     if (status == 0)
+             //     {
+             //     errlogPrintf("Error reading I/O configuration.\n");
+             //     break;
+             //     }
+             // 
+             //     status = sscanf(buff, "%d,%d", &type, &active);
+             //     switch (type)
+             //     {
+             //     case 0:
+             //     break;
+             //     case 1: // Home switch.
+             //     confptr->homeLS = itera;
+             //     break;
+             //     case 2: // Plus limit switch.
+             //     confptr->plusLS = itera;
+             //     break;
+             //     case 3: // Minus limit switch.
+             //     confptr->minusLS = itera;
+             //     break;
+             //     default:
+             //     errlogPrintf("Invalid I/O type: %d.\n", type);
+             // 
+             //     }
+             // }
+             // // Test for missing configuration.
+             // if (confptr->minusLS == 0 || confptr->plusLS == 0)
+             // {
+             //     const char p_label[6] = "Plus", m_label[6] = "Minus";
+             //     errlogPrintf("MDrivePlus chain #%d, motor #%d %s LS not configured.\n",
+             //          card_index, motor_index,
+             //          (confptr->minusLS == 0) ? m_label : p_label);
+             // }
 
-            sprintf(buff, "PR S%d", itera);
-            send_mess(card_index, buff, MDrivePlus_axis[motor_index]);
-            status = recv_mess(card_index, buff, 1);
-            if (status == 0)
-            {
-            errlogPrintf("Error reading I/O configuration.\n");
-            break;
-            }
+             // Read status of each motor.  Need to read position so
+             // autosave can know if it needs to restore position!
+             set_status(card_index, motor_index);
+          }
+      }
+      else
+      {
+          motor_state[card_index] = (struct controller *) NULL;
+      }
+   }
 
-            status = sscanf(buff, "%d,%d", &type, &active);
-            switch (type)
-            {
-            case 0:
-            break;
-            case 1: // Home switch.
-            confptr->homeLS = itera;
-            break;
-            case 2: // Plus limit switch.
-            confptr->plusLS = itera;
-            break;
-            case 3: // Minus limit switch.
-            confptr->minusLS = itera;
-            break;
-            default:
-            errlogPrintf("Invalid I/O type: %d.\n", type);
+   any_motor_in_motion = 0;
 
-            }
-        }
-        // Test for missing configuration.
-        if (confptr->minusLS == 0 || confptr->plusLS == 0)
-        {
-            const char p_label[6] = "Plus", m_label[6] = "Minus";
-            errlogPrintf("MDrivePlus chain #%d, motor #%d %s LS not configured.\n",
-                 card_index, motor_index,
-                 (confptr->minusLS == 0) ? m_label : p_label);
-        }
+   mess_queue.head = (struct mess_node *) NULL;
+   mess_queue.tail = (struct mess_node *) NULL;
 
-        set_status(card_index, motor_index);  /* Read status of each motor */
-        }
-    }
-    else
-        motor_state[card_index] = (struct controller *) NULL;
-    }
+   free_list.head = (struct mess_node *) NULL;
+   free_list.tail = (struct mess_node *) NULL;
 
-    any_motor_in_motion = 0;
+   epicsThreadCreate((char *) "MDrivePlus_motor", epicsThreadPriorityMedium,
+             epicsThreadGetStackSize(epicsThreadStackMedium),
+             (EPICSTHREADFUNC) motor_task, (void *) &targs);
 
-    mess_queue.head = (struct mess_node *) NULL;
-    mess_queue.tail = (struct mess_node *) NULL;
-
-    free_list.head = (struct mess_node *) NULL;
-    free_list.tail = (struct mess_node *) NULL;
-
-    epicsThreadCreate((char *) "MDrivePlus_motor", epicsThreadPriorityMedium,
-              epicsThreadGetStackSize(epicsThreadStackMedium),
-              (EPICSTHREADFUNC) motor_task, (void *) &targs);
-
-    return(OK);
+   return(OK);
 }
 
+static int detectIoConfig( int card, char* name )
+{
+   char buff[BUFF_SIZE];
+   int type;
+   int active;
+   int status;
+
+   struct controller *brdptr;
+   struct IM483controller *cntrl;
+
+   brdptr = motor_state[card];
+   cntrl = (struct IM483controller *) brdptr->DevicePrivate;
+   input_config* confptr = cntrl->inconfig;
+
+   for (int sw = 1; sw <= 4; sw++)
+   {
+      sprintf(buff, "PR S%d", sw);
+      send_mess(card, buff, name);
+      status = recv_mess(card, buff, 1);
+      if (status == 0)
+      {
+         errlogPrintf("Error reading I/O configuration.\n");
+         break;
+      }
+
+      status = sscanf(buff, "%d,%d", &type, &active);
+      switch (type)
+      {
+         case 0:
+         break;
+         case 1: // Home switch.
+         confptr->homeLS = sw;
+         break;
+         case 2: // Plus limit switch.
+         confptr->plusLS = sw;
+         break;
+         case 3: // Minus limit switch.
+         confptr->minusLS = sw;
+         break;
+         default:
+         errlogPrintf("Invalid I/O type: %d.\n", type);
+      }
+   }
+
+   // Test for missing configuration.
+   if (confptr->minusLS == 0)
+   {
+      errlogPrintf("MDrivePlus chain #%d, minus LS not configured.\n",
+                   card);
+   }
+
+   if (confptr->plusLS == 0)
+   {
+      errlogPrintf("MDrivePlus chain #%d, plus LS not configured.\n",
+                   card);
+   }
+
+   return(OK);
+}

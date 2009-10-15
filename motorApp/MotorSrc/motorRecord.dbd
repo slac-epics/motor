@@ -677,7 +677,7 @@ recordtype(motor) {
 	field(INIT,DBF_STRING) {
 		promptgroup(GUI_COMMON)
 		prompt("Startup commands")
-		size(40)
+		size(80)
 		interest(1)
 	}
 	field(PREM,DBF_STRING) {
