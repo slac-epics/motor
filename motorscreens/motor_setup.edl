@@ -1,12 +1,12 @@
-4 0 0
+4 0 1
 beginScreenProperties
 major 4
 minor 0
-release 0
-x 322
-y 33
-w 400
-h 588
+release 1
+x 256
+y 299
+w 430
+h 611
 font "helvetica-medium-r-18.0"
 ctlFont "helvetica-medium-r-10.0"
 btnFont "helvetica-medium-r-18.0"
@@ -23,16 +23,15 @@ snapToGrid
 gridSize 5
 endScreenProperties
 
-
 # (Rectangle)
 object activeRectangleClass
 beginObjectProperties
 major 4
 minor 0
 release 0
-x 0
+x -20
 y 0
-w 399
+w 470
 h 25
 lineColor index 1
 fill
@@ -44,7 +43,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 190
 y 90
@@ -53,9 +52,10 @@ h 20
 font "helvetica-medium-r-10.0"
 fontAlign "center"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Backlash"
+  "Backlash"
 }
 endObjectProperties
 
@@ -63,7 +63,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 110
 y 90
@@ -72,9 +72,10 @@ h 20
 font "helvetica-medium-r-10.0"
 fontAlign "center"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Normal"
+  "Normal"
 }
 endObjectProperties
 
@@ -82,7 +83,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 2
 y 90
@@ -90,9 +91,10 @@ w 75
 h 20
 font "helvetica-medium-r-10.0"
 fgColor index 0
+bgColor index 0
 useDisplayBg
 value {
- "Dynamics"
+  "Dynamics"
 }
 endObjectProperties
 
@@ -100,7 +102,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 285
 y 90
@@ -108,9 +110,10 @@ w 110
 h 20
 font "helvetica-medium-r-10.0"
 fgColor index 0
+bgColor index 0
 useDisplayBg
 value {
- "Calibration"
+  "Calibration"
 }
 endObjectProperties
 
@@ -119,22 +122,22 @@ object activeLineClass
 beginObjectProperties
 major 4
 minor 0
-release 0
-x -1
+release 1
+x 0
 y 85
-w 401
-h 3
+w 465
+h 5
 lineColor index 44
 fillColor index 44
 lineWidth 3
-numPoints 2 {
-xPoints  {
-0 0
-1 398
+numPoints 2
+xPoints {
+  0 1
+  1 463
 }
-yPoints  {
-0 86
-1 86
+yPoints {
+  0 87
+  1 87
 }
 endObjectProperties
 
@@ -143,7 +146,7 @@ object activeLineClass
 beginObjectProperties
 major 4
 minor 0
-release 0
+release 1
 x 275
 y 84
 w 3
@@ -151,14 +154,14 @@ h 219
 lineColor index 44
 fillColor index 44
 lineWidth 3
-numPoints 2 {
-xPoints  {
-0 276
-1 276
+numPoints 2
+xPoints {
+  0 276
+  1 276
 }
-yPoints  {
-0 85
-1 301
+yPoints {
+  0 85
+  1 301
 }
 endObjectProperties
 
@@ -166,70 +169,51 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 0
 y 0
 w 200
 h 27
 controlPv "$(MOTOR).DESC"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 44
 bgColor index 1
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 200
-y 0
-w 200
-h 14
-font "helvetica-medium-r-10.0"
-fontAlign "center"
-fgColor index 14
-useDisplayBg
-value {
- "($(MOTOR))"
-}
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
-x 200
-y 13
-w 200
-h 14
+x 215
+y 15
+w 175
+h 15
 controlPv "$(MOTOR).DTYP"
+format "decimal"
 font "helvetica-medium-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 44
 bgColor index 1
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Lines)
@@ -237,22 +221,22 @@ object activeLineClass
 beginObjectProperties
 major 4
 minor 0
-release 0
-x 0
-y 27
-w 401
-h 3
+release 1
+x -10
+y 25
+w 465
+h 5
 lineColor index 44
 fillColor index 44
 lineWidth 3
-numPoints 2 {
-xPoints  {
-0 1
-1 399
+numPoints 2
+xPoints {
+  0 -14
+  1 448
 }
-yPoints  {
-0 28
-1 28
+yPoints {
+  0 27
+  1 27
 }
 endObjectProperties
 
@@ -260,7 +244,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 219
 y 31
@@ -269,9 +253,10 @@ h 10
 font "helvetica-medium-r-10.0"
 fontAlign "center"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "DIAL"
+  "DIAL"
 }
 endObjectProperties
 
@@ -279,7 +264,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 115
 y 31
@@ -288,9 +273,10 @@ h 10
 font "helvetica-medium-r-10.0"
 fontAlign "center"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "USER"
+  "USER"
 }
 endObjectProperties
 
@@ -307,64 +293,63 @@ h 22
 
 beginGroup
 
-
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 115
 y 39
 w 100
 h 22
 controlPv "$(MOTOR).HLM"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 219
 y 39
 w 100
 h 22
 controlPv "$(MOTOR).DHLM"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 77
 y 42
@@ -372,9 +357,10 @@ w 35
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "High"
+  "High"
 }
 endObjectProperties
 
@@ -382,12 +368,11 @@ endGroup
 
 endObjectProperties
 
-
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 2
 y 32
@@ -395,9 +380,10 @@ w 75
 h 20
 font "helvetica-medium-r-10.0"
 fgColor index 0
+bgColor index 0
 useDisplayBg
 value {
- "Limits"
+  "Limits"
 }
 endObjectProperties
 
@@ -405,59 +391,59 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 115
 y 61
 w 100
 h 22
 controlPv "$(MOTOR).LLM"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 219
 y 61
 w 100
 h 22
 controlPv "$(MOTOR).DLLM"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 77
 y 64
@@ -465,9 +451,10 @@ w 35
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Low"
+  "Low"
 }
 endObjectProperties
 
@@ -475,7 +462,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 1
 y 117
@@ -483,9 +470,10 @@ w 140
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Max. Speed (Rev/s)"
+  "Max. Speed (Rev/s)"
 }
 endObjectProperties
 
@@ -493,215 +481,215 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 151
 y 114
 w 80
 h 25
 controlPv "$(MOTOR).SMAX"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 191
 y 242
 w 80
 h 25
 controlPv "$(MOTOR).FRAC"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 191
 y 217
 w 80
 h 25
 controlPv "$(MOTOR).BDST"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 191
 y 192
 w 80
 h 25
 controlPv "$(MOTOR).BACC"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 191
 y 142
 w 80
 h 25
 controlPv "$(MOTOR).SBAK"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 151
 y 167
 w 80
 h 25
 controlPv "$(MOTOR).SBAS"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 111
 y 192
 w 80
 h 25
 controlPv "$(MOTOR).ACCL"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 111
 y 142
 w 80
 h 25
 controlPv "$(MOTOR).S"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 195
@@ -709,9 +697,10 @@ w 100
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Accel time (s)"
+  "Accel time (s)"
 }
 endObjectProperties
 
@@ -719,7 +708,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 245
@@ -727,9 +716,10 @@ w 150
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Move fraction"
+  "Move fraction"
 }
 endObjectProperties
 
@@ -737,7 +727,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 145
@@ -745,9 +735,10 @@ w 100
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Speed (Rev/s)"
+  "Speed (Rev/s)"
 }
 endObjectProperties
 
@@ -755,7 +746,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 170
@@ -763,9 +754,10 @@ w 125
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Base speed (Rev/s)"
+  "Base speed (Rev/s)"
 }
 endObjectProperties
 
@@ -773,7 +765,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 286
 y 145
@@ -781,9 +773,10 @@ w 25
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Cal"
+  "Cal"
 }
 endObjectProperties
 
@@ -791,7 +784,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 286
 y 182
@@ -799,9 +792,10 @@ w 25
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Off"
+  "Off"
 }
 endObjectProperties
 
@@ -809,7 +803,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 286
 y 220
@@ -817,9 +811,10 @@ w 25
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Dir"
+  "Dir"
 }
 endObjectProperties
 
@@ -827,33 +822,33 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 316
 y 166
 w 80
 h 25
 controlPv "$(MOTOR).OFF"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 220
@@ -861,9 +856,10 @@ w 190
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Backlash dist.(        )"
+  "Backlash dist.(        )"
 }
 endObjectProperties
 
@@ -871,32 +867,32 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 121
 y 221
 w 65
 h 14
 controlPv "$(MOTOR).EGU"
+format "decimal"
 font "helvetica-medium-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 44
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 305
@@ -904,9 +900,10 @@ w 200
 h 20
 font "helvetica-medium-r-10.0"
 fgColor index 0
+bgColor index 0
 useDisplayBg
 value {
- "Resolution, Readback"
+  "Resolution, Readback"
 }
 endObjectProperties
 
@@ -914,7 +911,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 241
 y 353
@@ -922,9 +919,10 @@ w 50
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "/Rev."
+  "/Rev."
 }
 endObjectProperties
 
@@ -932,7 +930,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 241
 y 428
@@ -940,9 +938,10 @@ w 50
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "/Unit"
+  "/Unit"
 }
 endObjectProperties
 
@@ -950,7 +949,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 241
 y 403
@@ -958,9 +957,10 @@ w 50
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "/Step"
+  "/Step"
 }
 endObjectProperties
 
@@ -968,7 +968,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 241
 y 378
@@ -976,9 +976,10 @@ w 50
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "/Rev."
+  "/Rev."
 }
 endObjectProperties
 
@@ -986,82 +987,82 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 171
 y 378
 w 70
 h 18
 controlPv "$(MOTOR).EGU"
+format "decimal"
 font "helvetica-medium-r-10.0"
 fontAlign "right"
-smartRefresh
-fastUpdate
 fgColor index 44
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 171
 y 428
 w 70
 h 18
 controlPv "$(MOTOR).EGU"
+format "decimal"
 font "helvetica-medium-r-10.0"
 fontAlign "right"
-smartRefresh
-fastUpdate
 fgColor index 44
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 171
 y 403
 w 70
 h 18
 controlPv "$(MOTOR).EGU"
+format "decimal"
 font "helvetica-medium-r-10.0"
 fontAlign "right"
-smartRefresh
-fastUpdate
 fgColor index 44
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 171
 y 353
@@ -1070,9 +1071,10 @@ h 18
 font "helvetica-medium-r-10.0"
 fontAlign "right"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Steps"
+  "Steps"
 }
 endObjectProperties
 
@@ -1080,26 +1082,26 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 91
 y 375
 w 80
 h 25
 controlPv "$(MOTOR).UREV"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Group)
@@ -1115,38 +1117,37 @@ h 25
 
 beginGroup
 
-
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 91
 y 400
 w 80
 h 25
 controlPv "$(MOTOR).ERES"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 403
@@ -1154,16 +1155,16 @@ w 60
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Encoder:"
+  "Encoder:"
 }
 endObjectProperties
 
 endGroup
 
 endObjectProperties
-
 
 # (Group)
 object activeGroupClass
@@ -1178,38 +1179,37 @@ h 25
 
 beginGroup
 
-
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 91
 y 425
 w 80
 h 25
 controlPv "$(MOTOR).RRES"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 428
@@ -1217,9 +1217,10 @@ w 70
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Readback:"
+  "Readback:"
 }
 endObjectProperties
 
@@ -1227,64 +1228,63 @@ endGroup
 
 endObjectProperties
 
-
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 91
 y 350
 w 80
 h 25
 controlPv "$(MOTOR).SREV"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 91
 y 325
 w 80
 h 25
 controlPv "$(MOTOR).EGU"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 296
 y 403
@@ -1292,9 +1292,10 @@ w 30
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Use:"
+  "Use:"
 }
 endObjectProperties
 
@@ -1302,7 +1303,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 296
 y 428
@@ -1310,9 +1311,10 @@ w 30
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Use:"
+  "Use:"
 }
 endObjectProperties
 
@@ -1320,7 +1322,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 365
@@ -1328,9 +1330,10 @@ w 60
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Motor:"
+  "Motor:"
 }
 endObjectProperties
 
@@ -1338,7 +1341,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 328
@@ -1346,9 +1349,10 @@ w 60
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Units:"
+  "Units:"
 }
 endObjectProperties
 
@@ -1356,7 +1360,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 216
 y 543
@@ -1364,9 +1368,10 @@ w 95
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Precision"
+  "Precision"
 }
 endObjectProperties
 
@@ -1374,7 +1379,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 216
 y 525
@@ -1382,9 +1387,10 @@ w 95
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "VME card#"
+  "VME card#"
 }
 endObjectProperties
 
@@ -1392,7 +1398,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 216
 y 505
@@ -1400,9 +1406,10 @@ w 95
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Code version"
+  "Code version"
 }
 endObjectProperties
 
@@ -1410,7 +1417,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 216
 y 485
@@ -1418,9 +1425,10 @@ w 75
 h 20
 font "helvetica-medium-r-10.0"
 fgColor index 0
+bgColor index 0
 useDisplayBg
 value {
- "Misc."
+  "Misc."
 }
 endObjectProperties
 
@@ -1428,133 +1436,133 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 316
 y 505
 w 80
 h 18
 controlPv "$(MOTOR).VERS"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 44
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 316
 y 525
 w 80
 h 18
 controlPv "$(MOTOR).CARD"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 44
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 316
 y 540
 w 80
 h 25
 controlPv "$(MOTOR).PREC"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 121
 y 530
 w 50
 h 25
 controlPv "$(MOTOR).RTRY"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Text Control)
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 91
 y 505
 w 80
 h 25
 controlPv "$(MOTOR).RDBD"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 508
@@ -1562,9 +1570,10 @@ w 70
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Deadband"
+  "Deadband"
 }
 endObjectProperties
 
@@ -1572,7 +1581,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 533
@@ -1580,9 +1589,10 @@ w 120
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Max. retries"
+  "Max. retries"
 }
 endObjectProperties
 
@@ -1590,7 +1600,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 485
@@ -1598,9 +1608,10 @@ w 127
 h 20
 font "helvetica-medium-r-10.0"
 fgColor index 0
+bgColor index 0
 useDisplayBg
 value {
- "Retry"
+  "Retry"
 }
 endObjectProperties
 
@@ -1608,33 +1619,33 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 91
 y 450
 w 200
 h 25
 controlPv "$(MOTOR).RDBL"
+format "string"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 40
 editable
 autoHeight
-format "string"
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 453
@@ -1642,9 +1653,10 @@ w 70
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "RBV inLink:"
+  "RBV inLink:"
 }
 endObjectProperties
 
@@ -1652,33 +1664,33 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 301
 y 374
 w 80
 h 25
 controlPv "$(MOTOR).DLY"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 301
 y 345
@@ -1687,9 +1699,10 @@ h 14
 font "helvetica-medium-r-10.0"
 fontAlign "center"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Readback"
+  "Readback"
 }
 endObjectProperties
 
@@ -1697,7 +1710,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 301
 y 360
@@ -1706,9 +1719,10 @@ h 14
 font "helvetica-medium-r-10.0"
 fontAlign "center"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "delay (s)"
+  "delay (s)"
 }
 endObjectProperties
 
@@ -1716,7 +1730,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 368
 y 573
@@ -1724,9 +1738,10 @@ w 25
 h 10
 font "helvetica-medium-r-10.0"
 fgColor index 0
+bgColor index 0
 useDisplayBg
 value {
- "V1.8"
+  "V1.8"
 }
 endObjectProperties
 
@@ -1735,22 +1750,22 @@ object activeLineClass
 beginObjectProperties
 major 4
 minor 0
-release 0
+release 1
 x 0
 y 300
-w 401
-h 3
+w 440
+h 5
 lineColor index 44
 fillColor index 44
 lineWidth 3
-numPoints 2 {
-xPoints  {
-0 1
-1 399
+numPoints 2
+xPoints {
+  0 1
+  1 438
 }
-yPoints  {
-0 301
-1 301
+yPoints {
+  0 302
+  1 302
 }
 endObjectProperties
 
@@ -1758,7 +1773,7 @@ endObjectProperties
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 3
 y 271
@@ -1766,9 +1781,10 @@ w 91
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "Home Speed ("
+  "Home Speed ("
 }
 endObjectProperties
 
@@ -1776,26 +1792,26 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 191
 y 267
 w 80
 h 25
 controlPv "$(MOTOR).HVEL"
+format "decimal"
 font "helvetica-medium-r-10.0"
-smartRefresh
-fastUpdate
 fgColor index 14
 bgColor index 51
 editable
 autoHeight
-format decimal
 motifWidget
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Lines)
@@ -1803,46 +1819,46 @@ object activeLineClass
 beginObjectProperties
 major 4
 minor 0
-release 0
-x 191
-y 481
-w 3
-h 94
-lineColor index 44
-fillColor index 44
-lineWidth 3
-numPoints 2 {
-xPoints  {
-0 192
-1 192
-}
-yPoints  {
-0 482
-1 573
-}
-endObjectProperties
-
-# (Lines)
-object activeLineClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 0
+release 1
+x 190
 y 480
-w 401
-h 3
+w 5
+h 115
 lineColor index 44
 fillColor index 44
 lineWidth 3
-numPoints 2 {
-xPoints  {
-0 1
-1 399
+numPoints 2
+xPoints {
+  0 192
+  1 192
 }
-yPoints  {
-0 481
-1 481
+yPoints {
+  0 482
+  1 593
+}
+endObjectProperties
+
+# (Lines)
+object activeLineClass
+beginObjectProperties
+major 4
+minor 0
+release 1
+x 0
+y 485
+w 445
+h 0
+lineColor index 44
+fillColor index 44
+lineWidth 3
+numPoints 2
+xPoints {
+  0 1
+  1 443
+}
+yPoints {
+  0 485
+  1 485
 }
 endObjectProperties
 
@@ -1850,32 +1866,32 @@ endObjectProperties
 object activeXTextDspClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
 x 97
 y 271
 w 65
 h 14
 controlPv "$(MOTOR).EGU"
+format "decimal"
 font "helvetica-medium-r-10.0"
 fontAlign "center"
-smartRefresh
-fastUpdate
 fgColor index 44
 bgColor index 3
 autoHeight
-format decimal
 nullColor index 32
+smartRefresh
+fastUpdate
 useHexPrefix
-objType "controls"
 newPos
+objType "controls"
 endObjectProperties
 
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
-minor 0
+minor 1
 release 0
 x 165
 y 271
@@ -1883,29 +1899,12 @@ w 20
 h 18
 font "helvetica-medium-r-10.0"
 fgColor index 14
+bgColor index 0
 useDisplayBg
 value {
- "/s)"
+  "/s)"
 }
 endObjectProperties
-# (Group)
-object activeGroupClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 77
-y 39
-w 242
-h 22
-
-beginGroup
-
-
-endGroup
-
-endObjectProperties
-
 
 # (Choice Button)
 object activeChoiceButtonClass
@@ -1968,42 +1967,6 @@ controlPv "$(MOTOR).SET"
 font "helvetica-medium-r-10.0"
 orientation "horizontal"
 endObjectProperties
-# (Group)
-object activeGroupClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 3
-y 400
-w 168
-h 25
-
-beginGroup
-
-
-endGroup
-
-endObjectProperties
-
-# (Group)
-object activeGroupClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 3
-y 425
-w 168
-h 25
-
-beginGroup
-
-
-endGroup
-
-endObjectProperties
-
 
 # (Choice Button)
 object activeChoiceButtonClass
@@ -2051,10 +2014,10 @@ endObjectProperties
 object relatedDisplayClass
 beginObjectProperties
 major 4
-minor 0
+minor 2
 release 0
-x 3
-y 553
+x 15
+y 570
 w 40
 h 20
 fgColor index 0
@@ -2062,41 +2025,83 @@ bgColor index 17
 topShadowColor index 2
 botShadowColor index 12
 font "helvetica-medium-r-10.0"
-buttonLabel "More"
-numPvs 10
-numDsps 5
+buttonLabel "Debug"
+numPvs 4
+numDsps 1
 displayFileName {
-  # 0 "motorscreens/motorx_tiny.edl"
-  # 1 "motorscreens/motorx.edl"
-  # 2 "motorscreens/motorx_more.edl"
-  # 3 "motorscreens/scanParms.edl"
-  # 4 "motorscreens/motorx_all.edl"
   0 "motorscreens/motorx_all.edl"
-}
-menuLabel {
-  # 0 $(MOTOR) (Tiny)
-  # 1 $(MOTOR) (Small)
-  # 2 $(MOTOR) (Medium)
-  # 3 Scan Parameters
-  # 4 $(MOTOR) (Debug)
-  0 $(MOTOR) (Debug)
-}
-symbols {
-  0 "MOTOR=$(MOTOR)"
-  # 1 "MOTOR=$(MOTOR)"
-  # 2 "MOTOR=$(MOTOR)"
-  # 3 "MOTOR=$(MOTOR)"
-  # 4 "MOTOR=$(MOTOR)"
 }
 closeAction {
   0 1
-  1 1
-  2 1
+}
+symbols {
+  0 "M=$(MOTOR)"
 }
 closeDisplay {
   0 1
-  1 1
-  2 1
+}
+endObjectProperties
+
+# (Exit Button)
+object activeExitButtonClass
+beginObjectProperties
+major 4
+minor 1
+release 0
+x 390
+y 0
+w 35
+h 25
+fgColor index 14
+bgColor index 4
+topShadowColor index 1
+botShadowColor index 11
+label "Exit"
+font "helvetica-medium-r-10.0"
+3d
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 0
+x 210
+y 0
+w 180
+h 15
+font "helvetica-medium-r-10.0"
+fontAlign "center"
+fgColor index 14
+bgColor index 0
+useDisplayBg
+value {
+  "($(MOTOR))"
+}
+endObjectProperties
+
+# (Lines)
+object activeLineClass
+beginObjectProperties
+major 4
+minor 0
+release 1
+x 0
+y 595
+w 445
+h 5
+lineColor index 44
+fillColor index 44
+lineWidth 3
+numPoints 2
+xPoints {
+  0 1
+  1 444
+}
+yPoints {
+  0 596
+  1 596
 }
 endObjectProperties
 
