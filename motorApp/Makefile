@@ -17,6 +17,7 @@ DIRS += MotorSrc
 # All the following modules require ASYN.
 ifdef ASYN
 #!DIRS += NewportSrc
+DIRS += PerfMaxUSBSrc
 DIRS += ImsSrc
 #!DIRS += AcsSrc
 #!DIRS += MclennanSrc
@@ -47,6 +48,7 @@ OmsSrc_DEPEND_DIRS			= MotorSrc
 SoftMotorSrc_DEPEND_DIRS	= MotorSrc
 MotorSimSrc_DEPEND_DIRS		= MotorSrc
 NewportSrc_DEPEND_DIRS		= MotorSrc
+PerfMaxUSBSrc_DEPEND_DIRS	= MotorSrc
 ImsSrc_DEPEND_DIRS			= MotorSrc
 AcsSrc_DEPEND_DIRS			= MotorSrc
 MclennanSrc_DEPEND_DIRS		= MotorSrc

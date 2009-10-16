@@ -1,0 +1,8 @@
+# PerfMaxUSB MoCo dc series support.
+#device(motor,VME_IO,devPerfMaxUSB,"PerfMaxUSB MoCo")
+device(motor,VME_IO,devPerfMaxUSB,"PerfMaxUSB")
+driver(drvPerfMaxUSB)
+registrar(PerfMaxUSBRegister)
+#variable(drvPerfMaxUSBDebug)
+
+
