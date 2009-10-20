@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 256
-y 299
+x 266
+y 343
 w 430
 h 611
 font "helvetica-medium-r-18.0"
@@ -173,11 +173,11 @@ minor 2
 release 0
 x 0
 y 0
-w 200
-h 27
+w 170
+h 16
 controlPv "$(MOTOR).DESC"
 format "decimal"
-font "helvetica-medium-r-10.0"
+font "helvetica-bold-r-10.0"
 fgColor index 44
 bgColor index 1
 editable
@@ -197,7 +197,7 @@ beginObjectProperties
 major 4
 minor 2
 release 0
-x 215
+x 175
 y 15
 w 175
 h 15
@@ -2035,7 +2035,7 @@ closeAction {
   0 1
 }
 symbols {
-  0 "M=$(MOTOR)"
+  0 "M=$(MOTOR),P=$(MOTOR).DESC"
 }
 closeDisplay {
   0 1
@@ -2067,11 +2067,11 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 210
+x 175
 y 0
 w 180
 h 15
-font "helvetica-medium-r-10.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 14
 bgColor index 0

@@ -3,10 +3,10 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 448
-y 44
-w 450
-h 904
+x 140
+y 22
+w 460
+h 910
 font "helvetica-medium-r-18.0"
 ctlFont "helvetica-medium-r-10.0"
 btnFont "helvetica-medium-r-18.0"
@@ -127,7 +127,7 @@ minor 0
 release 1
 x 0
 y 285
-w 449
+w 460
 h 2
 lineColor index 44
 fillColor index 44
@@ -135,7 +135,7 @@ lineWidth 2
 numPoints 2
 xPoints {
   0 1
-  1 448
+  1 459
 }
 yPoints {
   0 286
@@ -153,7 +153,7 @@ x 207
 y 446
 w 100
 h 24
-controlPv "$(P)$(M).FRAC"
+controlPv "$(M).FRAC"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -179,7 +179,7 @@ x 95
 y 317
 w 100
 h 24
-controlPv "$(P)$(M).VMAX"
+controlPv "$(M).VMAX"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -300,7 +300,7 @@ x 207
 y 395
 w 100
 h 24
-controlPv "$(P)$(M).BACC"
+controlPv "$(M).BACC"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -326,7 +326,7 @@ x 95
 y 395
 w 100
 h 24
-controlPv "$(P)$(M).ACCL"
+controlPv "$(M).ACCL"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -352,7 +352,7 @@ x 207
 y 420
 w 100
 h 24
-controlPv "$(P)$(M).BDST"
+controlPv "$(M).BDST"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -378,7 +378,7 @@ x 95
 y 343
 w 100
 h 24
-controlPv "$(P)$(M).VELO"
+controlPv "$(M).VELO"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -404,7 +404,7 @@ x 207
 y 343
 w 100
 h 24
-controlPv "$(P)$(M).BVEL"
+controlPv "$(M).BVEL"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -430,7 +430,7 @@ x 95
 y 369
 w 100
 h 24
-controlPv "$(P)$(M).VBAS"
+controlPv "$(M).VBAS"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -509,7 +509,7 @@ x 186
 y 249
 w 100
 h 25
-controlPv "$(P)$(M).OFF"
+controlPv "$(M).OFF"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -559,7 +559,7 @@ x 319
 y 343
 w 100
 h 24
-controlPv "$(P)$(M).JVEL"
+controlPv "$(M).JVEL"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -585,7 +585,7 @@ x 319
 y 395
 w 100
 h 24
-controlPv "$(P)$(M).JAR"
+controlPv "$(M).JAR"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -609,7 +609,7 @@ minor 0
 release 1
 x 2
 y 225
-w 449
+w 460
 h 2
 lineColor index 44
 fillColor index 44
@@ -617,7 +617,7 @@ lineWidth 2
 numPoints 2
 xPoints {
   0 3
-  1 450
+  1 461
 }
 yPoints {
   0 226
@@ -694,7 +694,7 @@ fontAlign "center"
 fgColor index 44
 bgColor index 0
 useDisplayBg
-visPv "CALC\\\{(((A=0)&&(B=0)))\}($(P)$(M).DMOV, $(P)$(M).STAT)"
+visPv "CALC\\\{(((A=0)&&(B=0)))\}($(M).DMOV, $(M).STAT)"
 visInvert
 visMin "0"
 visMax "1"
@@ -711,9 +711,9 @@ minor 2
 release 0
 x 350
 y 3
-w 90
-h 20
-controlPv "$(P)$(M).EGU"
+w 45
+h 16
+controlPv "$(M).EGU"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -779,7 +779,7 @@ fontAlign "center"
 fgColor index 20
 bgColor index 0
 useDisplayBg
-visPv "CALC\\\{(A)\}($(P)$(M).LLS)"
+visPv "CALC\\\{(A)\}($(M).LLS)"
 visInvert
 visMin "0"
 visMax "1"
@@ -801,7 +801,7 @@ h 22
 lineColor index 1
 fillColor index 1
 lineWidth 2
-visPv "CALC\\\{(A)\}($(P)$(M).HOMF)"
+visPv "CALC\\\{(A)\}($(M).HOMF)"
 visInvert
 visMin "0"
 visMax "1"
@@ -820,7 +820,7 @@ h 22
 lineColor index 1
 fillColor index 1
 lineWidth 2
-visPv "CALC\\\{(A)\}($(P)$(M).HOMR)"
+visPv "CALC\\\{(A)\}($(M).HOMR)"
 visInvert
 visMin "0"
 visMax "1"
@@ -836,7 +836,7 @@ x 103
 y 193
 w 56
 h 22
-controlPv "$(P)$(M).TWV"
+controlPv "$(M).TWV"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -862,7 +862,7 @@ x 83
 y 166
 w 100
 h 25
-controlPv "$(P)$(M).RLV"
+controlPv "$(M).RLV"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -933,7 +933,7 @@ fontAlign "center"
 fgColor index 20
 bgColor index 0
 useDisplayBg
-visPv "CALC\\\{(A)\}($(P)$(M).HLS)"
+visPv "CALC\\\{(A)\}($(M).HLS)"
 visInvert
 visMin "0"
 visMax "1"
@@ -952,7 +952,7 @@ x 83
 y 78
 w 100
 h 18
-controlPv "$(P)$(M).RBV"
+controlPv "$(M).RBV"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -976,7 +976,7 @@ x 187
 y 78
 w 100
 h 18
-controlPv "$(P)$(M).DRBV"
+controlPv "$(M).DRBV"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -1000,7 +1000,7 @@ x 83
 y 102
 w 100
 h 25
-controlPv "$(P)$(M).VAL"
+controlPv "$(M).VAL"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -1026,7 +1026,7 @@ x 83
 y 132
 w 100
 h 22
-controlPv "$(P)$(M).LLM"
+controlPv "$(M).LLM"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -1052,7 +1052,7 @@ x 187
 y 50
 w 100
 h 22
-controlPv "$(P)$(M).DHLM"
+controlPv "$(M).DHLM"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -1078,7 +1078,7 @@ x 83
 y 50
 w 100
 h 22
-controlPv "$(P)$(M).HLM"
+controlPv "$(M).HLM"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -1104,7 +1104,7 @@ x 187
 y 102
 w 100
 h 25
-controlPv "$(P)$(M).DVAL"
+controlPv "$(M).DVAL"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -1130,7 +1130,7 @@ x 187
 y 132
 w 100
 h 22
-controlPv "$(P)$(M).DLLM"
+controlPv "$(M).DLLM"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -1160,7 +1160,7 @@ lineColor index 20
 fill
 fillColor index 20
 lineWidth 0
-visPv "CALC\\\{(A)\}($(P)$(M).HLS)"
+visPv "CALC\\\{(A)\}($(M).HLS)"
 visInvert
 visMin "0"
 visMax "1"
@@ -1180,7 +1180,7 @@ lineColor index 20
 fill
 fillColor index 20
 lineWidth 0
-visPv "CALC\\\{(A)\}($(P)$(M).LLS)"
+visPv "CALC\\\{(A)\}($(M).LLS)"
 visInvert
 visMin "0"
 visMax "1"
@@ -1201,7 +1201,7 @@ fontAlign "center"
 fgColor index 30
 bgColor index 0
 useDisplayBg
-visPv "CALC\\\{(A)\}($(P)$(M).LVIO)"
+visPv "CALC\\\{(A)\}($(M).LVIO)"
 visInvert
 visMin "0"
 visMax "1"
@@ -1236,7 +1236,7 @@ h 16
 lineColor index 30
 fillColor index 30
 lineWidth 2
-visPv "CALC\\\{(A)\}($(P)$(M).SET)"
+visPv "CALC\\\{(A)\}($(M).SET)"
 visInvert
 visMin "0"
 visMax "1"
@@ -1255,7 +1255,7 @@ h 20
 lineColor index 14
 fillColor index 14
 lineWidth 2
-visPv "CALC\\\{(A)\}($(P)$(M).SET)"
+visPv "CALC\\\{(A)\}($(M).SET)"
 visInvert
 visMin "0"
 visMax "1"
@@ -1426,7 +1426,7 @@ x 335
 y 77
 w 100
 h 19
-controlPv "$(P)$(M).RRBV"
+controlPv "$(M).RRBV"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -1453,7 +1453,7 @@ h 27
 lineColor index 30
 fill
 fillColor index 30
-visPv "CALC\\\{(A)\}($(P)$(M).LVIO)"
+visPv "CALC\\\{(A)\}($(M).LVIO)"
 visInvert
 visMin "0"
 visMax "1"
@@ -1469,7 +1469,7 @@ x 335
 y 102
 w 100
 h 25
-controlPv "$(P)$(M).RVAL"
+controlPv "$(M).RVAL"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -1500,7 +1500,7 @@ fontAlign "center"
 fgColor index 30
 bgColor index 0
 useDisplayBg
-visPv "CALC\\\{(A)\}($(P)$(M).SET)"
+visPv "CALC\\\{(A)\}($(M).SET)"
 visInvert
 visMin "0"
 visMax "1"
@@ -1517,7 +1517,7 @@ minor 0
 release 0
 x 0
 y 0
-w 449
+w 460
 h 25
 lineColor index 1
 fill
@@ -1533,11 +1533,11 @@ minor 2
 release 0
 x 0
 y 0
-w 190
-h 27
-controlPv "$(P)$(M).DESC"
+w 145
+h 16
+controlPv "$(M).DESC"
 format "decimal"
-font "helvetica-medium-r-10.0"
+font "helvetica-bold-r-10.0"
 fgColor index 44
 bgColor index 1
 editable
@@ -1559,7 +1559,7 @@ minor 0
 release 1
 x 0
 y 27
-w 449
+w 460
 h 3
 lineColor index 44
 fillColor index 44
@@ -1567,7 +1567,7 @@ lineWidth 3
 numPoints 2
 xPoints {
   0 1
-  1 447
+  1 458
 }
 yPoints {
   0 28
@@ -1581,17 +1581,17 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 175
+x 165
 y 0
-w 135
+w 150
 h 15
-font "helvetica-medium-r-10.0"
+font "helvetica-bold-r-10.0"
 fontAlign "center"
 fgColor index 14
 bgColor index 0
 useDisplayBg
 value {
-  "($(P)$(M))"
+  "$(M)"
 }
 endObjectProperties
 
@@ -1601,11 +1601,11 @@ beginObjectProperties
 major 4
 minor 2
 release 0
-x 175
+x 120
 y 15
-w 130
-h 15
-controlPv "$(P)$(M).DTYP"
+w 225
+h 12
+controlPv "$(M).DTYP"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fontAlign "center"
@@ -1630,7 +1630,7 @@ x 174
 y 161
 w 2
 h 2
-controlPv "$(P)$(M).LVIO"
+controlPv "$(M).LVIO"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fontAlign "center"
@@ -1660,7 +1660,7 @@ fontAlign "center"
 fgColor index 30
 bgColor index 0
 useDisplayBg
-visPv "CALC\\\{(A)\}($(P)$(M).STAT)"
+visPv "CALC\\\{(A)\}($(M).STAT)"
 visInvert
 visMin "0"
 visMax "1"
@@ -1700,7 +1700,7 @@ fontAlign "center"
 fgColor index 50
 bgColor index 0
 useDisplayBg
-visPv "CALC\\\{(((A=0)&&(B=0)))\}($(P)$(M).DMOV, $(P)$(M).STAT)"
+visPv "CALC\\\{(((A=0)&&(B=0)))\}($(M).DMOV, $(M).STAT)"
 visInvert
 visMin "0"
 visMax "1"
@@ -2038,8 +2038,8 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 321
-y 7
+x 355
+y 0
 w 20
 h 13
 font "helvetica-medium-r-10.0"
@@ -2143,7 +2143,7 @@ h 22
 lineColor index 1
 fillColor index 1
 lineWidth 2
-visPv "CALC\\\{(A)\}($(P)$(M).JOGF)"
+visPv "CALC\\\{(A)\}($(M).JOGF)"
 visInvert
 visMin "0"
 visMax "1"
@@ -2162,7 +2162,7 @@ h 22
 lineColor index 1
 fillColor index 1
 lineWidth 2
-visPv "CALC\\\{(A)\}($(P)$(M).JOGR)"
+visPv "CALC\\\{(A)\}($(M).JOGR)"
 visInvert
 visMin "0"
 visMax "1"
@@ -2370,7 +2370,7 @@ x 134
 y 558
 w 94
 h 25
-controlPv "$(P)$(M).MRES"
+controlPv "$(M).MRES"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -2396,7 +2396,7 @@ x 134
 y 583
 w 94
 h 25
-controlPv "$(P)$(M).ERES"
+controlPv "$(M).ERES"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -2422,7 +2422,7 @@ x 134
 y 633
 w 94
 h 25
-controlPv "$(P)$(M).RDBD"
+controlPv "$(M).RDBD"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -2448,7 +2448,7 @@ x 164
 y 658
 w 64
 h 25
-controlPv "$(P)$(M).RTRY"
+controlPv "$(M).RTRY"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -2493,7 +2493,7 @@ x 71
 y 661
 w 50
 h 18
-controlPv "$(P)$(M).RCNT"
+controlPv "$(M).RCNT"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -2536,7 +2536,7 @@ x 346
 y 578
 w 100
 h 18
-controlPv "$(P)$(M).TDIR"
+controlPv "$(M).TDIR"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -2579,7 +2579,7 @@ x 346
 y 598
 w 100
 h 18
-controlPv "$(P)$(M).MOVN"
+controlPv "$(M).MOVN"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -2603,7 +2603,7 @@ x 346
 y 558
 w 100
 h 18
-controlPv "$(P)$(M).MSTA"
+controlPv "$(M).MSTA"
 format "hex"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -2722,7 +2722,7 @@ x 346
 y 698
 w 100
 h 18
-controlPv "$(P)$(M).DIFF"
+controlPv "$(M).DIFF"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -2765,7 +2765,7 @@ x 346
 y 618
 w 100
 h 18
-controlPv "$(P)$(M).ATHM"
+controlPv "$(M).ATHM"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -2789,7 +2789,7 @@ x 346
 y 658
 w 100
 h 18
-controlPv "$(P)$(M).REP"
+controlPv "$(M).REP"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -2813,7 +2813,7 @@ x 346
 y 638
 w 100
 h 18
-controlPv "$(P)$(M).RMP"
+controlPv "$(M).RMP"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -2837,7 +2837,7 @@ x 346
 y 678
 w 100
 h 18
-controlPv "$(P)$(M).MIP"
+controlPv "$(M).MIP"
 format "hex"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -2861,7 +2861,7 @@ x 134
 y 608
 w 94
 h 25
-controlPv "$(P)$(M).RRES"
+controlPv "$(M).RRES"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -2906,7 +2906,7 @@ x 346
 y 718
 w 100
 h 18
-controlPv "$(P)$(M).VERS"
+controlPv "$(M).VERS"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -2949,7 +2949,7 @@ x 346
 y 758
 w 100
 h 20
-controlPv "$(P)$(M).PREC"
+controlPv "$(M).PREC"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -2994,7 +2994,7 @@ x 346
 y 738
 w 100
 h 18
-controlPv "$(P)$(M).CARD"
+controlPv "$(M).CARD"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 44
@@ -3018,7 +3018,7 @@ x 134
 y 733
 w 94
 h 25
-controlPv "$(P)$(M).DLY"
+controlPv "$(M).DLY"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -3044,7 +3044,7 @@ x 88
 y 758
 w 140
 h 25
-controlPv "$(P)$(M).RDBL"
+controlPv "$(M).RDBL"
 format "string"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -3403,7 +3403,7 @@ x 346
 y 535
 w 88
 h 16
-controlPv "$(P)$(M).STAT"
+controlPv "$(M).STAT"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fontAlign "center"
@@ -3442,7 +3442,7 @@ x 298
 y 807
 w 150
 h 20
-controlPv "$(P)$(M).FLNK"
+controlPv "$(M).FLNK"
 format "string"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -3528,7 +3528,7 @@ minor 0
 release 1
 x 0
 y 529
-w 449
+w 460
 h 2
 lineColor index 44
 fillColor index 44
@@ -3536,7 +3536,7 @@ lineWidth 2
 numPoints 2
 xPoints {
   0 1
-  1 448
+  1 459
 }
 yPoints {
   0 530
@@ -3568,7 +3568,7 @@ minor 0
 release 1
 x 1
 y 473
-w 449
+w 460
 h 2
 lineColor index 44
 fillColor index 44
@@ -3576,7 +3576,7 @@ lineWidth 2
 numPoints 2
 xPoints {
   0 2
-  1 449
+  1 460
 }
 yPoints {
   0 474
@@ -3722,7 +3722,7 @@ x 95
 y 498
 w 100
 h 24
-controlPv "$(P)$(M).PCOF"
+controlPv "$(M).PCOF"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -3748,7 +3748,7 @@ x 207
 y 498
 w 100
 h 24
-controlPv "$(P)$(M).ICOF"
+controlPv "$(M).ICOF"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -3774,7 +3774,7 @@ x 319
 y 498
 w 100
 h 24
-controlPv "$(P)$(M).DCOF"
+controlPv "$(M).DCOF"
 format "decimal"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -3898,7 +3898,7 @@ x 134
 y 783
 w 94
 h 25
-controlPv "$(P)$(M).PREM"
+controlPv "$(M).PREM"
 format "string"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -3943,7 +3943,7 @@ x 134
 y 808
 w 94
 h 25
-controlPv "$(P)$(M).POST"
+controlPv "$(M).POST"
 format "string"
 font "helvetica-medium-r-10.0"
 fgColor index 14
@@ -3975,7 +3975,7 @@ selectColor index 51
 inconsistentColor index 14
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).SET"
+controlPv "$(M).SET"
 font "helvetica-medium-r-10.0"
 orientation "horizontal"
 endObjectProperties
@@ -4008,8 +4008,8 @@ bgColor index 51
 inconsistentColor index 12
 topShadowColor index 2
 botShadowColor index 12
-controlPv "$(P)$(M).FOFF"
-indicatorPv "$(P)$(M).FOFF"
+controlPv "$(M).FOFF"
+indicatorPv "$(M).FOFF"
 font "helvetica-medium-r-10.0"
 endObjectProperties
 
@@ -4033,7 +4033,7 @@ selectColor index 51
 inconsistentColor index 14
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).DIR"
+controlPv "$(M).DIR"
 font "helvetica-medium-r-10.0"
 orientation "horizontal"
 endObjectProperties
@@ -4053,7 +4053,7 @@ onColor index 51
 offColor index 51
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).TWF"
+controlPv "$(M).TWF"
 pressValue "1"
 onLabel ">"
 offLabel ">"
@@ -4077,7 +4077,7 @@ onColor index 51
 offColor index 51
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).TWR"
+controlPv "$(M).TWR"
 pressValue "1"
 onLabel "<"
 offLabel "<"
@@ -4101,7 +4101,7 @@ onColor index 51
 offColor index 51
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).JOGR"
+controlPv "$(M).JOGR"
 pressValue "1"
 releaseValue "0"
 onLabel "JogR"
@@ -4126,7 +4126,7 @@ onColor index 51
 offColor index 51
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).JOGF"
+controlPv "$(M).JOGF"
 pressValue "1"
 releaseValue "0"
 onLabel "JogF"
@@ -4151,7 +4151,7 @@ onColor index 51
 offColor index 51
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).HOMF"
+controlPv "$(M).HOMF"
 pressValue "1"
 onLabel "HomF"
 offLabel "HomF"
@@ -4175,7 +4175,7 @@ onColor index 51
 offColor index 51
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).HOMR"
+controlPv "$(M).HOMR"
 pressValue "1"
 onLabel "HomR"
 offLabel "HomR"
@@ -4200,7 +4200,7 @@ selectColor index 51
 inconsistentColor index 14
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M)_able.VAL"
+controlPv "$(M)_able.VAL"
 font "helvetica-medium-r-10.0"
 endObjectProperties
 
@@ -4220,7 +4220,7 @@ selectColor index 20
 inconsistentColor index 31
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).SPMG"
+controlPv "$(M).SPMG"
 font "helvetica-medium-r-10.0"
 endObjectProperties
 
@@ -4240,7 +4240,7 @@ selectColor index 51
 inconsistentColor index 14
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).UEIP"
+controlPv "$(M).UEIP"
 font "helvetica-medium-r-10.0"
 orientation "horizontal"
 endObjectProperties
@@ -4261,7 +4261,7 @@ selectColor index 51
 inconsistentColor index 14
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).URIP"
+controlPv "$(M).URIP"
 font "helvetica-medium-r-10.0"
 orientation "horizontal"
 endObjectProperties
@@ -4282,7 +4282,7 @@ selectColor index 51
 inconsistentColor index 14
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).CNEN"
+controlPv "$(M).CNEN"
 font "helvetica-medium-r-10.0"
 orientation "horizontal"
 endObjectProperties
@@ -4302,7 +4302,7 @@ onColor index 44
 offColor index 44
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M).STUP"
+controlPv "$(M).STUP"
 pressValue "1"
 onLabel "STATUS"
 offLabel "STATUS"
@@ -4350,7 +4350,7 @@ onColor index 51
 offColor index 51
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M):scanParms.GO"
+controlPv "$(M):scanParms.GO"
 pressValue "1"
 onLabel "Go"
 offLabel "Go"
@@ -4374,7 +4374,7 @@ onColor index 51
 offColor index 51
 topShadowColor index 0
 botShadowColor index 14
-controlPv "$(P)$(M):scanParms.LOAD"
+controlPv "$(M):scanParms.LOAD"
 pressValue "1"
 onLabel "Ld"
 offLabel "Ld"
@@ -4430,8 +4430,8 @@ bgColor index 51
 inconsistentColor index 12
 topShadowColor index 2
 botShadowColor index 12
-controlPv "$(P)$(M).OMSL"
-indicatorPv "$(P)$(M).OMSL"
+controlPv "$(M).OMSL"
+indicatorPv "$(M).OMSL"
 font "helvetica-medium-r-10.0"
 endObjectProperties
 
@@ -4441,7 +4441,7 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 400
+x 415
 y 0
 w 40
 h 25
@@ -4452,5 +4452,29 @@ botShadowColor index 11
 label "Exit"
 font "helvetica-medium-r-10.0"
 3d
+endObjectProperties
+
+# (Lines)
+object activeLineClass
+beginObjectProperties
+major 4
+minor 0
+release 1
+x 0
+y 900
+w 460
+h 2
+lineColor index 44
+fillColor index 44
+lineWidth 2
+numPoints 2
+xPoints {
+  0 1
+  1 459
+}
+yPoints {
+  0 901
+  1 901
+}
 endObjectProperties
 

@@ -3,10 +3,10 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 1959
-y 234
-w 583
-h 781
+x 669
+y 38
+w 585
+h 837
 font "helvetica-medium-r-10.0"
 ctlFont "helvetica-medium-r-10.0"
 btnFont "helvetica-medium-r-10.0"
@@ -31,15 +31,15 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 8
+x 0
 y 0
-w 576
+w 585
 h 32
 font "helvetica-bold-r-14.0"
 fgColor index 14
 bgColor index 56
 value {
-  "3-Axis for $(DESC)"
+  "    3-Axis for $(DESC)"
 }
 endObjectProperties
 
@@ -50,7 +50,7 @@ major 4
 minor 1
 release 0
 x 520
-y 0
+y 5
 w 48
 h 24
 fgColor index 14
@@ -1429,7 +1429,7 @@ major 4
 minor 0
 release 0
 x 8
-y 280
+y 288
 w 560
 h 248
 
@@ -1442,7 +1442,7 @@ major 4
 minor 0
 release 0
 x 8
-y 280
+y 288
 w 560
 h 248
 
@@ -1455,7 +1455,7 @@ major 4
 minor 0
 release 0
 x 9
-y 288
+y 296
 w 560
 h 235
 lineColor index 10
@@ -1469,7 +1469,7 @@ major 4
 minor 0
 release 0
 x 8
-y 286
+y 294
 w 560
 h 235
 lineColor index 3
@@ -1483,7 +1483,7 @@ major 4
 minor 0
 release 0
 x 8
-y 287
+y 295
 w 560
 h 235
 lineColor index 14
@@ -1497,7 +1497,7 @@ major 4
 minor 1
 release 0
 x 24
-y 280
+y 288
 w 85
 h 14
 font "helvetica-bold-r-12.0"
@@ -1516,7 +1516,7 @@ major 4
 minor 1
 release 0
 x 424
-y 515
+y 523
 w 136
 h 13
 font "helvetica-bold-r-12.0"
@@ -1539,7 +1539,7 @@ major 4
 minor 0
 release 0
 x 16
-y 304
+y 312
 w 536
 h 200
 
@@ -1552,7 +1552,7 @@ major 4
 minor 0
 release 0
 x 16
-y 312
+y 320
 w 264
 h 192
 lineColor index 3
@@ -1567,7 +1567,7 @@ major 4
 minor 0
 release 0
 x 128
-y 416
+y 424
 w 16
 h 8
 lineColor index 3
@@ -1583,7 +1583,7 @@ major 4
 minor 0
 release 0
 x 192
-y 416
+y 424
 w 16
 h 8
 lineColor index 3
@@ -1599,7 +1599,7 @@ major 4
 minor 0
 release 0
 x 192
-y 392
+y 400
 w 16
 h 16
 lineColor index 39
@@ -1615,7 +1615,7 @@ major 4
 minor 0
 release 0
 x 128
-y 392
+y 400
 w 16
 h 16
 lineColor index 39
@@ -1631,7 +1631,7 @@ major 4
 minor 1
 release 0
 x 24
-y 328
+y 336
 w 56
 h 24
 font "helvetica-bold-r-12.0"
@@ -1655,7 +1655,7 @@ major 4
 minor 1
 release 0
 x 80
-y 328
+y 336
 w 56
 h 24
 font "helvetica-bold-r-12.0"
@@ -1679,7 +1679,7 @@ major 4
 minor 1
 release 0
 x 136
-y 328
+y 336
 w 56
 h 24
 font "helvetica-bold-r-12.0"
@@ -1703,7 +1703,7 @@ major 4
 minor 0
 release 0
 x 296
-y 312
+y 320
 w 256
 h 192
 lineColor index 3
@@ -1718,7 +1718,7 @@ major 4
 minor 1
 release 0
 x 16
-y 304
+y 312
 w 48
 h 16
 font "helvetica-bold-r-12.0"
@@ -1737,7 +1737,7 @@ major 4
 minor 1
 release 0
 x 24
-y 360
+y 368
 w 88
 h 24
 font "helvetica-medium-r-12.0"
@@ -1756,7 +1756,7 @@ major 4
 minor 2
 release 0
 x 392
-y 392
+y 400
 w 72
 h 24
 controlPv "$(M2).TWV"
@@ -1780,7 +1780,7 @@ major 4
 minor 1
 release 0
 x 304
-y 392
+y 400
 w 48
 h 24
 font "helvetica-medium-r-12.0"
@@ -1800,7 +1800,7 @@ major 4
 minor 0
 release 0
 x 384
-y 464
+y 472
 w 64
 h 32
 fgColor index 35
@@ -1824,7 +1824,7 @@ major 4
 minor 1
 release 0
 x 296
-y 304
+y 312
 w 56
 h 16
 font "helvetica-bold-r-12.0"
@@ -1843,7 +1843,7 @@ major 4
 minor 1
 release 0
 x 304
-y 360
+y 368
 w 80
 h 24
 font "helvetica-medium-r-12.0"
@@ -1863,7 +1863,7 @@ major 4
 minor 2
 release 0
 x 384
-y 360
+y 368
 w 88
 h 24
 controlPv "$(M2).VAL"
@@ -1887,7 +1887,7 @@ major 4
 minor 0
 release 0
 x 328
-y 328
+y 336
 w 168
 h 24
 fgColor index 14
@@ -1909,7 +1909,7 @@ major 4
 minor 1
 release 0
 x 24
-y 392
+y 400
 w 88
 h 24
 font "helvetica-medium-r-12.0"
@@ -1929,7 +1929,7 @@ major 4
 minor 0
 release 0
 x 128
-y 392
+y 400
 w 16
 h 16
 lineColor index 35
@@ -1948,7 +1948,7 @@ major 4
 minor 0
 release 0
 x 192
-y 392
+y 400
 w 16
 h 16
 lineColor index 35
@@ -1967,7 +1967,7 @@ major 4
 minor 0
 release 0
 x 160
-y 392
+y 400
 w 16
 h 16
 lineColor index 30
@@ -1986,7 +1986,7 @@ major 4
 minor 1
 release 0
 x 304
-y 424
+y 432
 w 80
 h 24
 font "helvetica-medium-r-12.0"
@@ -2005,7 +2005,7 @@ major 4
 minor 2
 release 0
 x 384
-y 424
+y 432
 w 88
 h 24
 controlPv "$(M2).VELO"
@@ -2029,7 +2029,7 @@ major 4
 minor 1
 release 0
 x 24
-y 432
+y 440
 w 88
 h 24
 font "helvetica-medium-r-12.0"
@@ -2048,7 +2048,7 @@ major 10
 minor 0
 release 0
 x 128
-y 432
+y 440
 w 80
 h 24
 controlPv "$(M2).RMP"
@@ -2070,7 +2070,7 @@ major 4
 minor 2
 release 0
 x 480
-y 360
+y 368
 w 16
 h 24
 controlPv "$(M2).EGU"
@@ -2093,7 +2093,7 @@ major 4
 minor 1
 release 0
 x 208
-y 416
+y 424
 w 24
 h 16
 font "helvetica-medium-r-8.0"
@@ -2112,7 +2112,7 @@ major 4
 minor 1
 release 0
 x 104
-y 416
+y 424
 w 24
 h 16
 font "helvetica-medium-r-8.0"
@@ -2132,7 +2132,7 @@ major 4
 minor 0
 release 0
 x 480
-y 424
+y 432
 w 16
 h 32
 
@@ -2145,7 +2145,7 @@ major 4
 minor 2
 release 0
 x 480
-y 424
+y 432
 w 16
 h 24
 controlPv "$(M2).EGU"
@@ -2168,7 +2168,7 @@ major 4
 minor 1
 release 0
 x 480
-y 432
+y 440
 w 13
 h 24
 font "helvetica-medium-r-8.0"
@@ -2192,7 +2192,7 @@ major 4
 minor 0
 release 0
 x 128
-y 416
+y 424
 w 16
 h 8
 lineColor index 3
@@ -2212,7 +2212,7 @@ major 4
 minor 0
 release 0
 x 192
-y 416
+y 424
 w 16
 h 8
 lineColor index 3
@@ -2232,7 +2232,7 @@ major 4
 minor 2
 release 0
 x 520
-y 376
+y 384
 w 24
 h 16
 controlPv "$(M2).LLM"
@@ -2257,7 +2257,7 @@ major 4
 minor 2
 release 0
 x 520
-y 352
+y 360
 w 24
 h 16
 controlPv "$(M2).HLM"
@@ -2282,7 +2282,7 @@ major 4
 minor 2
 release 0
 x 520
-y 392
+y 400
 w 24
 h 24
 controlPv "$(M2).EGU"
@@ -2305,7 +2305,7 @@ major 4
 minor 2
 release 0
 x 520
-y 440
+y 448
 w 24
 h 16
 controlPv "$(M2).VBAS"
@@ -2330,7 +2330,7 @@ major 4
 minor 2
 release 0
 x 520
-y 416
+y 424
 w 24
 h 16
 controlPv "$(M2).VMAX"
@@ -2355,7 +2355,7 @@ major 4
 minor 1
 release 0
 x 376
-y 312
+y 320
 w 88
 h 16
 font "helvetica-bold-r-12.0"
@@ -2376,7 +2376,7 @@ major 4
 minor 1
 release 0
 x 24
-y 464
+y 472
 w 88
 h 24
 font "helvetica-medium-r-12.0"
@@ -2395,7 +2395,7 @@ major 4
 minor 2
 release 0
 x 128
-y 464
+y 472
 w 80
 h 24
 controlPv "$(M2).DRBV"
@@ -2418,7 +2418,7 @@ major 4
 minor 2
 release 0
 x 120
-y 360
+y 368
 w 96
 h 24
 controlPv "$(M2).RBV"
@@ -2441,7 +2441,7 @@ major 4
 minor 0
 release 0
 x 208
-y 328
+y 336
 w 24
 h 24
 lineColor index 14
@@ -2458,7 +2458,7 @@ major 4
 minor 1
 release 0
 x 216
-y 440
+y 448
 w 64
 h 16
 font "helvetica-bold-i-12.0"
@@ -2481,7 +2481,7 @@ major 4
 minor 2
 release 0
 x 80
-y 392
+y 400
 w 40
 h 16
 controlPv "$(M2):REV_MEANS"
@@ -2503,7 +2503,7 @@ major 4
 minor 2
 release 0
 x 216
-y 392
+y 400
 w 40
 h 16
 controlPv "$(M2):FW_MEANS"
@@ -2524,7 +2524,7 @@ major 4
 minor 1
 release 0
 x 144
-y 504
+y 512
 w 2
 h 0
 font "helvetica-medium-r-10.0"
@@ -2541,7 +2541,7 @@ major 4
 minor 0
 release 0
 x 472
-y 392
+y 400
 w 40
 h 24
 
@@ -2554,7 +2554,7 @@ major 4
 minor 0
 release 0
 x 472
-y 392
+y 400
 w 40
 h 24
 fgColor index 14
@@ -2576,7 +2576,7 @@ major 4
 minor 2
 release 0
 x 472
-y 392
+y 400
 w 40
 h 24
 controlPv "$(M2):FW_MEANS"
@@ -2602,7 +2602,7 @@ major 4
 minor 0
 release 0
 x 352
-y 392
+y 400
 w 40
 h 24
 
@@ -2615,7 +2615,7 @@ major 4
 minor 0
 release 0
 x 352
-y 392
+y 400
 w 40
 h 24
 fgColor index 14
@@ -2637,7 +2637,7 @@ major 4
 minor 2
 release 0
 x 352
-y 392
+y 400
 w 40
 h 24
 controlPv "$(M2):REV_MEANS"
@@ -2663,7 +2663,7 @@ major 4
 minor 0
 release 0
 x 464
-y 464
+y 472
 w 80
 h 32
 fgColor index 14
@@ -2689,7 +2689,7 @@ major 4
 minor 0
 release 0
 x 224
-y 352
+y 360
 w 48
 h 32
 
@@ -2702,7 +2702,7 @@ major 4
 minor 1
 release 0
 x 226
-y 355
+y 363
 w 45
 h 12
 font "helvetica-bold-r-10.0"
@@ -2727,7 +2727,7 @@ major 4
 minor 1
 release 0
 x 224
-y 371
+y 379
 w 48
 h 12
 font "helvetica-bold-r-10.0"
@@ -2755,7 +2755,7 @@ major 4
 minor 2
 release 0
 x 304
-y 472
+y 480
 w 48
 h 24
 fgColor index 14
@@ -2782,6 +2782,110 @@ endGroup
 
 endObjectProperties
 
+# (Related Display)
+object relatedDisplayClass
+beginObjectProperties
+major 4
+minor 2
+release 0
+x 456
+y 5
+w 56
+h 24
+fgColor index 14
+bgColor index 4
+topShadowColor index 1
+botShadowColor index 11
+font "helvetica-medium-r-12.0"
+buttonLabel "Home"
+numPvs 4
+numDsps 1
+displayFileName {
+  0 "AMOHome"
+}
+setPosition {
+  0 "parentWindow"
+}
+replaceSymbols {
+  0 1
+}
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 0
+x 210
+y 32
+w 180
+h 20
+font "helvetica-bold-r-12.0"
+fgColor index 14
+bgColor index 7
+value {
+  "Motor $(M1)"
+}
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 0
+x 210
+y 280
+w 180
+h 20
+font "helvetica-bold-r-12.0"
+fgColor index 14
+bgColor index 7
+value {
+  "Motor $(M2)"
+}
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 0
+x 240
+y 800
+w 112
+h 24
+font "helvetica-medium-r-12.0"
+fontAlign "center"
+fgColor index 14
+bgColor index 4
+useDisplayBg
+value {
+  "$(IOC)"
+}
+endObjectProperties
+
+# (Text Update)
+object TextupdateClass
+beginObjectProperties
+major 10
+minor 0
+release 0
+x 408
+y 800
+w 144
+h 24
+controlPv "$(IOC):TOD"
+precision 1
+fgColor index 14
+fgAlarm
+bgColor index 12
+font "helvetica-medium-r-12.0"
+fontAlign "right"
+endObjectProperties
+
 # (Group)
 object activeGroupClass
 beginObjectProperties
@@ -2789,7 +2893,7 @@ major 4
 minor 0
 release 0
 x 8
-y 528
+y 547
 w 560
 h 248
 
@@ -2802,7 +2906,20 @@ major 4
 minor 0
 release 0
 x 8
-y 528
+y 547
+w 560
+h 248
+
+beginGroup
+
+# (Group)
+object activeGroupClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 8
+y 547
 w 560
 h 248
 
@@ -2815,7 +2932,7 @@ major 4
 minor 0
 release 0
 x 9
-y 536
+y 555
 w 560
 h 235
 lineColor index 10
@@ -2829,7 +2946,7 @@ major 4
 minor 0
 release 0
 x 8
-y 534
+y 553
 w 560
 h 235
 lineColor index 3
@@ -2843,7 +2960,7 @@ major 4
 minor 0
 release 0
 x 8
-y 535
+y 554
 w 560
 h 235
 lineColor index 14
@@ -2857,7 +2974,7 @@ major 4
 minor 1
 release 0
 x 24
-y 528
+y 547
 w 84
 h 14
 font "helvetica-bold-r-12.0"
@@ -2876,7 +2993,7 @@ major 4
 minor 1
 release 0
 x 424
-y 763
+y 782
 w 136
 h 13
 font "helvetica-bold-r-12.0"
@@ -2899,7 +3016,7 @@ major 4
 minor 0
 release 0
 x 16
-y 552
+y 571
 w 536
 h 200
 
@@ -2912,7 +3029,7 @@ major 4
 minor 0
 release 0
 x 16
-y 560
+y 579
 w 264
 h 192
 lineColor index 3
@@ -2927,7 +3044,7 @@ major 4
 minor 0
 release 0
 x 128
-y 664
+y 683
 w 16
 h 8
 lineColor index 3
@@ -2943,7 +3060,7 @@ major 4
 minor 0
 release 0
 x 192
-y 664
+y 683
 w 16
 h 8
 lineColor index 3
@@ -2959,7 +3076,7 @@ major 4
 minor 0
 release 0
 x 192
-y 640
+y 659
 w 16
 h 16
 lineColor index 39
@@ -2975,7 +3092,7 @@ major 4
 minor 0
 release 0
 x 128
-y 640
+y 659
 w 16
 h 16
 lineColor index 39
@@ -2991,7 +3108,7 @@ major 4
 minor 1
 release 0
 x 24
-y 576
+y 595
 w 56
 h 24
 font "helvetica-bold-r-12.0"
@@ -3015,7 +3132,7 @@ major 4
 minor 1
 release 0
 x 80
-y 576
+y 595
 w 56
 h 24
 font "helvetica-bold-r-12.0"
@@ -3039,7 +3156,7 @@ major 4
 minor 1
 release 0
 x 136
-y 576
+y 595
 w 56
 h 24
 font "helvetica-bold-r-12.0"
@@ -3063,7 +3180,7 @@ major 4
 minor 0
 release 0
 x 296
-y 560
+y 579
 w 256
 h 192
 lineColor index 3
@@ -3078,7 +3195,7 @@ major 4
 minor 1
 release 0
 x 16
-y 552
+y 571
 w 48
 h 16
 font "helvetica-bold-r-12.0"
@@ -3097,7 +3214,7 @@ major 4
 minor 1
 release 0
 x 24
-y 608
+y 627
 w 88
 h 24
 font "helvetica-medium-r-12.0"
@@ -3116,7 +3233,7 @@ major 4
 minor 2
 release 0
 x 392
-y 640
+y 659
 w 72
 h 24
 controlPv "$(M3).TWV"
@@ -3140,7 +3257,7 @@ major 4
 minor 1
 release 0
 x 304
-y 640
+y 659
 w 48
 h 24
 font "helvetica-medium-r-12.0"
@@ -3160,7 +3277,7 @@ major 4
 minor 0
 release 0
 x 384
-y 712
+y 731
 w 64
 h 32
 fgColor index 35
@@ -3184,7 +3301,7 @@ major 4
 minor 1
 release 0
 x 296
-y 552
+y 571
 w 56
 h 16
 font "helvetica-bold-r-12.0"
@@ -3203,7 +3320,7 @@ major 4
 minor 1
 release 0
 x 304
-y 608
+y 627
 w 80
 h 24
 font "helvetica-medium-r-12.0"
@@ -3223,7 +3340,7 @@ major 4
 minor 2
 release 0
 x 384
-y 608
+y 627
 w 88
 h 24
 controlPv "$(M3).VAL"
@@ -3247,7 +3364,7 @@ major 4
 minor 0
 release 0
 x 328
-y 576
+y 595
 w 168
 h 24
 fgColor index 14
@@ -3269,7 +3386,7 @@ major 4
 minor 1
 release 0
 x 24
-y 640
+y 659
 w 88
 h 24
 font "helvetica-medium-r-12.0"
@@ -3289,7 +3406,7 @@ major 4
 minor 0
 release 0
 x 128
-y 640
+y 659
 w 16
 h 16
 lineColor index 35
@@ -3308,7 +3425,7 @@ major 4
 minor 0
 release 0
 x 192
-y 640
+y 659
 w 16
 h 16
 lineColor index 35
@@ -3327,7 +3444,7 @@ major 4
 minor 0
 release 0
 x 160
-y 640
+y 659
 w 16
 h 16
 lineColor index 30
@@ -3346,7 +3463,7 @@ major 4
 minor 1
 release 0
 x 304
-y 672
+y 691
 w 80
 h 24
 font "helvetica-medium-r-12.0"
@@ -3365,7 +3482,7 @@ major 4
 minor 2
 release 0
 x 384
-y 672
+y 691
 w 88
 h 24
 controlPv "$(M3).VELO"
@@ -3389,7 +3506,7 @@ major 4
 minor 1
 release 0
 x 24
-y 680
+y 699
 w 88
 h 24
 font "helvetica-medium-r-12.0"
@@ -3408,7 +3525,7 @@ major 10
 minor 0
 release 0
 x 128
-y 680
+y 699
 w 80
 h 24
 controlPv "$(M3).RMP"
@@ -3430,7 +3547,7 @@ major 4
 minor 2
 release 0
 x 480
-y 608
+y 627
 w 16
 h 24
 controlPv "$(M3).EGU"
@@ -3453,7 +3570,7 @@ major 4
 minor 1
 release 0
 x 208
-y 664
+y 683
 w 24
 h 16
 font "helvetica-medium-r-8.0"
@@ -3472,7 +3589,7 @@ major 4
 minor 1
 release 0
 x 104
-y 664
+y 683
 w 24
 h 16
 font "helvetica-medium-r-8.0"
@@ -3492,7 +3609,7 @@ major 4
 minor 0
 release 0
 x 480
-y 672
+y 691
 w 16
 h 32
 
@@ -3505,7 +3622,7 @@ major 4
 minor 2
 release 0
 x 480
-y 672
+y 691
 w 16
 h 24
 controlPv "$(M3).EGU"
@@ -3528,7 +3645,7 @@ major 4
 minor 1
 release 0
 x 480
-y 680
+y 699
 w 13
 h 24
 font "helvetica-medium-r-8.0"
@@ -3552,7 +3669,7 @@ major 4
 minor 0
 release 0
 x 128
-y 664
+y 683
 w 16
 h 8
 lineColor index 3
@@ -3572,7 +3689,7 @@ major 4
 minor 0
 release 0
 x 192
-y 664
+y 683
 w 16
 h 8
 lineColor index 3
@@ -3592,7 +3709,7 @@ major 4
 minor 2
 release 0
 x 520
-y 624
+y 643
 w 24
 h 16
 controlPv "$(M3).LLM"
@@ -3617,7 +3734,7 @@ major 4
 minor 2
 release 0
 x 520
-y 600
+y 619
 w 24
 h 16
 controlPv "$(M3).HLM"
@@ -3642,7 +3759,7 @@ major 4
 minor 2
 release 0
 x 520
-y 640
+y 659
 w 24
 h 24
 controlPv "$(M3).EGU"
@@ -3665,7 +3782,7 @@ major 4
 minor 2
 release 0
 x 520
-y 688
+y 707
 w 24
 h 16
 controlPv "$(M3).VBAS"
@@ -3690,7 +3807,7 @@ major 4
 minor 2
 release 0
 x 520
-y 664
+y 683
 w 24
 h 16
 controlPv "$(M3).VMAX"
@@ -3715,7 +3832,7 @@ major 4
 minor 1
 release 0
 x 376
-y 560
+y 579
 w 88
 h 16
 font "helvetica-bold-r-12.0"
@@ -3736,7 +3853,7 @@ major 4
 minor 1
 release 0
 x 24
-y 712
+y 731
 w 88
 h 24
 font "helvetica-medium-r-12.0"
@@ -3755,7 +3872,7 @@ major 4
 minor 2
 release 0
 x 128
-y 712
+y 731
 w 80
 h 24
 controlPv "$(M3).DRBV"
@@ -3778,7 +3895,7 @@ major 4
 minor 2
 release 0
 x 120
-y 608
+y 627
 w 96
 h 24
 controlPv "$(M3).RBV"
@@ -3801,7 +3918,7 @@ major 4
 minor 0
 release 0
 x 208
-y 576
+y 595
 w 24
 h 24
 lineColor index 14
@@ -3818,7 +3935,7 @@ major 4
 minor 1
 release 0
 x 216
-y 688
+y 707
 w 64
 h 16
 font "helvetica-bold-i-12.0"
@@ -3841,7 +3958,7 @@ major 4
 minor 2
 release 0
 x 80
-y 640
+y 659
 w 40
 h 16
 controlPv "$(M3):REV_MEANS"
@@ -3863,7 +3980,7 @@ major 4
 minor 2
 release 0
 x 216
-y 640
+y 659
 w 40
 h 16
 controlPv "$(M3):FW_MEANS"
@@ -3884,7 +4001,7 @@ major 4
 minor 1
 release 0
 x 144
-y 752
+y 771
 w 2
 h 0
 font "helvetica-medium-r-10.0"
@@ -3901,7 +4018,7 @@ major 4
 minor 0
 release 0
 x 472
-y 640
+y 659
 w 40
 h 24
 
@@ -3914,7 +4031,7 @@ major 4
 minor 0
 release 0
 x 472
-y 640
+y 659
 w 40
 h 24
 fgColor index 14
@@ -3936,7 +4053,7 @@ major 4
 minor 2
 release 0
 x 472
-y 640
+y 659
 w 40
 h 24
 controlPv "$(M3):FW_MEANS"
@@ -3962,7 +4079,7 @@ major 4
 minor 0
 release 0
 x 352
-y 640
+y 659
 w 40
 h 24
 
@@ -3975,7 +4092,7 @@ major 4
 minor 0
 release 0
 x 352
-y 640
+y 659
 w 40
 h 24
 fgColor index 14
@@ -3997,7 +4114,7 @@ major 4
 minor 2
 release 0
 x 352
-y 640
+y 659
 w 40
 h 24
 controlPv "$(M3):REV_MEANS"
@@ -4023,7 +4140,7 @@ major 4
 minor 0
 release 0
 x 464
-y 712
+y 731
 w 80
 h 32
 fgColor index 14
@@ -4049,7 +4166,7 @@ major 4
 minor 0
 release 0
 x 224
-y 600
+y 619
 w 48
 h 32
 
@@ -4062,7 +4179,7 @@ major 4
 minor 1
 release 0
 x 226
-y 603
+y 622
 w 45
 h 12
 font "helvetica-bold-r-10.0"
@@ -4087,7 +4204,7 @@ major 4
 minor 1
 release 0
 x 224
-y 619
+y 638
 w 48
 h 12
 font "helvetica-bold-r-10.0"
@@ -4115,7 +4232,7 @@ major 4
 minor 2
 release 0
 x 304
-y 720
+y 739
 w 48
 h 24
 fgColor index 14
@@ -4142,32 +4259,25 @@ endGroup
 
 endObjectProperties
 
-# (Related Display)
-object relatedDisplayClass
+endGroup
+
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
 beginObjectProperties
 major 4
-minor 2
+minor 1
 release 0
-x 448
-y 0
-w 56
-h 24
+x 210
+y 544
+w 180
+h 20
+font "helvetica-bold-r-12.0"
 fgColor index 14
-bgColor index 4
-topShadowColor index 1
-botShadowColor index 11
-font "helvetica-medium-r-12.0"
-buttonLabel "Home"
-numPvs 4
-numDsps 1
-displayFileName {
-  0 "AMOHome"
-}
-setPosition {
-  0 "parentWindow"
-}
-replaceSymbols {
-  0 1
+bgColor index 7
+value {
+  "Motor $(M3)"
 }
 endObjectProperties
 
