@@ -2,9 +2,9 @@
 FILENAME...     drvOmsPC68Com.h
 USAGE... This file contains information common to all OMS PC68/78 controllers.
 
-Version:	1.2
-Modified By:	dkline
-Last Modified:	2007/02/13 13:02:27
+Version:	$Revision: 1.2 $
+Modified By:	$Author: dkline $
+Last Modified:	$Date: 2007-02-13 13:02:27 $
 */
 
 /*

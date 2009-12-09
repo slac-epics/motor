@@ -3,9 +3,9 @@ FILENAME...	drvPIC662.h
 USAGE... This file contains driver "include" information that is specific to
 Physik Instrumente (PI) GmbH & Co. motor controller driver support.
 
-Version:	1.1
-Modified By:	sullivan
-Last Modified:	2006/04/14 20:34:42
+Version:	$Revision: 1.1 $
+Modified By:	$Author: sullivan $
+Last Modified:	$Date: 2006-04-14 20:34:42 $
 */
 
 /*

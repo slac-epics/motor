@@ -2,9 +2,9 @@
 FILENAME...	PIE710Register.cc
 USAGE...	Register PI motor device driver shell commands.
 
-Version:	1.1
-Modified By:	sullivan
-Last Modified:	2006/10/06 18:18:21
+Version:	$Revision: 1.1 $
+Modified By:	$Author: sullivan $
+Last Modified:	$Date: 2006-10-06 18:18:21 $
 */
 
 /*****************************************************************
