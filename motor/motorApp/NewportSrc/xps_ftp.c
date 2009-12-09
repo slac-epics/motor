@@ -24,7 +24,9 @@
 static int code(char*);
 static int sendFtpCommandAndReceive (int, char*, char*);
 static int getPort (int, char*);
+#ifdef DEBUG
 static void printRecv (char*, int);
+#endif
 
 
 /******[ ftpConnect ]************************************************/
@@ -46,8 +48,10 @@ int ftpConnect (char* ip, char* login, char* password, int* socketFD)
   if (connect(sockFD, (struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0) 
     return -1;
 
-  
-  receivedBytes = recv(sockFD, returnString, RETURN_SIZE, 0);
+  do {
+    receivedBytes = recv(sockFD, returnString, RETURN_SIZE, 0);
+  }
+  while (strchr(returnString,'\n')==NULL);
 
   /* login */
   sprintf(command, "USER %s", login);
@@ -368,6 +372,7 @@ static int  getPort (int socketFD, char* ip)
 }
 
 
+#ifdef DEBUG
 /******[ printRecv ]**************************************************/
 static void printRecv (char *str, int i)   
 {
@@ -375,3 +380,4 @@ static void printRecv (char *str, int i)
   for (j = 0; j < i; j++)
     printf("%c", str[j]); 
 }
+#endif

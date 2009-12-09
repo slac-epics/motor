@@ -2,9 +2,9 @@
 FILENAME...	PiRegister.cc
 USAGE...	Register IMS motor device driver shell commands.
 
-Version:	1.1
-Modified By:	sullivan
-Last Modified:	2006/04/14 20:34:42
+Version:	$Revision: 1.1 $
+Modified By:	$Author: sullivan $
+Last Modified:	$Date: 2006-04-14 20:34:42 $
 */
 
 /*****************************************************************

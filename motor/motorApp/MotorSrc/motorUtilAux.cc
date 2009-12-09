@@ -2,9 +2,10 @@
 FILENAME...     motorUtilAux.cc
 USAGE...        Motor Record Utility Support.
 
-Version:        1.5
-Modified By:    mooney
-Last Modified:  2007/03/20 18:51:30
+Version:        $Revision: 9857 $
+Modified By:    $Author: sluiter $
+Last Modified:  $Date: 2009-12-09 10:21:24 -0600 (Wed, 09 Dec 2009) $
+HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-5-1/motorApp/MotorSrc/motorUtilAux.cc $
 */
 
 /*
@@ -28,6 +29,7 @@ Last Modified:  2007/03/20 18:51:30
 *                  dbGetNRecords().
 * .02 03-20-07 tmm sprintf() does not include terminating null in num of chars
 *                  converted, so getMotorList was not allocating space for it.
+* .03 09-09-08 rls Visual C++ link errors on improper pdbbase declaration.
 */
 
 #include <string.h>
@@ -36,14 +38,13 @@ Last Modified:  2007/03/20 18:51:30
 #include <dbStaticLib.h>
 #include <errlog.h>
 
+#include "dbAccessDefs.h"
+
+
 /* ----- Function Declarations ----- */
 char **getMotorList();
 /* ----- --------------------- ----- */
 
-/* ----- External Declarations ----- */
-extern "C" {
-extern struct dbBase *pdbbase;
-}
 extern int numMotors;
 /* ----- --------------------- ----- */
 
