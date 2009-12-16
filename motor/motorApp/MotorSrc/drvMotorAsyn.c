@@ -19,9 +19,9 @@
  *     of this distribution.
  *     ************************************************************************
  *
- * Version: 1.14
- * Modified by: peterd
- * Last Modified: 2007/02/02 16:21:05
+ * Version: $Revision: 1.22 $
+ * Modified by: $Author: rivers $
+ * Last Modified: $Date: 2009-09-01 14:05:07 $
  *
  * Original Author: Peter Denison
  * Current Author: Peter Denison
@@ -42,25 +42,67 @@
 #include <epicsString.h>
 #include <epicsTimer.h>
 #include <epicsMutex.h>
+#include <errlog.h>
 #include <epicsMessageQueue.h>
 #include <errlog.h>
 #include <cantProceed.h> /* !! for callocMustSucceed() */
 
 #include <asynDriver.h>
 #include <asynInt32.h>
+#include <asynUInt32Digital.h>
 #include <asynFloat64.h>
 #include <asynFloat64Array.h>
-#include <asynMotorStatus.h>
+#include <asynGenericPointer.h>
 #include <asynDrvUser.h>
 
 #include <drvSup.h>
 #include <registryDriverSupport.h>
 
-#include "drvMotorAsyn.h"
+#include "asynMotorDriver.h"
 #include "motor_interface.h"
+#include <limits.h>
 
 /* Message queue size */
 #define MAX_MESSAGES 100
+
+#define NMASKBITS (sizeof(int) * CHAR_BIT)
+#define BIT_ISSET(bit, n, mask) ( ((bit)/NMASKBITS < (n)) && \
+            ((mask)[(bit)/NMASKBITS] & (1 << ((bit) % NMASKBITS))) )
+#define BIT_SET(bit, mask, value) do { \
+                  (mask)[(bit)/NMASKBITS] &= ~(1 << ((bit) % NMASKBITS)); \
+                  if (value) { \
+                      (mask)[(bit)/NMASKBITS] |= (1 << ((bit) % NMASKBITS)); \
+                  } \
+              } while (0);
+
+/* Note, these values must not be used for pasynUser->reason in device support  */
+typedef enum {
+    /* Parameters - these must match the definitions in motor_interface.h */
+    motorPosition = motorAxisPosition,
+    motorEncRatio = motorAxisEncoderRatio,
+    motorResolution = motorAxisResolution,
+    motorPgain = motorAxisPGain,
+    motorIgain = motorAxisIGain,
+    motorDgain = motorAxisDGain,
+    motorHighLim = motorAxisHighLimit,
+    motorLowLim = motorAxisLowLimit,
+    motorSetClosedLoop = motorAxisClosedLoop,
+    motorEncoderPosition = motorAxisEncoderPosn,
+    motorDeferMoves = motorAxisDeferMoves,
+    /* Status bits split out */
+    motorStatusDirection=motorAxisDirection,
+    motorStatusDone, motorStatusHighLimit, motorStatusAtHome,
+    motorStatusSlip, motorStatusPowerOn, motorStatusFollowingError,
+    motorStatusHome, motorStatusHasEncoder, motorStatusProblem,
+    motorStatusMoving, motorStatusGainSupport, motorStatusCommsError,
+    motorStatusLowLimit, motorStatusHomed, motorStatusLast,
+    /* Not exposed by the driver */
+    motorVelocity=100, motorVelBase, motorAccel, 
+    /* Commands */
+    motorMoveRel, motorMoveAbs, motorMoveVel, motorHome, motorStop,
+    /* Status readback */
+    motorStatus, motorUpdateStatus
+} motorCommand;
 
 typedef struct {
     motorCommand command;
@@ -68,38 +110,43 @@ typedef struct {
 } motorCommandStruct;
 
 static motorCommandStruct motorCommands[] = {
-    {motorMoveRel,    "MOVE_REL"},
-    {motorMoveAbs,    "MOVE_ABS"},
-    {motorMoveVel,    "MOVE_VEL"},
-    {motorHome,       "HOME"},
-    {motorStop,       "STOP_AXIS"},
-    {motorVelocity,   "VELOCITY"},
-    {motorVelBase,    "VEL_BASE"},
-    {motorAccel,      "ACCEL"},
-    {motorPosition,   "POSITION"},
-    {motorResolution, "RESOLUTION"},
-    {motorEncRatio,   "ENC_RATIO"},
-    {motorPgain,      "PGAIN"},
-    {motorIgain,      "IGAIN"},
-    {motorDgain,      "DGAIN"},
-    {motorHighLim,    "HIGH_LIMIT"},
-    {motorLowLim,     "LOW_LIMIT"},
-    {motorSetClosedLoop, "SET_CLOSED_LOOP"},
-    {motorStatus,     "STATUS"},
-    {motorStatusDirection, "STATUS_DIRECTION"}, 
-    {motorStatusDone, "STATUS_DONE"},
-    {motorStatusHighLimit, "STATUS_HIGHLIMIT"},
-    {motorStatusAtHome,"STATUS_ATHOME"},
-    {motorStatusSlip, "STATUS_SLIP"},
-    {motorStatusPowerOn, "STATUS_POWERED"},
-    {motorStatusFollowingError, "STATUS_FOLLOWINGERROR"},
-    {motorStatusHome, "STATUS_HOME"},
-    {motorStatusHasEncoder, "STATUS_HASENCODER"},
-    {motorStatusProblem, "STATUS_PROBLEM"},
-    {motorStatusMoving, "STATUS_MOVING"},
-    {motorStatusGainSupport, "STATUS_GAINSUPPORT"},
-    {motorStatusCommsError, "STATUS_COMMSERROR"},
-    {motorStatusLowLimit, "STATUS_LOWLIMIT"},
+    {motorMoveRel,              motorMoveRelString},
+    {motorMoveAbs,              motorMoveAbsString},
+    {motorMoveVel,              motorMoveVelString},
+    {motorHome,                 motorHomeString},
+    {motorStop,                 motorStopString},
+    {motorVelocity,             motorVelocityString},
+    {motorVelBase,              motorVelBaseString},
+    {motorAccel,                motorAccelString},
+    {motorPosition,             motorPositionString},
+    {motorEncoderPosition,      motorEncoderPositionString},
+    {motorDeferMoves,           motorDeferMovesString},
+    {motorResolution,           motorResolutionString},
+    {motorEncRatio,             motorEncRatioString},
+    {motorPgain,                motorPgainString},
+    {motorIgain,                motorIgainString},
+    {motorDgain,                motorDgainString},
+    {motorHighLim,              motorHighLimString},
+    {motorLowLim,               motorLowLimString},
+    {motorSetClosedLoop,        motorSetClosedLoopString},
+    {motorDeferMoves,           motorDeferMovesString},
+    {motorStatus,               motorStatusString},
+    {motorUpdateStatus,         motorUpdateStatusString},
+    {motorStatusDirection,      motorStatusDirectionString}, 
+    {motorStatusDone,           motorStatusDoneString},
+    {motorStatusHighLimit,      motorStatusHighLimitString},
+    {motorStatusAtHome,         motorStatusAtHomeString},
+    {motorStatusSlip,           motorStatusSlipString},
+    {motorStatusPowerOn,        motorStatusPowerOnString},
+    {motorStatusFollowingError, motorStatusFollowingErrorString},
+    {motorStatusHome,           motorStatusHomeString},
+    {motorStatusHasEncoder,     motorStatusHasEncoderString},
+    {motorStatusProblem,        motorStatusProblemString},
+    {motorStatusMoving,         motorStatusMovingString},
+    {motorStatusGainSupport,    motorStatusGainSupportString},
+    {motorStatusCommsError,     motorStatusCommsErrorString},
+    {motorStatusLowLimit,       motorStatusLowLimitString},
+    {motorStatusHomed,          motorStatusHomedString},
 };
 
 typedef enum{typeInt32, typeFloat64, typeFloat64Array} dataType;
@@ -135,11 +182,13 @@ typedef struct drvmotorPvt {
     asynInterface common;
     asynInterface int32;
     void *int32InterruptPvt;
+    asynInterface uint32digital;
+    void *uint32digitalInterruptPvt;
     asynInterface float64;
     void *float64InterruptPvt;
     asynInterface float64Array;
-    void *motorStatusInterruptPvt;
-    asynInterface motorStatus;
+    asynInterface genericPointer;
+    void *genericPointerInterruptPvt;
     asynInterface drvUser;
     asynUser *pasynUser;
 } drvmotorPvt;
@@ -149,14 +198,18 @@ static asynStatus readInt32         (void *drvPvt, asynUser *pasynUser,
                                      epicsInt32 *value);
 static asynStatus writeInt32        (void *drvPvt, asynUser *pasynUser,
                                      epicsInt32 value);
+static asynStatus readUInt32Digital	(void *drvPvt, asynUser *pasynUser,
+                                     epicsUInt32 *value, epicsUInt32 mask);
+static asynStatus writeUInt32Digital (void *drvPvt, asynUser *pasynUser,
+                                     epicsUInt32 value, epicsUInt32 mask);
 static asynStatus getBounds         (void *drvPvt, asynUser *pasynUser,
                                      epicsInt32 *low, epicsInt32 *high);
 static asynStatus readFloat64       (void *drvPvt, asynUser *pasynUser,
                                      epicsFloat64 *value);
 static asynStatus writeFloat64      (void *drvPvt, asynUser *pasynUser,
                                      epicsFloat64 value);
-static asynStatus readMotorStatus   (void *drvPvt, asynUser *pasynUser,
-				     struct MotorStatus *value);
+static asynStatus readGenericPointer (void *drvPvt, asynUser *pasynUser,
+				                      void *value);
 static asynStatus drvUserCreate     (void *drvPvt, asynUser *pasynUser,
                                      const char *drvInfo, 
                                      const char **pptypeName, size_t *psize);
@@ -171,7 +224,6 @@ static asynStatus disconnect        (void *drvPvt, asynUser *pasynUser);
 
 /* These are private functions, not used in any interfaces */
 static void intCallback(void *drvPvt, unsigned int num, unsigned int *changed);
-static void setDefaults(drvmotorAxisPvt *pAxis);
 static int config      (drvmotorPvt *pPvt);
 static int logFunc     (void *userParam,
                         const motorAxisLogMask_t logMask,
@@ -189,6 +241,16 @@ static asynInt32 drvMotorInt32 = {
     getBounds
 };
 
+static asynUInt32Digital drvMotorUInt32Digital = {
+	writeUInt32Digital,
+	readUInt32Digital,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 static asynFloat64 drvMotorFloat64 = {
     writeFloat64,
     readFloat64
@@ -201,9 +263,9 @@ static asynFloat64Array drvMotorFloat64Array = {
     NULL
 };
 
-static asynMotorStatus drvMotorMotorStatus = {
+static asynGenericPointer drvMotorGenericPointer = {
     NULL,
-    readMotorStatus,
+    readGenericPointer,
 };
 
 static asynDrvUser drvMotorDrvUser = {
@@ -238,15 +300,18 @@ int drvAsynMotorConfigure(const char *portName, const char *driverName,
     pPvt->int32.interfaceType = asynInt32Type;
     pPvt->int32.pinterface  = (void *)&drvMotorInt32;
     pPvt->int32.drvPvt = pPvt;
+    pPvt->uint32digital.interfaceType = asynUInt32DigitalType;
+    pPvt->uint32digital.pinterface  = (void *)&drvMotorUInt32Digital;
+    pPvt->uint32digital.drvPvt = pPvt;
     pPvt->float64.interfaceType = asynFloat64Type;
     pPvt->float64.pinterface  = (void *)&drvMotorFloat64;
     pPvt->float64.drvPvt = pPvt;
     pPvt->float64Array.interfaceType = asynFloat64ArrayType;
     pPvt->float64Array.pinterface  = (void *)&drvMotorFloat64Array;
     pPvt->float64Array.drvPvt = pPvt;
-    pPvt->motorStatus.interfaceType = asynMotorStatusType;
-    pPvt->motorStatus.pinterface  = (void *)&drvMotorMotorStatus;
-    pPvt->motorStatus.drvPvt = pPvt;
+    pPvt->genericPointer.interfaceType = asynGenericPointerType;
+    pPvt->genericPointer.pinterface  = (void *)&drvMotorGenericPointer;
+    pPvt->genericPointer.drvPvt = pPvt;
     pPvt->drvUser.interfaceType = asynDrvUserType;
     pPvt->drvUser.pinterface  = (void *)&drvMotorDrvUser;
     pPvt->drvUser.drvPvt = pPvt;
@@ -274,6 +339,14 @@ int drvAsynMotorConfigure(const char *portName, const char *driverName,
     pasynManager->registerInterruptSource(portName, &pPvt->int32,
                                           &pPvt->int32InterruptPvt);
 
+    status = pasynUInt32DigitalBase->initialize(pPvt->portName,&pPvt->uint32digital);
+    if (status != asynSuccess) {
+        errlogPrintf("drvAsynMotorConfigure ERROR: Can't register uint32digital\n");
+        return -1;
+    }
+    pasynManager->registerInterruptSource(portName, &pPvt->uint32digital,
+                                          &pPvt->uint32digitalInterruptPvt);
+    
     status = pasynFloat64Base->initialize(pPvt->portName,&pPvt->float64);
     if (status != asynSuccess) {
         errlogPrintf("drvAsynMotorConfigure ERROR: Can't register float64\n");
@@ -288,13 +361,13 @@ int drvAsynMotorConfigure(const char *portName, const char *driverName,
         return -1;
     }
 
-    status = pasynMotorStatusBase->initialize(pPvt->portName,&pPvt->motorStatus);
+    status = pasynGenericPointerBase->initialize(pPvt->portName,&pPvt->genericPointer);
     if (status != asynSuccess) {
-        errlogPrintf("drvAsynMotorConfigure ERROR: Can't register motorStatus\n");
+        errlogPrintf("drvAsynMotorConfigure ERROR: Can't register genericPointer\n");
         return -1;
     }
-    pasynManager->registerInterruptSource(portName, &pPvt->motorStatus,
-                                          &pPvt->motorStatusInterruptPvt);
+    pasynManager->registerInterruptSource(portName, &pPvt->genericPointer,
+                                          &pPvt->genericPointerInterruptPvt);
 
     status = pasynManager->registerInterface(pPvt->portName,&pPvt->drvUser);
     if (status != asynSuccess) {
@@ -400,6 +473,45 @@ static asynStatus readInt32(void *drvPvt, asynUser *pasynUser,
     return(asynSuccess);
 }
 
+static asynStatus readUInt32Digital(void *drvPvt, asynUser *pasynUser,
+                                    epicsUInt32 *value, epicsUInt32 mask)
+{
+    drvmotorPvt *pPvt = (drvmotorPvt *)drvPvt;
+    drvmotorAxisPvt *pAxis;
+    int channel;
+    motorCommand command = pasynUser->reason;
+
+    pasynManager->getAddr(pasynUser, &channel);
+    if (channel >= pPvt->numAxes) {
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                "drvMotorAsyn::readInt32 Invalid axis %d", channel);
+        return(asynError);
+    }
+
+    pAxis = &pPvt->axisData[channel];
+    if (!pAxis->axis) {
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+		      "drvMotorAsyn::readInt32 Uninitialised axis %d", pAxis->num);
+        return(asynError);
+    }
+
+    switch(command) {
+    case -1:   /* This is commands we know about but don't want uint32digital interface for */
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                      "drvMotorAsyn::readUInt32Digital invalid command=%d",
+                      command);
+        return(asynError);
+    default:
+    	(*pPvt->drvset->getInteger)(pAxis->axis, command, (epicsInt32*)value);
+    	break;
+    }
+    
+    *value = *value & mask;
+    asynPrint(pasynUser, ASYN_TRACEIO_DRIVER,
+              "drvMotorAsyn::readUInt32Digital, reason=%d, value=%d\n", 
+          command, *value);
+    return(asynSuccess);    
+}
 
 static asynStatus readFloat64(void *drvPvt, asynUser *pasynUser,
                               epicsFloat64 *value)
@@ -468,7 +580,7 @@ static asynStatus writeInt32(void *drvPvt, asynUser *pasynUser,
     drvmotorAxisPvt *pAxis;
     int channel;
     motorCommand command = pasynUser->reason;
-    asynStatus status;
+    asynStatus status=asynSuccess;
 
     pasynManager->getAddr(pasynUser, &channel);
     if (channel >= pPvt->numAxes) {
@@ -487,7 +599,7 @@ static asynStatus writeInt32(void *drvPvt, asynUser *pasynUser,
     switch(command) {
     case -1:
         epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
-                      "drvMotorAsyn::writeInt32D invalid command=%d",
+                      "drvMotorAsyn::writeInt32 invalid command=%d",
                       command);
         return(asynError);
     case motorStop:
@@ -502,6 +614,10 @@ static asynStatus writeInt32(void *drvPvt, asynUser *pasynUser,
 	status = (*pPvt->drvset->setInteger)(pAxis->axis, motorAxisClosedLoop,
 					     value);
 	break;
+    case motorUpdateStatus:
+        if (pPvt->drvset->forceCallback != NULL)
+	    status = (*pPvt->drvset->forceCallback)(pAxis->axis);
+	break;
     default:
 	status = (*pPvt->drvset->setInteger)(pAxis->axis, command, value);
 	break;
@@ -512,6 +628,49 @@ static asynStatus writeInt32(void *drvPvt, asynUser *pasynUser,
     return(status);
 }
 
+static asynStatus writeUInt32Digital(void *drvPvt, asynUser *pasynUser, 
+                                     epicsUInt32 value, epicsUInt32 mask)
+{
+    drvmotorPvt *pPvt = (drvmotorPvt *)drvPvt;
+    drvmotorAxisPvt *pAxis;
+    int channel;
+    motorCommand command = pasynUser->reason;
+    asynStatus status;
+    epicsUInt32 temp = 0;
+
+    pasynManager->getAddr(pasynUser, &channel);
+    if (channel >= pPvt->numAxes) {
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                      "drvMotorAsyn::writeInt32 Invalid axis %d", channel);
+        return(asynError);
+    }
+
+    pAxis = &pPvt->axisData[channel];
+    if (!pAxis->axis) {
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                      "drvMotorAsyn::writeInt32 Uninitialised axis %d", pAxis->num);
+        return(asynError);
+    }
+
+    switch(command) {
+    case -1:
+        epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
+                      "drvMotorAsyn::writeUInt32Digital invalid command=%d",
+                      command);
+        return(asynError);
+    default:
+        (*pPvt->drvset->getInteger)(pAxis->axis, command, (epicsInt32*)&temp);
+        temp &= ~mask;
+        temp |= (value & mask);
+        status = (*pPvt->drvset->setInteger)(pAxis->axis, command, temp);
+        break;
+    }
+    asynPrint(pasynUser, ASYN_TRACEIO_DRIVER,
+          "drvMotorAsyn::writeUInt32Digital, reason=%d, value=%d\n",
+          command, temp);
+    return(status);
+}
+        
 static asynStatus writeFloat64(void *drvPvt, asynUser *pasynUser, 
                                epicsFloat64 value)
 {
@@ -564,12 +723,15 @@ static asynStatus writeFloat64(void *drvPvt, asynUser *pasynUser,
 	break;
     case motorVelocity:
 	pAxis->max_velocity = value;
+	status = asynSuccess;
 	break;
     case motorVelBase:
 	pAxis->min_velocity = value;
+	status = asynSuccess;
 	break;
     case motorAccel:
 	pAxis->accel = value;
+	status = asynSuccess;
 	break;
     case motorPosition:
     case motorResolution:
@@ -589,24 +751,25 @@ static asynStatus writeFloat64(void *drvPvt, asynUser *pasynUser,
     return(status);
 }
 
-static asynStatus readMotorStatus(void *drvPvt, asynUser *pasynUser, 
-				  struct MotorStatus *value)
+static asynStatus readGenericPointer(void *drvPvt, asynUser *pasynUser, 
+				  void *pValue)
 {
     drvmotorPvt *pPvt = (drvmotorPvt *)drvPvt;
     drvmotorAxisPvt *pAxis;
     int channel;
+    MotorStatus *value = (MotorStatus *)pValue;
 
     pasynManager->getAddr(pasynUser, &channel);
     if (channel >= pPvt->numAxes) {
 	epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
-		      "drvMotorAsyn::readMotorStatus Invalid axis %d", channel);
+		      "drvMotorAsyn::readGenericPointer Invalid axis %d", channel);
 	return(asynError);
     }
 
     pAxis = &pPvt->axisData[channel];
     if (!pAxis->axis) {
 	epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
-		      "drvMotorAsyn::readMotorStatus Uninitialised axis %d", pAxis->num);
+		      "drvMotorAsyn::readGenericPointer Uninitialised axis %d", pAxis->num);
 	return(asynError);
     }
 
@@ -682,7 +845,7 @@ static void intCallback(void *axisPvt, unsigned int nChanged,
        correct */
     for (i = 0; i < nChanged; i++) {
 	if (changed[i] >= motorAxisDirection && 
-	    changed[i] <= motorAxisLowHardLimit) {
+	    changed[i] <= motorAxisHomed) {
 	    bit_num = changed[i] - motorAxisDirection;
 	    changedmask |= (1 << bit_num);
 	    (*pPvt->drvset->getInteger)(pAxis->axis, changed[i], &ivalue);
@@ -724,20 +887,20 @@ static void intCallback(void *axisPvt, unsigned int nChanged,
     pasynManager->interruptEnd(pPvt->float64InterruptPvt);
 
     /* Pass motorStatus interrupts */
-    pasynManager->interruptStart(pPvt->motorStatusInterruptPvt, &pclientList);
+    pasynManager->interruptStart(pPvt->genericPointerInterruptPvt, &pclientList);
     pnode = (interruptNode *)ellFirst(pclientList);
     while (pnode) {
-	asynMotorStatusInterrupt *pmotorStatusInterrupt = pnode->drvPvt;
-	addr = pmotorStatusInterrupt->addr;
-	reason = pmotorStatusInterrupt->pasynUser->reason;
+	asynGenericPointerInterrupt *pInterrupt = pnode->drvPvt;
+	addr = pInterrupt->addr;
+	reason = pInterrupt->pasynUser->reason;
 	if (addr == pAxis->num) {
-	    pmotorStatusInterrupt->callback(pmotorStatusInterrupt->userPvt, 
-					    pmotorStatusInterrupt->pasynUser,
-					    &pAxis->status );
+	    pInterrupt->callback(pInterrupt->userPvt, 
+					    pInterrupt->pasynUser,
+					    (void *)&pAxis->status);
 	}
 	pnode = (interruptNode *)ellNext(&pnode->node);
     }
-    pasynManager->interruptEnd(pPvt->motorStatusInterruptPvt);
+    pasynManager->interruptEnd(pPvt->genericPointerInterruptPvt);
 
     /* Pass int32 interrupts */
     pasynManager->interruptStart(pPvt->int32InterruptPvt, &pclientList);
@@ -776,12 +939,12 @@ static void intCallback(void *axisPvt, unsigned int nChanged,
 }
 
 
-static void rebootCallback(void *drvPvt)
-{
-    drvmotorPvt *pPvt = (drvmotorPvt *)drvPvt;
+/*static void rebootCallback(void *drvPvt)*/
+/*{*/
+/*   drvmotorPvt *pPvt = (drvmotorPvt *)drvPvt;*/
     /* Anything special we have to do on reboot */
-    pPvt->rebooting = 1;
-}
+/*    pPvt->rebooting = 1;*/
+/*}*/
 
 /* asynDrvUser routines */
 static asynStatus drvUserCreate(void *drvPvt, asynUser *pasynUser,
@@ -882,16 +1045,16 @@ static void report(void *drvPvt, FILE *fp, int details)
         pasynManager->interruptEnd(pPvt->float64InterruptPvt);
 
         /* Report motorStatus interrupts */
-        pasynManager->interruptStart(pPvt->motorStatusInterruptPvt, &pclientList);
+        pasynManager->interruptStart(pPvt->genericPointerInterruptPvt, &pclientList);
         pnode = (interruptNode *)ellFirst(pclientList);
         while (pnode) {
-            asynMotorStatusInterrupt *pmotorStatusInterrupt = pnode->drvPvt;
+            asynGenericPointerInterrupt *pInterrupt = pnode->drvPvt;
             fprintf(fp, "    motorStatus callback client address=%p, reason=%d\n",
-                    pmotorStatusInterrupt->callback, 
-                    pmotorStatusInterrupt->pasynUser->reason); 
+                    pInterrupt->callback, 
+                    pInterrupt->pasynUser->reason); 
             pnode = (interruptNode *)ellNext(&pnode->node);
         }
-        pasynManager->interruptEnd(pPvt->motorStatusInterruptPvt);
+        pasynManager->interruptEnd(pPvt->genericPointerInterruptPvt);
     }
 }
 
