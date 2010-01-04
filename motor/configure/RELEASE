@@ -35,4 +35,5 @@
 #!MOTOR=$(TOP)
 
 include $(TOP)/../../configure/RELEASE-master
+IPAC=/afs/slac/g/spear/epics/site
 include $(TOP)/../../configure/CONFIG_SITE-master
