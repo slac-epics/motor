@@ -18,9 +18,11 @@ DBD += motorSimSupport.dbd
 motorSimSupport_SRCS += route.c
 motorSimSupport_SRCS += devMotorSim.c
 motorSimSupport_SRCS += drvMotorSim.c
+motorSimSupport_SRCS += motorSimDriver.cpp
 motorSimSupport_SRCS += motorSimRegister.cc
 
 motorSimSupport_LIBS += motor
+motorSimSupport_LIBS += asyn
 motorSimSupport_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 #=============================
@@ -32,6 +34,7 @@ DBD += motorSim.dbd
 
 # motorSim.dbd will be made up from these files:
 motorSim_DBD += base.dbd
+motorSim_DBD += asyn.dbd
 motorSim_DBD += motorSupport.dbd
 motorSim_DBD += motorSimSupport.dbd
 
