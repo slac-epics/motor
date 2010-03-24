@@ -16,7 +16,7 @@ DIRS += MotorSrc
 
 # All the following modules require ASYN.
 ifdef ASYN
-#!DIRS += NewportSrc
+DIRS += NewportSrc
 DIRS += PerfMaxUSBSrc
 DIRS += ImsSrc
 #!DIRS += AcsSrc
