@@ -35,6 +35,5 @@
 #!MOTOR=$(TOP)
 
 ASYN=/afs/slac/g/spear/epics/modules/asyn/asyn-R4-12-spear1
-IPAC=/afs/slac/g/spear/epics/site
 include $(TOP)/../../configure/RELEASE-master
 include $(TOP)/../../configure/CONFIG_SITE-master
