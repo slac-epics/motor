@@ -37,9 +37,9 @@
 </ul>
 <a name="Overview"></a>
 
-<h2>Overview</h2> This documentation describes version R6-2 of the EPICS motor
+<h2>Overview</h2> This documentation describes version R6-5 of the EPICS motor
 record, and related EPICS software required to build and use it.&nbsp; Version
-R6-2 of the motor record is compatible with EPICS base R3.14.9 and above.
+R6-5 of the motor record is compatible with EPICS base R3.14.10 and above.
 <p>
 The motor record is intended to support motors of all kinds, but currently 
 supports only the following variety of motor controllers (in addition to Soft 
@@ -54,7 +54,7 @@ Channel support):
     Highland Technologies model V540.
   </li>
   <li>
-    Newport models MM3000, MM4000/5/6, PM500, ESP300/100 and XPSC8.
+    Newport models MM3000, MM4000/5/6, PM500, ESP300/301/100 and XPSC8.
   </li>
   <li>
     Intelligent Motion Systems, Inc. (IMS) models IM483 and MDrive.
@@ -66,7 +66,7 @@ Channel support):
     Mclennan models PM304 and PM600.
   </li>
   <LI>
-    Physik Instrumente (PI) GmbH & Co. model C-630, C-844, C-848, C-862, E-662 and E-710.
+    Physik Instrumente (PI) GmbH & Co. model C-630, C-844, C-848, C-862, E-662, E-710 and E-816.
   </LI>
   <li>
     MicroMo model MVP 2001 B02.
@@ -93,6 +93,21 @@ Channel support):
   </li>
   <li>
     Thorlabs, Piezo Controller, Model MDT695.
+  </li>
+  <li>
+    Animatics Corporation SmartMotor.
+  </li>
+  <li>
+    piezosystem jena GmbH EDS data interface module.
+  </li>
+  <li>
+    Kohzu SC-200, SC-400, SC-800 stepper motor controllers.
+  </li>
+  <li>
+    attocube systems AG ANC150 Piezo Step Controller.
+  </li>
+  <li>
+    Aerotech Ensemble digital servo controller.
   </li>
 </ul>
 The record maintains two coordinate systems for motor position ("user" and "dial 
@@ -213,8 +228,22 @@ below.
     <td><a href="#Fields_motion">ACCL</a></td>
     <td>R/W</td>
     <td>Seconds to Velocity</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>acceleration time</td>
+  </tr>
+  <tr>
+    <td><a href="#Fields_status">ADEL</a></td>
+    <td>R/W</td>
+    <td>Archive Deadband</td>
+    <td>DOUBLE</td>
+    <td>Deadband on RBV archive monitor</td>
+  </tr>
+  <tr>
+    <td><a href="#Fields_status">ALST</a></td>
+    <td>R</td>
+    <td>Last Valve Archived</td>
+    <td>DOUBLE</td>
+    <td>Last RBV value to be archived</td>
   </tr>
   <tr>
     <td><a href="#Fields_status">ATHM</a></td>
@@ -227,21 +256,21 @@ below.
     <td><a href="#Fields_motion">BACC</a></td>
     <td>R/W</td>
     <td>BL Seconds to Veloc.</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>backlash acceleration time</td>
   </tr>
   <tr>
     <td><a href="#Fields_motion">BDST</a></td>
     <td>R/W</td>
     <td>BL Distance (EGU)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>backlash distance</td>
   </tr>
   <tr>
     <td><a href="#Fields_motion">BVEL</a></td>
     <td>R/W</td>
     <td>BL Velocity (EGU/s)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>backlash speed</td>
   </tr>
   <tr>
@@ -278,7 +307,7 @@ below.
     <td><a href="#Servo_fields">DCOF</a></td>
     <td>R/W</td>
     <td>Derivative Gain</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -286,7 +315,7 @@ below.
     <td><a href="#Fields_limit">DHLM</a></td>
     <td>R/W*</td>
     <td>Dial High Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -317,7 +346,7 @@ below.
     <td><a href="#Fields_limit">DLLM</a></td>
     <td>R/W*</td>
     <td>Dial Low Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -325,7 +354,7 @@ below.
     <td><a href="#Fields_status">DLY</a></td>
     <td>R/W</td>
     <td>Readback settle time (s)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -371,7 +400,7 @@ below.
     <td><a href="#Fields_res">ERES</a></td>
     <td>R/W*</td>
     <td>Encoder Step Size (EGU)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -394,7 +423,7 @@ below.
     <td><a href="#Fields_motion">FRAC</a></td>
     <td>R/W</td>
     <td>Move Fraction</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -410,7 +439,7 @@ below.
     <td><a href="#Fields_alarm">HIGH</a></td>
     <td>R/W*</td>
     <td>High Alarm Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -418,7 +447,7 @@ below.
     <td><a href="#Fields_alarm">HIHI</a></td>
     <td>R/W*</td>
     <td>Hihi Alarm Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -426,7 +455,7 @@ below.
     <td><a href="#Fields_limit">HLM</a></td>
     <td>R/W*</td>
     <td>User High Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -466,7 +495,7 @@ below.
     <td><a href="#Fields_limit">HOPR</a></td>
     <td>R/W</td>
     <td>High Operating Range</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -482,7 +511,7 @@ below.
     <td><a href="#Fields_motion">HVEL</a></td>
     <td>R/W*</td>
     <td>Home Velocity</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -490,7 +519,7 @@ below.
     <td><a href="#Servo_fields">ICOF</a></td>
     <td>R/W</td>
     <td>Integral Gain</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -506,7 +535,7 @@ below.
     <td><a href="#Fields_motion">JAR</a></td>
     <td>R/W</td>
     <td>Jog Acceleration (EGU/s^2)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -528,7 +557,7 @@ below.
     <td><a href="#Fields_motion">JVEL</a></td>
     <td>R/W</td>
     <td>Jog Velocity</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -544,7 +573,7 @@ below.
     <td><a href="#Fields_limit">LLM</a></td>
     <td>R/W*</td>
     <td>User Low Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -569,13 +598,13 @@ below.
     <td>R/W*</td>
     <td>Soft Channel Position Lock</td>
     <td>RECCHOICE</td>
-    <td>(0:"No", 1:"Yes")</td>
+    <td>(0:"NO", 1:"YES")</td>
   </tr>
   <tr>
     <td><a href="#Fields_alarm">LOLO</a></td>
     <td>R/W*</td>
     <td>Lolo Alarm Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -583,7 +612,7 @@ below.
     <td><a href="#Fields_limit">LOPR</a></td>
     <td>R/W</td>
     <td>Low Operating Range</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -591,7 +620,7 @@ below.
     <td><a href="#Fields_alarm">LOW</a></td>
     <td>R/W*</td>
     <td>Low Alarm Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -643,6 +672,20 @@ below.
     </td>
   </tr>
   <tr>
+    <td><a href="#Fields_status">MDEL</a></td>
+    <td>R/W</td>
+    <td>Monitor Deadband</td>
+    <td>DOUBLE</td>
+    <td>Deadband on RBV valve monitor</td>
+  </tr>
+  <tr>
+    <td><a href="#Fields_status">MLST</a></td>
+    <td>R</td>
+    <td>Last Valve Monitored</td>
+    <td>DOUBLE</td>
+    <td>Last RBV value to be value monitored</td>
+  </tr>
+  <tr>
     <td><a href="#Fields_private">MIP</a></td>
     <td>R</td>
     <td>Motion In Progress</td>
@@ -677,7 +720,7 @@ below.
     <td><a href="#Fields_res">MRES</a></td>
     <td>R/W*</td>
     <td>Motor Step Size (EGU)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -702,7 +745,14 @@ below.
     <td>R/W*</td>
     <td>New Target Monitor</td>
     <td>RECCHOICE</td>
-    <td>(0:"No", 1:"Yes")</td>
+    <td>(0:"NO", 1:"YES")</td>
+  </tr>
+  <tr>
+    <td><a href="#Fields_misc">NTMF</a></td>
+    <td>R/W*</td>
+    <td>New Target Monitor Deadband Factor</td>
+    <td>SHORT</td>
+    <td>Determines NTM deadband; NTMF >= 2</td>
   </tr>
   <tr>
     <td><a href="#Fields_calib">OFF</a></td>
@@ -732,7 +782,7 @@ below.
     <td><a href="#Servo_fields">PCOF</a></td>
     <td>R/W</td>
     <td>Proportional Gain</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -741,7 +791,7 @@ below.
     <td>R/W</td>
     <td>Periodic Limits</td>
     <td>RECCHOICE</td>
-    <td>(0:"No", 1:"Yes")</td>
+    <td>(0:"NO", 1:"YES")</td>
   </tr>
   <tr>
     <td><a href="#Fields_misc">POST</a></td>
@@ -795,7 +845,7 @@ below.
     <td><a href="#Fields_motion">RDBD</a></td>
     <td>R/W</td>
     <td>Retry Deadband (EGU)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -864,6 +914,14 @@ below.
     </td>
   </tr>
   <tr>
+    <td><a href="#Fields_motion">RMOD</a></td>
+    <td>R/W</td>
+    <td>Retry Mode</td>
+    <td>RECCHOICE</td>
+    <td>(0:"Unity", 1:"Arthmetic", 2:"Geometric")<br>
+    </td>
+  </tr>
+  <tr>
     <td><a href="#Fields_status">RMP</a></td>
     <td>R</td>
     <td>Raw Motor Position</td>
@@ -883,7 +941,7 @@ below.
     <td><a href="#Fields_res">RRES</a></td>
     <td>R/W</td>
     <td>Readback Step Size (EGU)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -915,7 +973,7 @@ below.
     <td><a href="#Fields_motion">S</a></td>
     <td>R/W</td>
     <td>Speed (RPS)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -923,7 +981,7 @@ below.
     <td><a href="#Fields_motion">SBAK</a></td>
     <td>R/W</td>
     <td>BL Speed (RPS)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -931,7 +989,7 @@ below.
     <td><a href="#Fields_motion">SBAS</a></td>
     <td>R/W</td>
     <td>Base Speed (RPS)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -946,7 +1004,7 @@ below.
     <td><a href="#Fields_motion">SMAX</a></td>
     <td>R/W</td>
     <td>Max Velocity (RPS)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -991,10 +1049,10 @@ below.
   </tr>
   <tr>
     <td><a href="#Fields_status">STUP</a></td>
-    <td>R</td>
+    <td>R/W*</td>
     <td>Status Update Request</td>
     <td>RECCHOICE</td>
-    <td>ON(1)<br>
+    <td>OFF(0), ON(1), BUSY(2)<br>
     </td>
   </tr>
   <tr>
@@ -1003,6 +1061,14 @@ below.
     <td>Set USE Mode</td>
     <td>SHORT</td>
     <td><br>
+    </td>
+  </tr>
+  <tr>
+    <td><a href="#Fields_drive">SYNC</a></td>
+    <td>R/W*</td>
+    <td>Sync positions</td>
+    <td>RECCHOICE</td>
+    <td>(0:"No", 1:"Yes")<br>
     </td>
   </tr>
   <tr>
@@ -1033,7 +1099,7 @@ below.
     <td><a href="#Fields_command">TWV</a></td>
     <td>R/W*</td>
     <td>Tweak Step Size (EGU)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -1048,7 +1114,7 @@ below.
     <td><a href="#Fields_res">UREV</a></td>
     <td>R/W*</td>
     <td>EGU's per Revolution</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -1071,7 +1137,7 @@ below.
     <td><a href="#Fields_motion">VBAS</a></td>
     <td>R/W</td>
     <td>Base Velocity (EGU/s)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -1079,7 +1145,7 @@ below.
     <td><a href="#Fields_motion">VELO</a></td>
     <td>R/W</td>
     <td>Velocity (EGU/s)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -1087,14 +1153,14 @@ below.
     <td><a href="#Fields_misc">VERS</a></td>
     <td>R</td>
     <td>Code Version</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>e.g., "1.95"</td>
   </tr>
   <tr>
     <td><a href="#Fields_motion">VMAX</a></td>
     <td>R/W</td>
     <td>Max Velocity (EGU/s)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td><br>
     </td>
   </tr>
@@ -1315,7 +1381,7 @@ below.
     <td>MRES</td>
     <td>R/W*</td>
     <td>Motor Step Size (EGU)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>May be positive or negative</td>
   </tr>
   <tr valign="top">
@@ -1329,7 +1395,7 @@ below.
     <td>UREV</td>
     <td>R/W*</td>
     <td>EGU's per Revolution</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>May be positive or negative</td>
   </tr>
   <tr>
@@ -1389,7 +1455,7 @@ below.
     <td>ERES</td>
     <td>R/W*</td>
     <td>Encoder Step Size (EGU)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <TD>
       Encoder resolution: the distance or angle, in engineering units, associated 
       with a single encoder step. ERES may be positive or negative. If the user sets 
@@ -1400,7 +1466,7 @@ below.
     <td>RRES</td>
     <td>R/W</td>
     <td>Readback Step Size (EGU)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Readback-device resolution: the distance or angle, in engineering units,
     associated with a unit change of the number retrieved via the readback- location 
     input link (RDBL). RRES may be either positive or negative.&nbsp;</td>
@@ -1445,10 +1511,12 @@ below.
     <td>R/W*</td>
     <td>Use RDBL Link If Present</td>
     <td>RECCHOICE (0:"No", 1:"Yes")</td>
-    <td>Switch: nonzero value tells the record to get the motor position from the 
+    <TD>Switch: nonzero value tells the record to get the motor position from the 
     readback-location link (RDBL) (if it contains valid EPICS link information, and 
     if no error occurs in the attempt to read from the link) and to ignore values 
-    read back from the hardware's step-count and encoder registers.</td>
+    read back from the hardware's step-count and encoder registers.  If the RDBL 
+    link is invalid or a read attempt results in an error, the motor position 
+    becomes frozen.</TD>
   </tr>
   <tr>
     <td colspan="5">These switches also direct the record to calculate destinations 
@@ -1476,7 +1544,7 @@ below.
     <td>VMAX</td>
     <td>R/W</td>
     <td>Max Velocity (EGU/s)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Valid range; 0 &lt;= VMAX.&nbsp; VMAX=0 disables maximum velocity range
     checking.</td>
   </tr>
@@ -1484,21 +1552,21 @@ below.
     <td>SMAX</td>
     <td>R/W</td>
     <td>Max Velocity (RPS)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Valid range; 0 &lt;= SMAX</td>
   </tr>
   <tr>
     <td>VBAS</td>
     <td>R/W</td>
     <td>Base Velocity (EGU/s)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Valid range; 0 &lt;= VBAS</td>
   </tr>
   <tr>
     <td>SBAS</td>
     <td>R/W</td>
     <td>Base Speed (RPS)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Valid range; 0 &lt;= SBAS</td>
   </tr>
   <tr nosave="">
@@ -1535,14 +1603,14 @@ below.
     <td>VELO</td>
     <td>R/W</td>
     <td>Velocity (EGU/s)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Valid range; VBAS &lt;= VELO &lt;= VMAX</td>
   </tr>
   <tr valign="top">
     <td>S</td>
     <td>R/W</td>
     <td>Speed (RPS)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Valid range;&nbsp; SBAS &lt;=&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; S&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
     &lt;= SMAX</td>
   </tr>
@@ -1556,14 +1624,14 @@ below.
     <td>HVEL</td>
     <td>R/W</td>
     <td>Velocity (EGU/s)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Homing velocity; valid range; VBAS &lt;= HVEL &lt;= VMAX</td>
   </tr>
   <tr valign="top">
     <td>ACCL</td>
     <td>R/W</td>
     <td>Seconds to Velocity</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>The length, in seconds, of the acceleration and deceleration phases of a 
     motor motion.</td>
   </tr>
@@ -1577,14 +1645,14 @@ below.
     <td>JVEL</td>
     <td>R/W</td>
     <td>Jog Velocity (EGU/s)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Valid range; VBAS &lt;= VELO &lt;= VMAX</td>
   </tr>
   <tr>
     <td>JAR</td>
     <td>R/W</td>
     <td>Jog Acceleration (EGU/s^2)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Default value: VELO / ACCL</td>
   </tr>
   <tr nosave="">
@@ -1596,7 +1664,7 @@ below.
     <td>BDST</td>
     <td>R/W</td>
     <td>BL Distance (EGU)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>The signed distance, in dial coordinates, used for backlash takeout.</td>
   </tr>
   <tr>
@@ -1634,13 +1702,13 @@ below.
     <td>BVEL</td>
     <td>R/W</td>
     <td>BL Velocity (EGU/s)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
   </tr>
   <tr valign="top">
     <td>SBAK</td>
     <td>R/W</td>
     <td>BL Speed (RPS)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
   </tr>
   <tr>
     <td colspan="5">BVEL is the speed, in engineering units per second, at which the 
@@ -1664,7 +1732,7 @@ below.
     <td>BACC</td>
     <td>R/W</td>
     <td>BL Seconds to Veloc.</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>The length, in seconds, of the acceleration and deceleration phases of a 
     backlash-takeout motion. See discussion of the acceleration field ACCL for more 
     specific information.</td>
@@ -1685,7 +1753,7 @@ below.
     <td>FRAC</td>
     <td>R/W</td>
     <td>Move Fraction</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
   </tr>
   <tr>
     <td colspan="5">This field supports closed-loop control of pathological devices 
@@ -1717,7 +1785,7 @@ below.
     <td>RDBD</td>
     <td>R/W</td>
     <td>Retry Deadband (EGU)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>When the motor has finished a complete motion, possibly including backlash
     takeout, the motor record will compare its current position with the desired
     position. If the magnitude of the difference is greater than RDBD, the motor
@@ -1735,7 +1803,34 @@ below.
     the motion finished. If the desired position was not reached, the field MISS 
     will be set to 1.</td>
   </tr>
-
+  <tr valign="top">
+    <td>RMOD</td>
+    <td>R/W</td>
+    <td>Retry Mode</td>
+    <td>RECCHOICE</td>
+    <td>
+      <p>
+      (0:"Unity", 1:"Arthmetic", 2:"Geometric")
+      </p>
+      <p>
+      RMOD allows the user to select different ways of calculating the retry distance 
+      move.  The default mode (Unity) moves the motor a relative distance based on 
+      the dial error (DIFF field). Badly behaved devices (piezo motors) can oscillate 
+      around their target position in this mode.  Hence, two other modes were added to 
+      allow a decreasing response from the motor record after each retry.
+      </p>
+      <p>
+      The Arithmetic mode generates an arithmetic sequence of corrections. For example, 
+      if the max. retry count (RTRY) is 10, then the retries will proceed as follows; 
+      DIFF * (1.0), DIFF * (9/10), DIFF * (8/10), etc.
+      </p>
+      <p>
+      The Geometric mode generates a geometric sequence with a 1/2 common factor of 
+      corrections.  For example, if the max. retry count is 10, then the retries will 
+      proceed as follows; DIFF * (1.0), DIFF * (1/2) DIFF * (1/4), DIFF * (1/8), etc.
+      </p>
+    </td>
+  </tr>
   </tbody>
 </table>
 
@@ -1867,7 +1962,7 @@ below.
     <td>HLM</td>
     <td>R/W*</td>
     <td>User High Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>The maximum allowed value of the VAL field. If HLM changes so that VAL is no 
     longer less than HLM, then the record will set the field LVIO to 1. If the DIR 
     field has the value "Pos", then HLM will always be consistent with DHLM, 
@@ -1877,7 +1972,7 @@ below.
     <td>LLM</td>
     <td>R/W*</td>
     <td>User Low Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>The minimum allowed value of the VAL field. If LLM changes so that VAL is no 
     longer greater than LLM, then the record will set the field LVIO to 1. If the 
     DIR field has the value "Pos", then LLM will always be consistent with DLLM, 
@@ -1887,7 +1982,7 @@ below.
     <td>DHLM</td>
     <td>R/W*</td>
     <td>Dial High Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>The maximum allowed value of the DVAL field. If DHLM changes so that DVAL is 
     no longer less than DHLM, then the record will set the field LVIO to 1.. If the 
     DIR field has the value "Pos", then DHLM will always be consistent with HLM, 
@@ -1897,7 +1992,7 @@ below.
     <td>DLLM</td>
     <td>R/W*</td>
     <td>Dial Low Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>The minimum allowed value of the DVAL field. If DLLM changes so that DVAL is 
     no longer greater than DLLM, then the record will set the field LVIO to 1. If 
     the DIR field has the value "Pos", then DLLM will always be consistent with LLM, 
@@ -1929,14 +2024,14 @@ below.
     <td>HOPR</td>
     <td>R/W</td>
     <td>High Operating Range</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Not used. See HLM and DHLM.</td>
   </tr>
   <tr valign="top">
     <td>LOPR</td>
     <td>R/W</td>
     <td>Low Operating Range</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Not used. See LLM and DLLM.</td>
   </tr>
   <tr valign="top">
@@ -2198,7 +2293,7 @@ below.
     <td>TWV</td>
     <td>R/W*</td>
     <td>Tweak Step Size (EGU)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>This field contains the distance the motor is to move in response to  the 
     TWF and TWR buttons.</td>
   </tr>
@@ -2254,6 +2349,14 @@ below.
     <td>When this field is changed, its value will be added to VAL, the field itself 
     will immediately be reset to 0, and the motor record will behave as though the 
     VAL field had been changed directly.&nbsp;</td>
+  </tr>
+  <tr valign="top">
+    <td>SYNC</td>
+    <td>R/W*</td>
+    <td>Sync positions</td>
+    <td>RECCHOICE</td>
+    <td>When this field is set to Yes(1) the record sets the Drive fields (VAL/DVAL/RVAL) 
+    to their readback values (RBV/DRBV/RRBV) and sets the SYNC field back to No(0).&nbsp;</td>
   </tr>
 
   </tbody>
@@ -2317,7 +2420,7 @@ below.
     <td>DLY</td>
     <td>R/W</td>
     <td>Readback settle time (s)</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Delay (in seconds) the time between motor controller done and motor record 
     done (i.e., DMOV).</td>
   </tr>
@@ -2391,7 +2494,7 @@ below.
 	    POSITION: closed-loop position control is enabled.
 	  </li>
 	  <li>
-	    Unused
+	    SLIP_STALL: Slip/Stall detected (eg. fatal following error)
 	  </li>
 	  <li>
 	    HOME: if at home position.
@@ -2400,7 +2503,7 @@ below.
 	    PRESENT: encoder is present.
 	  </li>
 	  <li>
-	    PROBLEM: driver stopped polling.
+	    PROBLEM: driver stopped polling, or hardware problem
 	  </li>
 	  <li>
 	    MOVING: non-zero velocity present.
@@ -2412,10 +2515,15 @@ below.
 	    COMM_ERR: Controller communication error.
 	  </li>
 	  <li>
-	    MINUS_LS: minus limit switch has been hit.<br>
+	    MINUS_LS: minus limit switch has been hit.
 	  </li>
-
+	  <li>
+	    HOMED: the motor has been homed.<br>
+	  </li>
 	</ol>
+	The record is put into MAJOR STATE alarm if either SLIP_STALL or PROBLEM bits are detected. 
+	If HLSV is set, then the record is put into HIGH alarm if either a high soft limit or 
+	hard limit (PLUS_LS) has been reached. Similary for the low limits.
       </blockquote>
     </td>
   </tr>
@@ -2492,6 +2600,38 @@ below.
       </P>
     </td>
   </tr>
+  <tr valign="top">
+    <td>ADEL</td>
+    <td>R/W</td>
+    <td>Archive Deadband</td>
+    <td>DOUBLE</td>
+    <td>An archive value is only posted if RBV moves out of the ADEL deadband when 
+        compared to the previous value archived. ie. if ((RBV-ALST)>ADEL). ADEL defaults to zero, 
+        which would mean that all changes to RBV are archived.</td>
+    </tr>
+    <tr valign="top">
+    <td>MDEL</td>
+    <td>R/W</td>
+    <td>Monitor Deadband</td>
+    <td>DOUBLE</td>
+    <td>An monitor value is only posted if RBV moves out of the MDEL deadband when 
+        compared to the previous value posted. ie. if ((RBV-MLST)>MDEL). MDEL defaults to zero, 
+        which would mean that all value changes to RBV are posted.</td>
+    </tr>
+    <tr valign="top">
+    <td>ALST</td>
+    <td>R</td>
+    <td>Last Value Archived</td>
+    <td>DOUBLE</td>
+    <td>Holds the last RBV to be archived. Used to determine if the current RBV is within an ADEL deadband.</td>
+    </tr>
+    <tr valign="top">
+    <td>MLST</td>
+    <td>R</td>
+    <td>Last Value Monitored</td>
+    <td>DOUBLE</td>
+    <td>Holds the last RBV to be posted. Used to determine if the current RBV is within a MDEL deadband.</td>
+    </tr>
 
   </tbody>
 </table>
@@ -2586,21 +2726,21 @@ below.
     <td>PCOF</td>
     <td>R/W</td>
     <td>Proportional Gain</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Valid range; 0.0 &lt;= PCOF &lt;= 1.0</td>
   </tr>
   <tr valign="top">
     <td>&nbsp;ICOF</td>
     <td>R/W</td>
     <td>Integral Gain</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Valid range; 0.0 &lt;= ICOF &lt;= 1.0</td>
   </tr>
   <tr valign="top">
     <td>&nbsp;DCOF</td>
     <td>R/W</td>
     <td>Derivative Gain</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Valid range; 0.0 &lt;= DCOF &lt;= 1.0</td>
   </tr>
 
@@ -2632,25 +2772,25 @@ below.
     <td>HIHI</td>
     <td>R/W*</td>
     <td>Hihi Alarm Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
   </tr>
   <tr valign="top">
     <td>LOLO</td>
     <td>R/W*</td>
     <td>Lolo Alarm Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
   </tr>
   <tr valign="top">
     <td>HIGH</td>
     <td>R/W*</td>
     <td>High Alarm Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
   </tr>
   <tr valign="top">
     <td>LOW</td>
     <td>R/W*</td>
     <td>Low Alarm Limit</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
   </tr>
   <tr valign="top">
     <td>HHSV</td>
@@ -2722,7 +2862,7 @@ below.
     <td>VERS</td>
     <td>R</td>
     <td>Code Version</td>
-    <td>FLOAT</td>
+    <td>DOUBLE</td>
     <td>Version number of the recMotor.c code.</td>
   </tr>
   <tr valign="top">
@@ -2784,11 +2924,11 @@ below.
 	      In the POST field; only "PUT(<i>pvname</i>, <i>pv-value</i>)".
 	    </li>
 	  </blockquote>
-	  See <i>Driver Power Monitoring</i> below for the DPM_ON directive. &nbsp;The PUT 
-	  directive supports changing the value of a database variable. &nbsp;Note that 
-	  the PREM supports a delay argument, but that POST does not. &nbsp;The <i>Readback 
-	  settle time field</i> (DLY) should be used to create a time delay after the PV 
-	  specified in the POST field is written.
+          See <i>Driver Power Monitoring</i> below for the DPM_ON directive. &nbsp;The PUT 
+          directive supports changing the value of a database variable. &nbsp;Note that 
+          the PREM supports a time delay argument before the motor move , but that POST 
+          does not. &nbsp;The <i>Readback settle time field</i> (DLY) should be used to 
+          create a time delay after the PV specified in the POST field is written.
 	</blockquote>
 	<li>
 	  Device directive strings are stripped of valid device directives (including @'s) 
@@ -2877,7 +3017,7 @@ below.
     readback position.  Soft Channel device support detects that the "hard" motor 
     has initiated the move when it sees the PV pointed to by DINP go false, while 
     the "soft" record's DMOV is true. Automatic synchronization is undesirable in a 
-    multi-axis application. Hence, setting the LOCK field to "Yes" disables this 
+    multi-axis application. Hence, setting the LOCK field to "YES" disables this 
     automatic synchronization.</td>
   </tr>
   <tr>
@@ -2888,24 +3028,33 @@ below.
     <td>The requirements on how the motor record processes a new target position 
     while the motor is in motion are as follows;<BR>
       Case #1: The motor record is given a new position, which is in the opposite 
-      direction from the current motor motion.  If NTM is "Yes", the motor is 
-      immediately stopped and given a motion command to the new position.  If NTM is "No 
+      direction from the current motor motion.  If NTM is "YES", the motor is 
+      immediately stopped and given a motion command to the new position.  If NTM is "NO 
       ", the motor completes the previous move before it is given a motion command to 
       the new position.<BR>
       Case #2: The motor record is given a new position, which is in the same 
       direction as the current motor motion, but the new position is closer to the 
-      motor's current position than the original target position.  If NTM is "Yes", 
+      motor's current position than the original target position.  If NTM is "YES", 
       the motor is stopped after it has gone past the new position; then a command is 
-      given to return to the new position.  If NTM is "No", the motor completes the 
+      given to return to the new position.  If NTM is "NO", the motor completes the 
       previous move before it is given a motion command to the new position.<BR>
       Case #3: The motor record is given a new position, which is in the same 
       direction as the current motor motion, but the new position is further from the 
       motor's current position than the original position.  After the motor reaches 
       the original target position and stops, a command is given to the new target 
       position.  This case is independent of NTM.<BR>
-      NTM defaults to "Yes".  It should be set to "No" only for soft motors. Soft 
-      motors should be configured with NTM set to "No" to prevent Case #1 above from 
+      NTM defaults to "YES".  It should be set to "NO" only for soft motors. Soft 
+      motors should be configured with NTM set to "NO" to prevent Case #1 above from 
       interfering with "hard" motors using backlash correction.  </td>
+  </tr>
+  <tr>
+    <td>NTMF</td>
+    <td>R/W</td>
+    <td>New Target Monitor Deadband Factor</td>
+    <td>SHORT</td>
+    <td>Determines NTM deadband = NTMF * (|BDST| + RDBD).  NTMF must be >= 2.  The 
+    NTM deadband prevents NTM logic from issuing a STOP command at the end of a DC 
+    motor move that overshoots its' target position.</td>
   </tr>
   </tbody>
 </table>
