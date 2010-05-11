@@ -10,10 +10,12 @@ include $(TOP)/configure/CONFIG
 DBD += devOms.dbd
 
 LIBRARY_IOC_DEFAULT += oms
-LIBRARY_IOC_WIN32 += -nil-
 
 # The following is required for the OMS PC68/78 (i.e., devOmsPC68) device driver.
+ifdef ASYN
 SRCS += devOmsPC68.cc drvOmsPC68.cc
+SRCS += drvMAXnetAsyn.cc
+endif
 
 # The following is required for the OMS VME8/44 (i.e., devOMS) device driver.
 SRCS += devOms.cc drvOms.cc
@@ -28,7 +30,9 @@ SRCS += devMAXv.cc drvMAXv.cc
 SRCS += devOmsCom.cc
 
 oms_LIBS += motor
+ifdef ASYN
 oms_LIBS += asyn
+endif
 oms_LIBS += $(EPICS_BASE_IOC_LIBS)
 
 include $(TOP)/configure/RULES
