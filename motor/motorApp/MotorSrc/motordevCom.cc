@@ -3,9 +3,10 @@ FILENAME: motordevCom.cc
 USAGE... This file contains device functions that are common to all motor
     record device support modules.
 
-Version:        1.11
-Modified By:    sluiter
-Last Modified:  2007/02/27 17:44:06
+Version:        $Revision: 11154 $
+Modified By:    $Author: sluiter $
+Last Modified:  $Date: 2010-06-09 14:41:35 -0500 (Wed, 09 Jun 2010) $
+HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-5-1/motorApp/MotorSrc/motordevCom.cc $
 */
 
 /*
@@ -50,6 +51,13 @@ Last Modified:  2007/02/27 17:44:06
  *                   determines precedence between controller or save/restore
  *                   motor position at boot-up; negative controller positions
  *                   were not handled correctly.
+ * .10  10/17/07 rls Raised the precedence of the INIT string for controllers
+ *                   (PI C-848) that require an INIT string primitive before a
+ *                   LOAD_POS can be executed.
+ * .11  02/14/08 rls Post RVEL changes.
+ * .12  03/08/10 rls Always send positive encoder ratio values.
+ * .13  06/09/10 rls Set RA_PROBLEM instead of CNTRL_COMM_ERR when a NULL
+ *                   motor_state[] ptr is detected in motor_end_trans_com().
  */
 
 
@@ -272,23 +280,18 @@ motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_table *t
     initEncoder = (msta.Bits.EA_PRESENT && mr->ueip) ? true : false;
     if (initEncoder == true)
     {
+        int m;
         if (fabs(mr->mres) < 1.e-9)
             mr->mres = 1.;
         if (fabs(mr->eres) < 1.e-9)
             mr->eres = mr->mres;
-        {
-            int m;
-            for (m = 10000000; (m > 1) && (fabs(m / mr->eres) > 1.e6 ||
-                        fabs(m / mr->mres) > 1.e6); m /= 10);
-            ep_mp[0] = m / mr->eres;    /* encoder pulses per ... */
-            ep_mp[1] = m / mr->mres;    /* motor pulses */
-        }
+        for (m = 10000000; (m > 1) &&
+             (fabs(m / mr->eres) > 1.e6 || fabs(m / mr->mres) > 1.e6); m /= 10);
+        ep_mp[0] = fabs(m / mr->eres);    /* encoder pulses per */
+        ep_mp[1] = fabs(m / mr->mres);    /* motor pulses */
     }
     else
-    {
-        ep_mp[0] = 1.;
-        ep_mp[1] = 1.;
-    }
+        ep_mp[0] = ep_mp[1] = 1.0;
 
     initPos = (fabs(mr->dval) > mr->rdbd && mr->mres != 0 &&
                fabs(axis_query.position * mr->mres) < mr->rdbd)
@@ -307,6 +310,14 @@ motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_table *t
         /* Switch to special init callback so that record will not be processed during iocInit. */
         callbackSetCallback((void (*)(struct callbackPvt *)) motor_init_callback,
                             &(motor_call->callback));
+
+        if (initString == true)
+        {
+            (*pdset->start_trans)(mr);
+            (*pdset->build_trans)(PRIMITIVE, NULL, mr);
+            (*pdset->end_trans)(mr);
+        }
+        
         if (initEncoder == true)
         {
             (*pdset->start_trans)(mr);
@@ -320,13 +331,6 @@ motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_table *t
 
             (*pdset->start_trans)(mr);
             (*pdset->build_trans)(LOAD_POS, &setPos, mr);
-            (*pdset->end_trans)(mr);
-        }
-
-        if (initString == true)
-        {
-            (*pdset->start_trans)(mr);
-            (*pdset->build_trans)(PRIMITIVE, NULL, mr);
             (*pdset->end_trans)(mr);
         }
 
@@ -407,7 +411,11 @@ epicsShareFunc CALLBACK_VALUE motor_update_values(struct motorRecord * mr)
     {
         mr->rmp = ptrans->motor_pos;
         mr->rep = ptrans->encoder_pos;
-        mr->rvel = ptrans->vel;
+        if (mr->rvel != ptrans->vel)
+        {
+            mr->rvel = ptrans->vel;
+            db_post_events(mr, &mr->rvel, DBE_VAL_LOG);
+        }
         mr->msta = ptrans->status.All;
         ptrans->callback_changed = NO;
         rc = CALLBACK_DATA;
@@ -473,12 +481,12 @@ epicsShareFunc RTN_STATUS motor_end_trans_com(struct motorRecord *mr, struct dri
         msta_field msta;
 
         /* If the controller does not exits, then set "done moving"
-         * and communication error TRUE.
+         * and the Hardware Problem bit TRUE.
          */
         mr->dmov = TRUE;
         db_post_events(mr, &mr->dmov, DBE_VAL_LOG);
         msta.All = mr->msta;
-        msta.Bits.CNTRL_COMM_ERR = 1;
+        msta.Bits.RA_PROBLEM = 1;
         mr->msta = msta.All;
         return(rc = ERROR);
     }
