@@ -59,22 +59,23 @@
 #define	PMC100_STATUS_LATCH	0x01 << 0x06
 #define	PMC100_STATUS_UNDEF_B7	0x01 << 0x07
 
-#define	PMC100_SLS_STATUS_IDLE	0
-#define	PMC100_SLS_STATUS_MOV	1
-#define	PMC100_SLS_STATUS_COR	2
-#define	PMC100_SLS_STATUS_STOP	3
-#define	PMC100_SLS_STATUS_JOG	4
-#define	PMC100_SLS_STATUS_HOME	5	
-#define	PMC100_SLS_STATUS_RANGE	10	
-#define	PMC100_SLS_STATUS_TRY	11	
-#define	PMC100_SLS_STATUS_UNKWN	-1
+#define	PMC100_SL_STATUS_IDLE	0
+#define	PMC100_SL_STATUS_MOV	1
+#define	PMC100_SL_STATUS_COR	2
+#define	PMC100_SL_STATUS_STOP	3
+#define	PMC100_SL_STATUS_JOG	4
+#define	PMC100_SL_STATUS_HOME	5	
+#define	PMC100_SL_STATUS_RANGE	10	
+#define	PMC100_SL_STATUS_TRY	11	
+#define	PMC100_SL_STATUS_UNKWN	-1
 
 static int pmc100TxRx(AR_HANDLE, char*, char*);
 static AR_HANDLE pmax100EpicsHandleGet(int);
-static int pmc100SlsStatusGet(int);
+static int pmc100SlStatusGet(int);
 static int pmc100PosSet(int, int);
 static int pmc100Abort(int);
 static int pmc100EncCntGet(int);
+static int pmc100SlModeGet(int);
 
 struct mess_queue
 {
@@ -124,20 +125,18 @@ static void query_done(int, int, struct mess_node *);
 static const char *perfMaxUSBInitCmds[] =
 {
    "LSPD=30" ,
-   "HSPD=10000",
+   "HSPD=5000",
    "ACC=300",
    "POL=16",
    "SSPD500",
    "EO=1",
-   "SLR=11",
+   "SLR=10",
    "SLT=200",
    "SLR=16",
-   "SLS=1",
+   "SL=1",
    NULL,
 };
 
-char TxBuf[BUFF_SIZE];
-char RxBuf[BUFF_SIZE];
 
 /*----------------functions-----------------*/
 
@@ -248,18 +247,14 @@ int set_status(int card, int signal)
     long motorData;
     bool ls_active = false;
     msta_field status;
-    int slsStatus;
+    int slstatus;
 
+    pmc100SlModeGet(card);
     motor_info = &(motor_state[card]->motor_info[signal]);
     nodeptr = motor_info->motor_motion;
     status.All = motor_info->status.All;
 
     /* Request the moving status of this motor */
-
-    /* Get the motor status (ts) */
-    memset(TxBuf, '\0', sizeof(TxBuf));
-    //sprintf(TxBuf, "MST");
-    //printf("RxBuf %c %s\n", RxBuf[0], RxBuf);
 
     motor_info->encoder_position = 0;
     motor_info->no_motion_count = 0;
@@ -268,11 +263,12 @@ int set_status(int card, int signal)
     status.Bits.RA_PLUS_LS = 0;
     status.Bits.RA_PROBLEM = 0;
 
-    slsStatus = pmc100SlsStatusGet(card);
-    if (slsStatus == PMC100_SLS_STATUS_IDLE)
+    /* Get the motor status (ts) */
+    slstatus = pmc100SlStatusGet(card);
+    if (slstatus == PMC100_SL_STATUS_IDLE)
         status.Bits.RA_DONE = 1;
-    else if ((slsStatus == PMC100_SLS_STATUS_RANGE) ||
-             (slsStatus == PMC100_SLS_STATUS_TRY))
+    else if ((slstatus == PMC100_SL_STATUS_RANGE) ||
+             (slstatus == PMC100_SL_STATUS_TRY))
     {
         status.Bits.RA_DONE = 0;
         pmc100Abort(card);
@@ -280,28 +276,9 @@ int set_status(int card, int signal)
     }
     else 
         status.Bits.RA_DONE = 0;
-  
 
-#if	0 
-    if (RxBuf[0] == 0x30)
-        status.Bits.RA_DONE = 1;
-    else
-        status.Bits.RA_DONE = 0;
-#endif
-
-
-
-    //if (status.Bits.RA_DONE & 1)
-    //    puts("done moving");;
-
-#if	0
-    sprintf(TxBuf, "PX");
-    send_mess(card, TxBuf, 0);
-#endif
-
+    // get the encoder count
     motorData = pmc100EncCntGet(card); 
-    //printf("RxBuf %s\n", RxBuf);
-    //printf("motorData1 %ld\n", motorData);
        
     /* derive direction information */
     if (motorData == motor_info->position)
@@ -311,7 +288,7 @@ int set_status(int card, int signal)
     }
     else
     {
-        status.Bits.RA_DIRECTION = (RxBuf[0] == '-') ? 0 : 1;
+        status.Bits.RA_DIRECTION = (motorData <= 0) ? 0 : 1;
         motor_info->position = motorData;
         motor_info->encoder_position = motorData;
         motor_info->no_motion_count = 0;
@@ -336,6 +313,8 @@ RTN_STATUS send_mess(int card, const char *com, char *name)
 {
     struct perfMaxUSBController *ctlr;
     RTN_STATUS err = OK;
+    char rxBuf[BUFF_SIZE];
+    char txBuf[BUFF_SIZE];
 
     if (!strlen(com))
         return(ERROR);
@@ -349,7 +328,8 @@ RTN_STATUS send_mess(int card, const char *com, char *name)
  
     ctlr = (struct perfMaxUSBController *) motor_state[card]->DevicePrivate;
 
-    if(!fnPerformaxComSendRecv(ctlr->pmaxUSB.handle, (AR_VOID*) com, BUFF_SIZE, BUFF_SIZE, (AR_VOID*) RxBuf))
+    if(!fnPerformaxComSendRecv(ctlr->pmaxUSB.handle, (AR_VOID*) com, 
+                               BUFF_SIZE, BUFF_SIZE, (AR_VOID*) rxBuf))
         err = ERROR;
 
     Debug(2, "send_mess: sending message to card %d, message=%s\n", card, com);
@@ -519,6 +499,8 @@ static int motor_init()
     int status = 0;
     int i;
     EPICSTHREADFUNC perfMaxUSBEventThread();
+    char txBuf[BUFF_SIZE];
+    char rxBuf[BUFF_SIZE];
 
     initialized = true;   /* Indicate that driver is initialized. */
 
@@ -572,8 +554,8 @@ static int motor_init()
                 /* turn off echo */
                 for (i = 0; perfMaxUSBInitCmds[i] != NULL; i++)
                 {
-                    send_mess(card_index, perfMaxUSBInitCmds[i], NULL);
-                    recv_mess(card_index, RxBuf, WAIT);
+                    strcpy(txBuf, perfMaxUSBInitCmds[i]);
+		    pmc100TxRx(pmax100EpicsHandleGet(card_index), txBuf, rxBuf);
                 }
 
                 strcpy(brdptr->ident, "PERFMAXUSB");
@@ -771,7 +753,7 @@ int pmc100EncTrysSet(int card, int attempts)
    return(OK);
 }
 
-int pmc100SlsStatusGet(int card)
+int pmc100SlStatusGet(int card)
 {
    char out[64], in[64];
    int i;
@@ -779,18 +761,29 @@ int pmc100SlsStatusGet(int card)
    strcpy(out, "SLS");
    if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
       return(ERR);
-   printf("SlsStatusGet=%s\n",in);
+   printf("SlStatusGet=%s\n",in);
 
    if ((in[0] == '1') && (in[1] >= '0'))
       i = 10 + in[1] - '0';
    else
       i = in[0] - '0';
 
-   printf("SlsStatusGetI=%d\n",i);
+   printf("SlStatusGetI=%d\n",i);
 
    return(i);
 }
 
+int pmc100SlModeGet(int card)
+{
+   char out[64], in[64];
+   int cnt;
+
+   strcpy(out, "SL");
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   printf("SlModeGet=%c\n", in[0]);
+   return(OK);
+}
 int pmc100EncCntGet(int card)
 {
    char out[64], in[64];
