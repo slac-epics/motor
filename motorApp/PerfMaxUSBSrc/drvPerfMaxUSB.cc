@@ -315,7 +315,6 @@ RTN_STATUS send_mess(int card, const char *com, char *name)
     struct perfMaxUSBController *ctlr;
     RTN_STATUS err = OK;
     char rxBuf[BUFF_SIZE];
-    char txBuf[BUFF_SIZE];
 
     if (!strlen(com))
         return(ERROR);
@@ -402,13 +401,15 @@ PerfMaxUSBConfig(int card,       /* "controller" being configured */
     char rxBuf[BUFF_SIZE];
     char txBuf[BUFF_SIZE];
     int i, cnt;
+    AR_DWORD	numDevices;
 
-    if(!fnPerformaxComGetNumDevices((AR_DWORD*) &cnt))
+    if ( !fnPerformaxComGetNumDevices( &numDevices ) )
     {
         printf("error in fnPerformaxComGetNumDevices\n");
         return(ERROR);
     }
 
+	cnt	= numDevices;
     if(cnt < 1)
     {
         printf( "No motor found\n");
@@ -486,7 +487,8 @@ RTN_STATUS PerfMaxUSBShow(const char* ctlrName)
 
 RTN_STATUS PerfMaxUSBPolSet(int card, int polarity)
 {
-   pmc100PolSet(card, polarity);
+	pmc100PolSet(card, polarity);
+	return(OK);
 }
 
 
@@ -794,7 +796,6 @@ int pmc100SlStatusGet(int card)
 int pmc100SlModeGet(int card)
 {
    char out[64], in[64];
-   int cnt;
 
    strcpy(out, "SL");
    if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
@@ -802,6 +803,7 @@ int pmc100SlModeGet(int card)
    printf("SlModeGet=%c\n", in[0]);
    return(OK);
 }
+
 int pmc100EncCntGet(int card)
 {
    char out[64], in[64];
