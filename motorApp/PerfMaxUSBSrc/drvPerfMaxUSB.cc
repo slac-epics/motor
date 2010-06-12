@@ -322,7 +322,7 @@ RTN_STATUS send_mess(int card, const char *com, char *name)
     /* Check that card exists */
     if (!motor_state[card])
     {
-        errlogPrintf("send_mess - invalid card #%d\n", card);
+        errlogPrintf("send_mess - card #%d not found!\n", card);
         return(ERROR);
     }
  
@@ -564,7 +564,7 @@ static int motor_init()
                 for (i = 0; perfMaxUSBInitCmds[i] != NULL; i++)
                 {
                     strcpy(txBuf, perfMaxUSBInitCmds[i]);
-		    pmc100TxRx(pmax100EpicsHandleGet(card_index), txBuf, rxBuf);
+		    		pmc100TxRx(pmax100EpicsHandleGet(card_index), txBuf, rxBuf);
                 }
 
                 strcpy(brdptr->ident, "PERFMAXUSB");
@@ -607,6 +607,9 @@ static int motor_init()
 int pmc100TxRx(AR_HANDLE Handle, char *outBuf, char *inBuf)  
 {
    int i;
+
+   if ( Handle == NULL )
+   	return ERR;
 
    /* we do this twice because the first time returns incorrect status */
    for (i = 0; i < 2; i++)
@@ -868,25 +871,11 @@ static AR_HANDLE pmax100EpicsHandleGet(int card)
     /* Check that card exists */
     if (!motor_state[card])
     {
-        errlogPrintf("send_mess - invalid card #%d\n", card);
+        errlogPrintf("pmax100EpicsHandleGet: card #%d not found!\n", card);
         return(NULL);
     }
  
     ctlr = (struct perfMaxUSBController *) motor_state[card]->DevicePrivate;
     return(ctlr->pmaxUSB.handle);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-   
-
 
