@@ -37,6 +37,45 @@
 
 #define BUFF_SIZE 64       /* Maximum length of string to/from perfMaxUSB */
 
+//#define	OK	0
+//#define	ERR	!OK
+#define	ERR	ERROR
+#define	FALSE	0
+#define	TRUE	!FALSE
+
+#define PMC100_TX_LEN		64
+#define	PMC100_RX_LEN		64
+#define	PMC100_STATE_ON		'1'
+#define	PMC100_STATE_OFF	'0'
+#define	PMC100_DIR_POS		TRUE	
+#define	PMC100_DIR_NEG		FALSE	
+
+#define	PMC100_STATUS_CONST_SPD	0x01 << 0x00
+#define	PMC100_STATUS_ACCEL	0x01 << 0x01
+#define	PMC100_STATUS_DECEL	0x01 << 0x02
+#define	PMC100_STATUS_UNDEF_B3	0x01 << 0x03
+#define	PMC100_STATUS_PLUS_LIM	0x01 << 0x04
+#define	PMC100_STATUS_MIN_LIM	0x01 << 0x05
+#define	PMC100_STATUS_LATCH	0x01 << 0x06
+#define	PMC100_STATUS_UNDEF_B7	0x01 << 0x07
+
+#define	PMC100_SLS_STATUS_IDLE	0
+#define	PMC100_SLS_STATUS_MOV	1
+#define	PMC100_SLS_STATUS_COR	2
+#define	PMC100_SLS_STATUS_STOP	3
+#define	PMC100_SLS_STATUS_JOG	4
+#define	PMC100_SLS_STATUS_HOME	5	
+#define	PMC100_SLS_STATUS_RANGE	10	
+#define	PMC100_SLS_STATUS_TRY	11	
+#define	PMC100_SLS_STATUS_UNKWN	-1
+
+static int pmc100TxRx(AR_HANDLE, char*, char*);
+static AR_HANDLE pmax100EpicsHandleGet(int);
+static int pmc100SlsStatusGet(int);
+static int pmc100PosSet(int, int);
+static int pmc100Abort(int);
+static int pmc100EncCntGet(int);
+
 struct mess_queue
 {
     struct mess_node *head;
@@ -81,14 +120,19 @@ static long init();
 static int motor_init();
 static void query_done(int, int, struct mess_node *);
 
+
 static const char *perfMaxUSBInitCmds[] =
 {
-   "LSPD=3000" ,
-   "HSPD=100000",
+   "LSPD=30" ,
+   "HSPD=10000",
    "ACC=300",
    "POL=16",
    "SSPD500",
    "EO=1",
+   "SLR=11",
+   "SLT=200",
+   "SLR=16",
+   "SLS=1",
    NULL,
 };
 
@@ -196,7 +240,7 @@ static void start_status(int card)
  * set_status()
  ************************************************************/
 
-static int set_status(int card, int signal)
+int set_status(int card, int signal)
 {
     register struct mess_info *motor_info;
     struct mess_node *nodeptr;
@@ -204,6 +248,7 @@ static int set_status(int card, int signal)
     long motorData;
     bool ls_active = false;
     msta_field status;
+    int slsStatus;
 
     motor_info = &(motor_state[card]->motor_info[signal]);
     nodeptr = motor_info->motor_motion;
@@ -213,8 +258,7 @@ static int set_status(int card, int signal)
 
     /* Get the motor status (ts) */
     memset(TxBuf, '\0', sizeof(TxBuf));
-    sprintf(TxBuf, "MST");
-    send_mess(card, TxBuf, 0);
+    //sprintf(TxBuf, "MST");
     //printf("RxBuf %c %s\n", RxBuf[0], RxBuf);
 
     motor_info->encoder_position = 0;
@@ -224,18 +268,38 @@ static int set_status(int card, int signal)
     status.Bits.RA_PLUS_LS = 0;
     status.Bits.RA_PROBLEM = 0;
 
+    slsStatus = pmc100SlsStatusGet(card);
+    if (slsStatus == PMC100_SLS_STATUS_IDLE)
+        status.Bits.RA_DONE = 1;
+    else if ((slsStatus == PMC100_SLS_STATUS_RANGE) ||
+             (slsStatus == PMC100_SLS_STATUS_TRY))
+    {
+        status.Bits.RA_DONE = 0;
+        pmc100Abort(card);
+        pmc100PosSet(card, motor_info->position);
+    }
+    else 
+        status.Bits.RA_DONE = 0;
+  
+
+#if	0 
     if (RxBuf[0] == 0x30)
         status.Bits.RA_DONE = 1;
     else
         status.Bits.RA_DONE = 0;
+#endif
 
-   // if (status.Bits.RA_DONE & 1)
-   //     puts("done moving");;
 
+
+    //if (status.Bits.RA_DONE & 1)
+    //    puts("done moving");;
+
+#if	0
     sprintf(TxBuf, "PX");
     send_mess(card, TxBuf, 0);
+#endif
 
-    motorData = atoi(RxBuf);
+    motorData = pmc100EncCntGet(card); 
     //printf("RxBuf %s\n", RxBuf);
     //printf("motorData1 %ld\n", motorData);
        
@@ -357,24 +421,17 @@ PerfMaxUSBConfig(int card,       /* "controller" being configured */
     char rxBuf[BUFF_SIZE];
     char txBuf[BUFF_SIZE];
     int i, cnt;
-    RTN_STATUS err = ERROR;
-
-    if (motor_state[card] != NULL)
-    {
-        printf("Car %d already assigned!!!\n", card);
-        return(err);
-    }
 
     if(!fnPerformaxComGetNumDevices((AR_DWORD*) &cnt))
     {
         printf("error in fnPerformaxComGetNumDevices\n");
-        return(err);
+        return(ERROR);
     }
 
     if(cnt < 1)
     {
         printf( "No motor found\n");
-        return(err);
+        return(ERROR);
     }
 
     printf("There are %d devices\n", cnt);
@@ -382,62 +439,45 @@ PerfMaxUSBConfig(int card,       /* "controller" being configured */
     if(!fnPerformaxComSetTimeouts(5000,5000))
     {
         printf("Error setting timeouts\n");
-        return(err);
+        return(ERROR);
     }
 
-
-    for (i = 0; i < cnt; i++) 
+    if (motor_state[card] == NULL)
     {
-        if(!fnPerformaxComOpen(i, &handle))
-        {
-            printf( "Error opening device\n");
-            continue; 
-        }
 
-        if(!fnPerformaxComFlush(handle))
+        for (i = 0; i < cnt; i++) 
         {
-            printf("Error flushing the coms\n");
+            if(!fnPerformaxComOpen(i,&handle))
+            {
+                printf( "Error opening device\n");
+                continue; 
+            }
+
+            if(!fnPerformaxComFlush(handle))
+            {
+                printf("Error flushing the coms\n");
+                continue;
+            }
+
+            strcpy(txBuf, "DN"); //read current
+            if(!fnPerformaxComSendRecv(handle, txBuf, 64,64, rxBuf))
+                puts("nothing there?");
+
+            else if(!strcmp(rxBuf, name))
+            {
+                motor_state[card] = (struct controller *) malloc(sizeof(struct controller));
+                ctlr =  (struct perfMaxUSBController*) malloc(sizeof(struct perfMaxUSBController));
+                motor_state[card]->DevicePrivate = (void*) ctlr; 
+                strcpy(ctlr->name, rxBuf);
+
+                ctlr->pmaxUSB.found = 1;
+                ctlr->pmaxUSB.handle = handle;
+                break;
+            }
             fnPerformaxComClose(handle);
-            continue;
-        }
-
-        strcpy(txBuf, "DN"); //read current
-        if(!fnPerformaxComSendRecv(handle, txBuf, 64,64, rxBuf))
-        {
-            puts("nothing there?");
-            fnPerformaxComClose(handle);
-	    continue;
-        }
-
-        // break if we get a match
-        else if(!strcmp(rxBuf, name))
-            break;
-
-        else
-        {
-            printf("The name we got is %s\n", rxBuf);
-            usb_reset(handle);
-            fnPerformaxComClose(handle);
-            continue;
         }
     }
-
-    if (i >= cnt)
-        err = ERROR;
-    else
-    {
-        printf("We found %s i = %d\n", name, i);
-
-        motor_state[card] = (struct controller *) malloc(sizeof(struct controller));
-        ctlr =  (struct perfMaxUSBController*) malloc(sizeof(struct perfMaxUSBController));
-        motor_state[card]->DevicePrivate = (void*) ctlr; 
-        strcpy(ctlr->name, rxBuf);
-
-        ctlr->pmaxUSB.found = 1;
-        ctlr->pmaxUSB.handle = handle;
-        err = OK;
-    }
-    return(err);
+    return(OK);
 }
 
 RTN_STATUS PerfMaxUSBShow(const char* ctlrName)
@@ -572,4 +612,268 @@ static int motor_init()
 
     return (0);
 }
+
+int pmc100TxRx(AR_HANDLE Handle, char *outBuf, char *inBuf)  
+{
+   int i;
+
+   /* we do this twice because the first time returns incorrect status */
+   for (i = 0; i < 2; i++)
+   {
+      if(!fnPerformaxComSendRecv(Handle, outBuf, PMC100_TX_LEN, PMC100_RX_LEN, inBuf))
+      {
+         printf("Could not send\n");
+         return(ERR);
+      }
+   }
+   return(OK);
+}
+
+int pmc100Abort(int card)
+{
+   char out[64], in[64];
+
+   strcpy(out, "ABORT");
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   printf("Abort=%s\n", in); 
+   return(OK);
+}
+
+
+int pmc100DrvrPwrSet(int card, int state)
+{
+   char out[64], in[64];
+
+   sprintf(out, "EO=%s", state?"1":"0");
+   pmc100TxRx(pmax100EpicsHandleGet(card), out, in);
+   return(OK);
+}
+
+int pmc100MtrIdleGet(int card)
+{
+   char out[64], in[64];
+
+   sprintf(out, "MST");
+
+   pmc100TxRx(pmax100EpicsHandleGet(card), out, in);
+   return((in[0] != '?') && ((in[0] ^ (PMC100_STATUS_ACCEL|PMC100_STATUS_DECEL) == 0)?OK:ERR));
+}
+
+int pmc100PosSet(int card, int pos)
+{
+   char out[64], in[64];
+//   int i;
+
+      sprintf(out, "X%d", pos);
+      pmc100TxRx(pmax100EpicsHandleGet(card), out, in); 
+      printf("PosSet=%s\n",in);
+#if	0
+   do
+   {
+      sprintf(out, "X%d", pos);
+      pmc100TxRx(pmax100EpicsHandleGet(card), out, in); 
+      printf("In=%s\n",in);
+      //sleep(1);
+   } while (in[0] != 'O');
+#endif
+   return(OK);
+}
+
+int pmc100PosGet(int card)
+{
+   char out[64], in[64];
+
+   do
+   {
+      sprintf(out, "LTE");
+      pmc100TxRx(pmax100EpicsHandleGet(card), out, in);
+   } while (in[0] != 'O');
+   return(atoi(in));
+}
+  
+int pmc100LatchStatusGet(int card)
+{ 
+   char out[64], in[64];
+   int status;
+
+   memset(in, 0x55, 64);
+   sprintf(out, "LTS");
+   pmc100TxRx(pmax100EpicsHandleGet(card), out, in);
+   status = in[0] << 8|in[1];
+   printf("status=%x\n", status);
+   return(status);
+}
+
+int pmc100SlsModeSet(int card, int state)
+{
+   char out[64], in[64];
+
+   sprintf(out, "SL=%c", state?PMC100_STATE_ON:PMC100_STATE_OFF);
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   printf("SlsModeSet=%s\n",in);
+   return(OK);
+}
+
+int pmc100HomeSet(int card, int direction)
+{
+   char out[64], in[64];
+
+   strcpy(out, direction?"H+":"H-");
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   printf("HomeSet=%s\n",in);
+   return(OK);
+}
+
+int pmc100EncRatioSet(int card, int ratio)
+{
+   char out[64], in[64];
+
+   sprintf(out, "SLR=%d", ratio); 
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   printf("EncRatioSet=%s\n",in);
+   return(OK);
+}
+
+int pmc100EncTolSet(int card, int tolerance)
+{
+   char out[64], in[64];
+
+   sprintf(out, "SLT=%d", tolerance); 
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   printf("EncTolSet=%s\n",in);
+   return(OK);
+}
+
+int pmc100EncCorSet(int card, int correction)
+{
+   char out[64], in[64];
+
+   sprintf(out, "SLE=%d", correction); 
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   printf("EncCorSet=%s\n",in);
+   return(OK);
+}
+
+int pmc100EncTrysSet(int card, int attempts)
+{
+   char out[64], in[64];
+
+   sprintf(out, "SLA=%d", attempts); 
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   printf("EncTrysSet=%s\n",in);
+   return(OK);
+}
+
+int pmc100SlsStatusGet(int card)
+{
+   char out[64], in[64];
+   int i;
+
+   strcpy(out, "SLS");
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   printf("SlsStatusGet=%s\n",in);
+
+   if ((in[0] == '1') && (in[1] >= '0'))
+      i = 10 + in[1] - '0';
+   else
+      i = in[0] - '0';
+
+   printf("SlsStatusGetI=%d\n",i);
+
+   return(i);
+}
+
+int pmc100EncCntGet(int card)
+{
+   char out[64], in[64];
+   int cnt;
+
+   strcpy(out, "EX");
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   cnt = atoi(in);
+   printf("EncCntGet=%d\n", cnt);
+   return(cnt);
+}
+
+int pmc100EncCntSet(int card, int pos)
+{
+   char out[64], in[64];
+
+   sprintf(out, "EX=%d", pos);
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   return(OK);
+}
+
+int pmc100PlsCntGet(int card)
+{
+   char out[64], in[64];
+   int cnt;
+
+   strcpy(out, "PX");
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   cnt = atoi(in);
+   printf("PlsCntGet=%d\n",cnt);
+   return(cnt);
+}
+
+int pmc100PlsCntSet(int card, int pos)
+{
+   char out[64], in[64];
+
+   sprintf(out, "PX=%d", pos);
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   return(OK);
+}
+
+int pmc100Stop(int card)
+{
+   char out[64], in[64];
+
+   strcpy(out, "STOP");
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   printf("Stop=%s\n", in); 
+   return(OK);
+}
+
+static AR_HANDLE pmax100EpicsHandleGet(int card)
+{
+    struct perfMaxUSBController *ctlr;
+
+    /* Check that card exists */
+    if (!motor_state[card])
+    {
+        errlogPrintf("send_mess - invalid card #%d\n", card);
+        return(NULL);
+    }
+ 
+    ctlr = (struct perfMaxUSBController *) motor_state[card]->DevicePrivate;
+    return(ctlr->pmaxUSB.handle);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
 

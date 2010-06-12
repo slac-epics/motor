@@ -228,13 +228,14 @@ static RTN_STATUS perfMaxUSB_build_trans(motor_cmnd command, double *parms, stru
         trans->state = IDLE_STATE;
         break;
     case SET_VEL_BASE:
-        break;
+	break;
         if (ival < 0) ival = 0;
         if (ival > 10000) ival = 10000;
             sprintf(motor_call->message, "LSPD=%ld", ival);
         break;          /* perfMaxUSB does not use base velocity */
     case SET_VELOCITY:
-        break;
+	break;
+        printf("velocity %d\n", ival);
         if (ival < 0) ival = 0;
         if (ival > 10000) ival = 10000;
             sprintf(motor_call->message, "HSPD=%ld", ival);
