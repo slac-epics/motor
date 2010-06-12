@@ -60,5 +60,6 @@ struct perfMaxUSBController
 extern RTN_STATUS PerfMaxUSBSetup(int, int, int);
 extern RTN_STATUS PerfMaxUSBConfig(int, const char *);
 extern RTN_STATUS PerfMaxUSBShow(const char *);
+extern RTN_STATUS PerfMaxUSBPolSet(int, int);
 
 #endif	/* INCdrvpmaxUSBh */

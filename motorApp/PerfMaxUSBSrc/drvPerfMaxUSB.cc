@@ -76,6 +76,7 @@ static int pmc100PosSet(int, int);
 static int pmc100Abort(int);
 static int pmc100EncCntGet(int);
 static int pmc100SlModeGet(int);
+static int pmc100PolSet(int, int);
 
 struct mess_queue
 {
@@ -124,13 +125,13 @@ static void query_done(int, int, struct mess_node *);
 
 static const char *perfMaxUSBInitCmds[] =
 {
-   "LSPD=30" ,
-   "HSPD=5000",
-   "ACC=300",
+   "LSPD=300" ,
+   "HSPD=25000", // was 5000
+   "ACC=500", // was 300
    "POL=16",
    "SSPD500",
    "EO=1",
-   "SLR=10",
+   "SLR=50", // was 10
    "SLT=200",
    "SLR=16",
    "SL=1",
@@ -397,7 +398,7 @@ PerfMaxUSBConfig(int card,       /* "controller" being configured */
         const char *name)   /* asyn server task name */
 {
     struct perfMaxUSBController *ctlr;
-    AR_HANDLE handle;
+    AR_HANDLE handle = 0;
     char rxBuf[BUFF_SIZE];
     char txBuf[BUFF_SIZE];
     int i, cnt;
@@ -454,6 +455,7 @@ PerfMaxUSBConfig(int card,       /* "controller" being configured */
                 ctlr->pmaxUSB.handle = handle;
                 break;
             }
+            usb_reset(handle);
             fnPerformaxComClose(handle);
         }
     }
@@ -480,6 +482,11 @@ RTN_STATUS PerfMaxUSBShow(const char* ctlrName)
         }
     }
     return(OK);
+}
+
+RTN_STATUS PerfMaxUSBPolSet(int card, int polarity)
+{
+   pmc100PolSet(card, polarity);
 }
 
 
@@ -739,6 +746,17 @@ int pmc100EncCorSet(int card, int correction)
    if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
       return(ERR);
    printf("EncCorSet=%s\n",in);
+   return(OK);
+}
+
+int pmc100PolSet(int card, int polarity)
+{
+   char out[64], in[64];
+
+   sprintf(out, "POL=%d", polarity); 
+   if (pmc100TxRx(pmax100EpicsHandleGet(card), out, in))
+      return(ERR);
+   printf("PolaritySet=%s\n",in);
    return(OK);
 }
 
