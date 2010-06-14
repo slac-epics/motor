@@ -131,6 +131,11 @@ Last Modified:	2007/04/06 18:37:38
 volatile int motorRecordDebug = 0;
 extern "C" {epicsExportAddress(int, motorRecordDebug);}
 
+volatile int tillhack_enabled = 1;
+volatile int tillhack_count   = 0;
+
+volatile int tillhack_cb_cancelled = 0;
+
 
 /*** Forward references ***/
 
@@ -379,7 +384,9 @@ static void callbackFunc(struct callback *pcb)
 	pmr->mip &= ~MIP_DELAY_REQ;	/* Turn off REQ. */
 	pmr->mip |= MIP_DELAY_ACK;	/* Turn on ACK. */
 	scanOnce(pmr);
-    }
+    } else {
+		tillhack_cb_cancelled++;
+	}
 }
 
 
@@ -1599,8 +1606,24 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 	    /* Cancel any operations. */
 	    if (pmr->mip & MIP_HOME)
 		clear_buttons(pmr);
+
+		if ( (pmr->mip & MIP_DELAY_REQ) && tillhack_enabled ) {
+			/* If someone tries to STOP while we're waiting for
+			 * being processed by the callback DONT effectively
+			 * cancel the callback by clearing MIP_DELAY_REQ;
+			 * this would result in DMOV never being set!
+			 *
+			 * Instead, just raise MIP_STOP and wait for the callback
+			 * to do further work...
+			 *
+			 * T.S., 20080915.
+			 */
+			pmr->mip |= MIP_STOP;
+			tillhack_count++;
+		} else {
+	    	pmr->mip = MIP_STOP;
+		}
 	    
-	    pmr->mip = MIP_STOP;
 	    MARK(M_MIP);
 	    INIT_MSG();
 	    WRITE_MSG(STOP_AXIS, NULL);
@@ -1630,9 +1653,9 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 	}
     }
 
-    /*** Handle changes in motor/encoder resolution, and in .ueip. ***/
+    /*** Handle changes in motor/encoder resolution, and in .ueip/urip. ***/
     mmap_bits.All = pmr->mmap; /* Initialize for MARKED. */
-    if (MARKED(M_MRES) || MARKED(M_ERES) || MARKED(M_UEIP))
+    if (MARKED(M_MRES) || MARKED(M_ERES) || MARKED(M_UEIP) || MARKED(M_URIP))
     {
 	/* encoder pulses, motor pulses */
 	double ep_mp[2];
@@ -2571,6 +2594,7 @@ velcheckB:
 
 	/* new urip flag */
     case motorRecordURIP:
+	MARK(M_URIP);
 	break;
 
 	/* Set to SET mode  */

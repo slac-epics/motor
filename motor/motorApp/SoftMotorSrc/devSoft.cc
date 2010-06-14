@@ -67,7 +67,7 @@ NOTES...
 #ifdef __GNUG__
   #ifdef	DEBUG
     #define Debug(l, f, args...) {if (l <= devSoftdebug) \
-				    errlogPrintf(f, ## args);}
+				    printf(f, ## args);}
   #else
     #define Debug(l, f, args...)
   #endif

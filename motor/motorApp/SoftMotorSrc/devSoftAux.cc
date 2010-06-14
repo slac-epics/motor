@@ -196,7 +196,6 @@ STATIC EPICSTHREADFUNC soft_motor_task(void *parm)
     }
 
     ellFree(&soft_motor_list);
-    epicsThreadSuspendSelf();		/* Wait Forever. */
     return(NULL);
 }
 
