@@ -34,6 +34,7 @@
 # The following is only needed for the motor examples in iocBoot.
 #!MOTOR=$(TOP)
 
-ASYN=/afs/slac/g/spear/epics/modules/asyn/asyn-R4-13-1-spear1
+ASYN=/afs/slac/g/spear/epics/modules/asyn/asyn-R4-14-spear1
+SNCSEQ=/afs/slac/g/spear/epics/modules/seq/seq-R2-0-12-spear1
 include $(TOP)/../../configure/RELEASE-master
 include $(TOP)/../../configure/CONFIG_SITE-master
