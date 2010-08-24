@@ -16,7 +16,9 @@ DIRS += MotorSimSrc
 
 # All the following modules require ASYN.
 ifdef ASYN
+ifdef SNCSEQ
 DIRS += NewportSrc
+endif
 DIRS += ImsSrc
 DIRS += AcsSrc
 DIRS += MclennanSrc
