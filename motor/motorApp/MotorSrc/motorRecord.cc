@@ -383,7 +383,7 @@ static void callbackFunc(struct callback *pcb)
     {
 	pmr->mip &= ~MIP_DELAY_REQ;	/* Turn off REQ. */
 	pmr->mip |= MIP_DELAY_ACK;	/* Turn on ACK. */
-	scanOnce(pmr);
+	scanOnce((dbCommon *)pmr);
     } else {
 		tillhack_cb_cancelled++;
 	}
