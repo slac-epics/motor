@@ -1,8 +1,8 @@
 # FILENAME...   motorRecord.dbd
 
-# Version:       $Revision: 10799 $
-# Modified By:   $Author: sluiter $
-# Last Modified: $Date: 2010-04-21 13:24:59 -0500 (Wed, 21 Apr 2010) $
+# Version:       $Revision: 1.1.1.4 $
+# Modified By:   $Author: saa $
+# Last Modified: $Date: 2010/04/21 18:24:59 $
 # HeadURL:       $URL $
 
 # Experimental Physics and Industrial Control System (EPICS)
@@ -278,6 +278,11 @@ recordtype(motor) {
                 promptgroup(GUI_COMMON)
                 interest(1)
         }
+	field(RES,DBF_DOUBLE) {
+		prompt("Readback Step Size (EGU)")
+		special(SPC_NOMOD)
+		interest(1)
+	}
         field(UEIP,DBF_MENU) {
                 prompt("Use Encoder If Present")
                 promptgroup(GUI_COMMON)
@@ -289,6 +294,7 @@ recordtype(motor) {
         field(URIP,DBF_MENU) {
                 prompt("Use RDBL Link If Presen")
                 promptgroup(GUI_COMMON)
+		special(SPC_MOD)
                 pp(TRUE)
                 interest(1)
                 menu(motorUEIP)

@@ -3,9 +3,9 @@ FILENAME...	drvOms58.h
 USAGE...	OMS driver level "include" information that is specific to OMS
 		model VME58.
 
-Version:	$Revision: 1.4 $
-Modified By:	$Author: sluiter $
-Last Modified:	$Date: 2005-03-21 18:14:12 $
+Version:	1.4
+Modified By:	sluiter
+Last Modified:	2005/03/21 18:14:12
 */
 
 /*
@@ -248,15 +248,15 @@ typedef struct
 /* OMS VME dual port memory map */
 struct vmex_motor
 {
-    epicsInt16 inPutIndex;
-    epicsInt16 outGetIndex;
-    epicsInt16 inBuffer[BUFFER_SIZE];
-    epicsInt16 reserved0[254];
+    epicsUInt16 inPutIndex;
+    epicsUInt16 outGetIndex;
+    epicsUInt16 inBuffer[BUFFER_SIZE];
+    epicsUInt16 reserved0[254];
     MOTOR_DATA_REGS data[OMS_NUM_CHANNELS];
-    epicsInt16 outPutIndex;
-    epicsInt16 inGetIndex;
-    epicsInt16 outBuffer[BUFFER_SIZE];
-    epicsInt16 reserved1[750];
+    epicsUInt16 outPutIndex;
+    epicsUInt16 inGetIndex;
+    epicsUInt16 outBuffer[BUFFER_SIZE];
+    epicsUInt16 reserved1[750];
     MOTOR_CNTRL_REGS control;
 };
 
