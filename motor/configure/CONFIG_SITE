@@ -29,3 +29,6 @@ CROSS_COMPILER_TARGET_ARCHS =  $(CROSS_COMPILER_TARGET_VME)
 # define INSTALL_LOCATION here
 #INSTALL_LOCATION=<fullpathname>
 
+# uncomment for architectures where the
+# portable endian conversion header is available
+USR_CXXFLAGS += -DHAS_IOOPS_H
