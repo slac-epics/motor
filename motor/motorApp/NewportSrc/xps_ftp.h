@@ -23,9 +23,7 @@
 #include <winsock.h>
 #include <windows.h>
 #else
-#ifdef __rtems__
-#include <rtems.h>
-#endif
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
