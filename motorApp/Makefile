@@ -11,8 +11,8 @@ DIRS += MotorSrc
 # Select individual device/driver modules by removing the "#!" comment.
 #!DIRS += DeltaTauSrc
 #!DIRS += OmsSrc
-#!DIRS += SoftMotorSrc
-#!DIRS += MotorSimSrc
+DIRS += SoftMotorSrc
+DIRS += MotorSimSrc
 
 # All the following modules require ASYN.
 ifdef ASYN
