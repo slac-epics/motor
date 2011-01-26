@@ -279,6 +279,12 @@ static int set_status(int card, int signal)
         }
     }
 
+    /* check the power-cycle flag */
+    send_mess(card, "PR PU", MDrivePlus_axis[signal]);
+    recv_mess(card, buff, 1);
+
+    status.Bits.RA_POWERUP = atoi(buff);
+
     /*
      * Parse motor position
      * Position string format: 1TP5.012,2TP1.123,3TP-100.567,...

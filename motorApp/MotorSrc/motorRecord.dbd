@@ -766,4 +766,35 @@ recordtype(motor) {
 		interest(1)
                 menu(motorRMOD)
 	}
+	field(IMS,DBF_USHORT) {
+                initial("0")
+		prompt("IMS Motor Or Not")
+		special(SPC_NOMOD)
+		interest(1)
+	}
+	field(MPGM,DBF_STRING) {
+		prompt("Path To The MCode Program")
+		size(40)
+		special(SPC_NOMOD)
+		interest(1)
+	}
+	field(SDLT,DBF_ULONG) {
+		initial("30")
+		prompt("Delay Seconds To Save, 0 -- No Save")
+		interest(1)
+	}
+	field(MSEC,DBF_ULONG) {
+		prompt("UTC Seconds When Last Move Was Done")
+		special(SPC_NOMOD)
+		interest(1)
+	}
+	field(PDIF,DBF_DOUBLE) {
+		prompt("Difference val-rbv")
+		special(SPC_NOMOD)
+	}
+	field(PDBD,DBF_DOUBLE) {
+		initial("0.01")
+		prompt("Position Torlerance")
+		interest(1)
+	}
 }

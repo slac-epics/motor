@@ -140,6 +140,7 @@ Last Modified:  2009/06/22 18:06:37
 #include    <dbEvent.h>
 #include    <devSup.h>
 #include    <math.h>
+#include    <time.h>
 
 #define GEN_SIZE_OFFSET
 #include    "motorRecord.h"
@@ -327,6 +328,7 @@ typedef union
         unsigned int M_JOGR     :1;
         unsigned int M_HOMF     :1;
         unsigned int M_HOMR     :1;
+        unsigned int M_MSEC     :1;
     } Bits;
 } nmap_field;
 
@@ -475,6 +477,7 @@ static long init_record(dbCommon* arg, int pass)
         pmr->vers = VERSION;
         return(OK);
     }
+
     /* Check that we have a device-support entry table. */
     pdset = (struct motor_dset *) pmr->dset;
     if (pdset == NULL)
@@ -482,6 +485,7 @@ static long init_record(dbCommon* arg, int pass)
         recGblRecordError(S_dev_noDSET, (void *) pmr, (char *) errmsg);
         return (S_dev_noDSET);
     }
+
     /* Check that DSET has pointers to functions we need. */
     if ((pdset->base.number < 8) ||
         (pdset->update_values == NULL) ||
@@ -534,6 +538,38 @@ static long init_record(dbCommon* arg, int pass)
                 return(ERROR);
         }
     }
+
+    if ( pmr->ims == 1 )
+    {
+        INIT_MSG();
+        WRITE_MSG(CLEAR_MCODE, NULL);
+        SEND_MSG();
+
+        sleep( 3 );
+
+        if ( pmr->mpgm != "" )    /* load the MCode program to the controller */
+        {
+            char line[64];
+            FILE *fp = fopen( pmr->mpgm, "r" );
+
+            while( 1 )
+            {
+                fgets( line, 64, fp );
+                if ( ferror(fp) || feof(fp) ) break;
+
+                INIT_MSG();
+                WRITE_MSG(LOAD_MCODE, (double *)line);
+                SEND_MSG();
+
+                Debug(3, "%s", line);
+            }
+
+            fclose(fp);
+        }
+
+        pmr->msec = 0;
+    }
+
     /*
      * .dol (Desired Output Location) is a struct containing either a link to
      * some other field in this database, or a constant intended to initialize
@@ -609,6 +645,7 @@ static long init_record(dbCommon* arg, int pass)
     }
 
     monitor(pmr);
+
     return(OK);
 }
 
@@ -899,6 +936,7 @@ static void maybeRetry(motorRecord * pmr)
     {
         /* No, we're not close enough.  Try again. */
         Debug(1, "maybeRetry: not close enough; diff = %f\n", pmr->diff);
+
         /* If max retry count is zero, retry is disabled */
         if (pmr->rtry == 0)
         {
@@ -951,6 +989,12 @@ static void maybeRetry(motorRecord * pmr)
         {
             pmr->spmg = motorSPMG_Pause;
             MARK(M_SPMG);
+        }
+
+        if ( pmr->ims == 1 )
+        {
+            pmr->msec = time(NULL);
+            MARK_AUX(M_MSEC);
         }
     }
 }
@@ -1124,8 +1168,7 @@ static long process(dbCommon *arg)
      * this is a callback.
      */
     process_reason = (*pdset->update_values) (pmr);
-    if (pmr->msta != old_msta)
-        MARK(M_MSTA);
+    Debug(4, "process: proc %d, reason %d, mip %d\n", pmr->proc, process_reason, pmr->mip);
 
     if ((process_reason == CALLBACK_DATA) || (pmr->mip & MIP_DELAY_ACK))
     {
@@ -1315,12 +1358,40 @@ enter_do_work:
         status = do_work(pmr, process_reason);
     }
 
+    if ( (pmr->ims  == 1) && (process_reason != CALLBACK_DATA) &&
+         (pmr->proc == 1) && (pmr->sdlt > 0) && (pmr->msec > 0) )
+    {
+        unsigned long nsec = time(NULL);
+        if ( (nsec - pmr->msec) > pmr->sdlt )               /* save the state */
+        {
+            INIT_MSG();
+            WRITE_MSG(SAVE_TO_NVM, NULL);
+            SEND_MSG();
+
+            pmr->msec = 0;
+            MARK_AUX(M_MSEC);
+            Debug(3, "\"%s\" saved the state\n", pmr->name);
+        }
+    }
+
     /* Fire off readback link */
     status = dbPutLink(&(pmr->rlnk), DBR_DOUBLE, &(pmr->rbv), 1);
 
     if (pmr->dmov)
+    {
+        msta_field msta;
+
+        msta.All = pmr->msta;
+        if ( fabs(pmr->pdif) > pmr->pdbd ) msta.Bits.EA_SLIP_STALL = 1;
+        else                               msta.Bits.EA_SLIP_STALL = 0;
+
+        pmr->msta = msta.All;
+
         recGblFwdLink(pmr);     /* Process the forward-scan-link record. */
+    }
     
+    if ( pmr->msta != old_msta ) MARK(M_MSTA);
+
 process_exit:
     if (process_reason == CALLBACK_DATA && pmr->stup == motorSTUP_BUSY)
     {
@@ -1332,6 +1403,7 @@ process_exit:
     recGblGetTimeStamp(pmr);
     alarm_sub(pmr);                     /* If we've violated alarm limits, yell. */
     monitor(pmr);               /* If values have changed, broadcast them. */
+    pmr->proc = 0;
     pmr->pact = 0;
     Debug(4, "process:---------------------- end; motor \"%s\"\n", pmr->name);
     return (status);
@@ -3132,36 +3204,38 @@ static void alarm_sub(motorRecord * pmr)
     msta_field msta;
     int status;
 
+    msta.All  = pmr->msta;
+
+    /* disable all dbPutFields when POWERUP bit is set */
+    pmr->disp = msta.Bits.RA_PROBLEM | msta.Bits.CNTRL_COMM_ERR | msta.Bits.RA_POWERUP;
+
     if (pmr->udf == TRUE)
     {
-        status = recGblSetSevr((dbCommon *) pmr, UDF_ALARM, INVALID_ALARM);
+        status = recGblSetSevr((dbCommon *) pmr, UDF_ALARM,   INVALID_ALARM);
         return;
     }
+    else if ((msta.Bits.RA_PROBLEM != 0) || (msta.Bits.CNTRL_COMM_ERR != 0))
+    {
+        status = recGblSetSevr((dbCommon *) pmr, COMM_ALARM,  INVALID_ALARM);
+        return;
+    }
+    else if ((msta.Bits.RA_POWERUP != 0) || (msta.Bits.EA_SLIP_STALL  != 0))
+    {
+        status = recGblSetSevr((dbCommon *) pmr, STATE_ALARM, MAJOR_ALARM  );
+        return;
+    }
+
     /* limit-switch and soft-limit violations */
     if (pmr->hlsv && (pmr->hls || (pmr->dval > pmr->dhlm)))
     {
         status = recGblSetSevr((dbCommon *) pmr, HIGH_ALARM, pmr->hlsv);
         return;
     }
+
     if (pmr->hlsv && (pmr->lls || (pmr->dval < pmr->dllm)))
     {
-        status = recGblSetSevr((dbCommon *) pmr, LOW_ALARM, pmr->hlsv);
+        status = recGblSetSevr((dbCommon *) pmr, LOW_ALARM,  pmr->hlsv);
         return;
-    }
-    
-    msta.All = pmr->msta;
-
-    if (msta.Bits.CNTRL_COMM_ERR != 0)
-    {
-        msta.Bits.CNTRL_COMM_ERR =  0;
-        pmr->msta = msta.All;
-        MARK(M_MSTA);
-        status = recGblSetSevr((dbCommon *) pmr, COMM_ALARM, INVALID_ALARM);
-    }
-
-    if ((msta.Bits.EA_SLIP_STALL != 0) || (msta.Bits.RA_PROBLEM != 0))
-    {
-      status = recGblSetSevr((dbCommon *) pmr, STATE_ALARM, MAJOR_ALARM);
     }
 
     return;
@@ -3356,6 +3430,9 @@ static void post_MARKed_fields(motorRecord * pmr, unsigned short mask)
     if ((local_mask = mask | (MARKED_AUX(M_HOMR) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->homr, local_mask);
 
+    if ((local_mask = mask | (MARKED_AUX(M_MSEC) ? DBE_VAL_LOG : 0)))
+        db_post_events(pmr, &pmr->msec, local_mask);
+
     UNMARK_ALL;
 }
 
@@ -3480,6 +3557,8 @@ static void
     MARK(M_DIFF);
     pmr->rdif = NINT(pmr->diff / pmr->mres);
     MARK(M_RDIF);
+
+    pmr->pdif = pmr->val - pmr->rbv;
 }
 
 /* Calc and load new raw position into motor w/out moving it. */
