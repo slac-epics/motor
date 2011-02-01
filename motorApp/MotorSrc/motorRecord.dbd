@@ -772,8 +772,14 @@ recordtype(motor) {
 		special(SPC_NOMOD)
 		interest(1)
 	}
+	field(MENV,DBF_STRING) {
+		prompt("Dir For The MCode Program, ENV Variable")
+		size(40)
+		special(SPC_NOMOD)
+		interest(1)
+	}
 	field(MPGM,DBF_STRING) {
-		prompt("Path To The MCode Program")
+		prompt("Actual Path To The MCode Program")
 		size(40)
 		special(SPC_NOMOD)
 		interest(1)

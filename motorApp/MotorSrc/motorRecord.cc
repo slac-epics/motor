@@ -547,10 +547,14 @@ static long init_record(dbCommon* arg, int pass)
 
         sleep( 3 );
 
-        if ( pmr->mpgm != "" )    /* load the MCode program to the controller */
+        /* load the MCode program to the controller */
+        if ( ( pmr->menv != "" ) || ( pmr->mpgm != "" ) )
         {
-            char line[64];
-            FILE *fp = fopen( pmr->mpgm, "r" );
+            char line[256];
+            if ( pmr->menv != "" ) strcpy( line, getenv(pmr->menv) );
+            strcat( line, pmr->mpgm );
+
+            FILE *fp = fopen( line, "r" );
 
             while( 1 )
             {
