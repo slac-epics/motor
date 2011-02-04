@@ -545,7 +545,7 @@ static long init_record(dbCommon* arg, int pass)
         WRITE_MSG(CLEAR_MCODE, NULL);
         SEND_MSG();
 
-        sleep( 3 );
+        sleep( 2 );
 
         /* load the MCode program to the controller */
         if ( ( pmr->menv != "" ) || ( pmr->mpgm != "" ) )
@@ -569,6 +569,7 @@ static long init_record(dbCommon* arg, int pass)
             }
 
             fclose(fp);
+            sleep( 2 );
         }
 
         pmr->msec = 0;
@@ -1374,7 +1375,7 @@ enter_do_work:
 
             pmr->msec = 0;
             MARK_AUX(M_MSEC);
-            Debug(3, "\"%s\" saved the state\n", pmr->name);
+            Debug(0, "\"%s\" saved the state\n", pmr->name);
         }
     }
 
@@ -1405,8 +1406,8 @@ process_exit:
 
     /*** We're done.  Report the current state of the motor. ***/
     recGblGetTimeStamp(pmr);
-    alarm_sub(pmr);                     /* If we've violated alarm limits, yell. */
-    monitor(pmr);               /* If values have changed, broadcast them. */
+    alarm_sub(pmr);                  /* If we've violated alarm limits, yell. */
+    monitor(pmr);                  /* If values have changed, broadcast them. */
     pmr->proc = 0;
     pmr->pact = 0;
     Debug(4, "process:---------------------- end; motor \"%s\"\n", pmr->name);
@@ -3494,8 +3495,10 @@ static void
         MARK(M_TDIR);
 
     /* Get states of high, low limit switches. */
-    pmr->rhls = (msta.Bits.RA_PLUS_LS)  &&  pmr->cdir;
-    pmr->rlls = (msta.Bits.RA_MINUS_LS) && !pmr->cdir;
+/*  pmr->rhls = (msta.Bits.RA_PLUS_LS)  &&  pmr->cdir; */
+/*  pmr->rlls = (msta.Bits.RA_MINUS_LS) && !pmr->cdir; */
+    pmr->rhls =  msta.Bits.RA_PLUS_LS ;
+    pmr->rlls =  msta.Bits.RA_MINUS_LS;
 
     ls_active = (pmr->rhls || pmr->rlls) ? true : false;
     
