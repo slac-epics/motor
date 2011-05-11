@@ -1,0 +1,6 @@
+# Aerotech Soloist Driver support
+device(motor,VME_IO,devSoloist,"Soloist")
+driver(drvSoloist)
+
+registrar(AerotechRegister)
+
