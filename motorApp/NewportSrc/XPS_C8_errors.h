@@ -1,6 +1,4 @@
-/*///////////////////////////////////////////////////////////////////
-// Created header file XPS_C8_errors.h for XPS function errors
-//*/
+/* Created header file XPS_C8_errors.h for XPS function errors */
 
 /* TCL interpretor error */
 #define ERR_TCL_INTERPRETOR_ERROR 1
