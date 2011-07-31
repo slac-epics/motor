@@ -48,7 +48,14 @@
 /*				Added firmware version parameter								*/
 /*  2.3         Bugs fix 				Jim Chen       	 21/04/2011             */
 /*  	        Fixed detecting encoder logic wrong bug							*/
-/*                                                                              */
+/*  2.4         Bugs fix 				Jim Chen       	 24/06/2011             */
+/*  	        Fixed wrong ioc shell command function name						*/
+/*  2.5         Changes for 64bit Linux	Jim Chen, Mark Rivers 07/07/2011        */
+/*  	        Changed the cast modifier for "this" pointer in ipmIntConnect 	*/
+/*              function by (long) rather than (int) to suit 64bit Linux		*/
+/*              build. Also corrected the PROM reading. Added more info in      */
+/*              report when value > 0.                                          */
+/*              				                                                */
 /********************************************************************************/
 
 #include <stddef.h>
@@ -185,12 +192,12 @@ asynStatus HytecMotorController::SetupCard()
 	   return asynError;
     }
 
-    /* Setup Interrupts. THIS SEEMS NOT RIGHT. 8601 HAS 4 AXIS AND EACH ONE HAS A VECTOR SO 4 ISRs ARE NEEDED?????????????? */
+    /* Setup Interrupts. */
     st=ipmIntConnect(this->ip_carrier,
 			 this->ipslot,
 			 this->vector,
 			 &ISR_8601,
-			 (int)this);
+			 (long)this);
       
     /* If Interrupts NOT Setup OK */
     if (st!=OK) 
@@ -265,12 +272,12 @@ int HytecMotorController::checkprom(char *pr,int expmodel)
 	#define PR_FLAGS 0x14
 	#define PR_BYTES 0x16
 	#define PR_SERN  0x1a
-	#define HYTECID  0x00800300
+	#define HYTECID  0x8003
 
 	char*	hytecstr="  (HyTec Electronics Ltd., Reading, UK)";
 	char	lstr[7];
 	int		manid;
-	epicsUInt16	modelnum;
+	epicsUInt16	modelnum, word;
 	int		ishytec,ismodel,strok, ver;
   
 	/* Begin */
@@ -278,16 +285,23 @@ int HytecMotorController::checkprom(char *pr,int expmodel)
 	/* Debug - Display the passed Address */ 
 	printf("PROM CONTENTS AT: %p\n",pr);
 	/* Read the first 6 Characters from the passed Address */ 
-	strncpy(lstr, (char*)pr, 6);
-	/* Convert it to a String by Null terminating it */
-	lstr[6]=0;
+	word = *((epicsUInt16*)(pr+0));
+	lstr[0] = (char) (word >> 8);
+	lstr[1] = (char) (word & 0xFF);
+	word = *((epicsUInt16*)(pr+2));
+	lstr[2] = (char) (word >> 8);
+	lstr[3] = (char) (word & 0xFF);
+	word = *((epicsUInt16*)(pr+4));
+	lstr[4] = (char) (word >> 8);
+	lstr[5] = 0x20;
+	lstr[6] = 0;
 
 	/* Compare to Expected String (i.e. "VITA4 ") */
 	strok = (strcmp(lstr, IP_DETECT_STR) == 0);
 
 	printf("PROM header: '%6s'\n",lstr);
 	/* Set manid to PROM Address of the Hytec ID */
-	manid    = *((int*)(pr+PR_ID));
+	manid    = (*((epicsUInt16*)(pr+PR_ID)) << 8) + (*((epicsUInt16*)(pr+PR_ID+2)) >> 8);
 	/* Set ishytec to TRUE if Hytec ID is as expected */
 	ishytec  = (manid ==HYTECID);
 	/* Set modelnum to PROM Address of the IP Model */
@@ -296,7 +310,7 @@ int HytecMotorController::checkprom(char *pr,int expmodel)
 	ismodel  = (modelnum==expmodel);
 	
 	/* Display Assorted Information from Reading the PROM */
-	printf("PROM manufacturer ID: 0x%08X",manid);
+	printf("PROM manufacturer ID: 0x%04X",manid);
 	if (ishytec) printf(hytecstr);
 
 	printf("\nPROM model #: 0x%04hx, rev. 0x%04hx, serial # %hu\n",
@@ -339,7 +353,7 @@ int HytecMotorController::checkprom(char *pr,int expmodel)
 		expmodel);
 	}
 	
-	return (/* SCO strok && */ishytec && ismodel);
+	return (/* SCO strok && */ ismodel);
 }
 
 // report
@@ -347,16 +361,34 @@ void HytecMotorController::report(FILE *fp, int level)
 {
     int axis;
     HytecMotorAxis *pAxis;
+	double p, encoderp;
+	int dir, hasencoder, done, hlimit, home, fault, llimit;
 
-    fprintf(fp, "Hytec motor driver %s, numAxes=%d\n", this->portName, this->numAxes);
+    fprintf(fp, "Hytec motor driver %s, numAxes=%d, carrierNo=%d, ipslot=%d\n", 
+			this->portName, this->numAxes, this->ip_carrier, this->ipslot);
 
     if (level > 0) {
         for (axis=0; axis<this->numAxes; axis++) {
             pAxis = getAxis(axis);
-            fprintf(fp, "  axis %d\n"
-                        "    encoder ratio = %f\n", 
-                pAxis->axisNo_, pAxis->encoderRatio);
-
+	    	getDoubleParam(pAxis->axisNo_, motorPosition_, &p);
+	    	getDoubleParam(pAxis->axisNo_, motorEncoderPosition_, &encoderp);
+			getIntegerParam(pAxis->axisNo_, motorStatusDirection_, &dir);
+			getIntegerParam(pAxis->axisNo_, motorStatusHasEncoder_, &hasencoder);
+			getIntegerParam(pAxis->axisNo_, motorStatusDone_, &done);
+			getIntegerParam(pAxis->axisNo_, motorStatusHighLimit_, &hlimit);
+			getIntegerParam(pAxis->axisNo_, motorStatusHome_, &home);
+			getIntegerParam(pAxis->axisNo_, motorStatusProblem_, &fault);
+			getIntegerParam(pAxis->axisNo_, motorStatusLowLimit_, &llimit);
+            fprintf(fp, "  axis %d: encoder ratio = %f\n", pAxis->axisNo_, pAxis->encoderRatio);
+            fprintf(fp, "          abs position = %f\n", p);
+            fprintf(fp, "          encoder position = %f\n", encoderp);
+            fprintf(fp, "          direction = %d\n", dir);
+            fprintf(fp, "          encoder detected = %s\n", hasencoder == 0 ? "No" : "Yes");
+            fprintf(fp, "          Done bit set = %s\n", done == 0 ? "No" : "Yes");
+            fprintf(fp, "          High limit hit = %s\n", hlimit == 0 ? "No" : "Yes");
+            fprintf(fp, "          Low limit hit = %s\n", llimit == 0 ? "No" : "Yes");
+            fprintf(fp, "          Home limit hit = %s\n", home == 0 ? "No" : "Yes");
+            fprintf(fp, "          Faulty = %s\n", fault == 0 ? "No" : "Yes");
         }
     }
 
@@ -388,7 +420,7 @@ asynStatus HytecMotorController::readInt32(asynUser *pasynUser, epicsInt32 *valu
     if ((function == motorPosition_) || (function == motorEncoderPosition_))
     {
 		//update all values and status
-		pAxis->poll(&moving);			
+		pAxis->poll(&moving);		
 	    getDoubleParam(pAxis->axisNo_, function, &dvalue);
 	    *value = (int)dvalue;
 	}else if(function == HytecFWVersion_)
@@ -540,8 +572,6 @@ static void intQueuedTask( void *pDrv )
 			pAxis = pController->getAxis(axis);
            	pController->drvHy8601GetAxisStatus( pAxis, data[axis] );
         }
-
-//printf("\nasynDrover! Pointer=%x\n\n", data[0]);     /* for debug */
 
         /* re-enable interrupt. for Linux IOCs */
         ipmIrqCmd(ipcarrier, ipslot, 0, ipac_irqEnable);
@@ -949,7 +979,7 @@ int acc= GET_REG(this->chanbase, REG_RAMPRATE);
 int lsp= GET_REG(this->chanbase, REG_STARTSTOPSPD);
 int hsp=GET_REG(this->chanbase, REG_HIGHSPD);
 if(this->axisNo_ == 0)
-	printf("moved=%d, error=%d, desired=%d absp=%d csr=%x acc=%d minsp=%d maxsp=%d\n", (int)stepMoved, (int)error , (int)this->desiredMove, (int)this->absPosition, (int)csr, acc, lsp, hsp); 
+printf("%d: moved=%d, error=%d, desired=%d absp=%d csr=%x\n",this->axisNo_, (int)stepMoved, (int)error , (int)this->desiredMove, (int)this->absPosition, (int)csr); 
 */
     setIntegerParam( pC_->motorStatusDirection_,     ((csr & CSR_DIRECTION) != 0 ) );
     setIntegerParam( pC_->motorStatusHasEncoder_,    ((csr & CSR_ENCODDET) != 0) );
@@ -1065,7 +1095,7 @@ static const iocshArg * const Hy8601ConfigArgs[] =  {&Hy8601ConfigArg0,
 													   &Hy8601ConfigArg11,
 													   &Hy8601ConfigArg12};
 
-static const iocshFuncDef configHy8601 = {"Hy8601AsynConfig", 13, Hy8601ConfigArgs};
+static const iocshFuncDef configHy8601 = {"Hytec8601Configure", 13, Hy8601ConfigArgs};
 static void configHy8601CallFunc(const iocshArgBuf *args)
 {
     Hytec8601Configure(args[0].sval, args[1].ival, args[2].ival, args[3].ival, args[4].ival, 

@@ -2,10 +2,10 @@
 FILENAME... drvMM3000.cc
 USAGE...    Motor record driver level support for Newport MM3000.
 
-Version:        $Revision$
-Modified By:    $Author$
-Last Modified:  $Date$
-HeadURL:        $URL$
+Version:        $Revision: 13022 $
+Modified By:    $Author: sluiter $
+Last Modified:  $Date: 2011-07-06 09:15:22 -0700 (Wed, 06 Jul 2011) $
+HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/NewportSrc/drvMM3000.cc $
 */
 
 /*

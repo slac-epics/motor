@@ -79,6 +79,10 @@ Versions: Release 4-5 and higher.
           LOSS OR DAMAGES.
 */
 
+#include <iostream>
+using std::cout;
+using std::endl;
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -184,6 +188,9 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
    * NOTE: at this point the axis objects don't yet exist, but the poller tolerates this */
   startPoller(movingPollPeriod, idlePollPeriod, 10);
   
+  /* Start the thread that will handle move to home commands.*/
+  startMoveToHomeThread();
+
   // Create the event that wakes up the thread for profile moves
   profileExecuteEvent_ = epicsEventMustCreate(epicsEventEmpty);
   
@@ -192,6 +199,12 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
                     epicsThreadPriorityLow,
                     epicsThreadGetStackSize(epicsThreadStackMedium),
                     (EPICSTHREADFUNC)XPSProfileThreadC, (void *)this);
+
+  //By default, automatically enable axes that have been disabled.
+  autoEnable_ = 1;
+
+  /* Flag used to turn off setting MSTA problem bit when the axis is disabled.*/
+  noDisableError_ = 0;
 
 }
 
@@ -225,7 +238,6 @@ void XPSController::report(FILE *fp, int level)
 
 /**
  * Perform a deferred move (a coordinated group move) on all the axes in a group.
- * @param pController Pointer to XPSController structure.
  * @param groupName Pointer to string naming the group on which to perform the group move.
  * @return motor driver status code.
  */
@@ -1269,6 +1281,21 @@ asynStatus XPSController::readbackProfile()
   return status ? asynError : asynSuccess; 
 }
 
+/* Function to disable the automatic enable of axes when moving */ 
+asynStatus XPSController::disableAutoEnable()
+{
+  autoEnable_ = 0;
+  return asynSuccess; 
+}
+
+/* Function to disable the MSTA problem bit in the event of an XPS Disable state 20 */ 
+asynStatus XPSController::noDisableError()
+{
+  noDisableError_ = 1;
+  return asynSuccess; 
+}
+
+
 
 
 /** The following functions have C linkage, and can be called directly or from iocsh */
@@ -1333,6 +1360,35 @@ asynStatus XPSConfigProfile(const char *XPSName,         /* specify which contro
 }
 
 
+asynStatus XPSDisableAutoEnable(const char *XPSName)
+{
+  XPSController *pC;
+  static const char *functionName = "XPSDisableAutoEnable";
+
+  pC = (XPSController*) findAsynPortDriver(XPSName);
+  if (!pC) {
+    cout << driverName << "::" << functionName << " Error port " << XPSName << "not found." << endl;
+    return asynError;
+  }
+
+  return pC->disableAutoEnable();
+}
+
+
+asynStatus XPSNoDisableError(const char *XPSName)
+{
+  XPSController *pC;
+  static const char *functionName = "XPSNoDisableError";
+
+  pC = (XPSController*) findAsynPortDriver(XPSName);
+  if (!pC) {
+    cout << driverName << "::" << functionName << " Error port " << XPSName << "not found." << endl;
+    return asynError;
+  }
+
+  return pC->noDisableError();
+}
+
 
 /* Code for iocsh registration */
 
@@ -1396,13 +1452,37 @@ static void configXPSProfileCallFunc(const iocshArgBuf *args)
 {
   XPSConfigProfile(args[0].sval, args[1].ival, args[2].sval, args[3].sval);
 }
+
+
+/* XPSDisableAutoEnable */
+static const iocshArg XPSDisableAutoEnableArg0 = {"Controller port name", iocshArgString};
+static const iocshArg * const XPSDisableAutoEnableArgs[] = {&XPSDisableAutoEnableArg0};
+static const iocshFuncDef disableAutoEnable = {"XPSDisableAutoEnable", 1, XPSDisableAutoEnableArgs};
+
+static void disableAutoEnableCallFunc(const iocshArgBuf *args)
+{
+  XPSDisableAutoEnable(args[0].sval);
+}
+
+/* XPSNoDisableError */
+static const iocshArg XPSNoDisableErrorArg0 = {"Controller port name", iocshArgString};
+static const iocshArg * const XPSNoDisableErrorArgs[] = {&XPSNoDisableErrorArg0};
+static const iocshFuncDef noDisableError = {"XPSNoDisableError", 1, XPSNoDisableErrorArgs};
+
+static void noDisableErrorCallFunc(const iocshArgBuf *args)
+{
+  XPSNoDisableError(args[0].sval);
+}
+
+
 static void XPSRegister3(void)
 {
   iocshRegister(&configXPS,            configXPSCallFunc);
   iocshRegister(&configXPSAxis,        configXPSAxisCallFunc);
   iocshRegister(&configXPSProfile,     configXPSProfileCallFunc);
+  iocshRegister(&disableAutoEnable,    disableAutoEnableCallFunc);
+  iocshRegister(&noDisableError,       noDisableErrorCallFunc);
 }
 epicsExportRegistrar(XPSRegister3);
-
 
 } // extern "C"

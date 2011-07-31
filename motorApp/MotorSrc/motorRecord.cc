@@ -2,9 +2,9 @@
 FILENAME...     motorRecord.cc
 USAGE...        Motor Record Support.
 
-Version:        $Revision: 11600 $
+Version:        $Revision: 12968 $
 Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2010-09-09 09:42:16 -0700 (Thu, 09 Sep 2010) $
+Last Modified:  $Date: 2011-06-27 07:27:48 -0700 (Mon, 27 Jun 2011) $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/MotorSrc/motorRecord.cc $
 */
 
@@ -144,6 +144,10 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/mot
  *                  - bug fix for save/restore not working when URIP=Yes. DRBV
  *                    not getting initialized. Fixed in initial call to
  *                    process_motor_info().
+ * .60 06-23-11 kmp - Added a check for a non-zero MIP before doing retries.
+ * .61 06-24-11 rls - No retries after backlash or jogging. Move setting
+ *                    MIP <- DONE and reactivating Jog request from
+ *                    postProcess() to maybeRetry().
  *
  */
 
@@ -854,12 +858,6 @@ static long postProcess(motorRecord * pmr)
             SEND_MSG();
             pmr->pp = TRUE;
         }
-        else
-        {
-            pmr->mip = MIP_DONE;        /* Backup distance = 0; skip backlash. */
-            if ((pmr->jogf && !pmr->hls) || (pmr->jogr && !pmr->lls))
-                pmr->mip |= MIP_JOG_REQ;
-        }
         pmr->mip &= ~MIP_JOG_STOP;
         pmr->mip &= ~MIP_MOVE;
     }
@@ -909,13 +907,6 @@ static long postProcess(motorRecord * pmr)
         pmr->mip = MIP_JOG_BL2;
         pmr->pp = TRUE;
     }
-    else if (pmr->mip & MIP_JOG_BL2 || pmr->mip & MIP_MOVE_BL)
-    {
-        /* Completed backlash part of jog command. */
-        pmr->mip = MIP_DONE;
-        if ((pmr->jogf && !pmr->hls) || (pmr->jogr && !pmr->lls))
-            pmr->mip |= MIP_JOG_REQ;
-    }
     /* Save old values for next call. */
     pmr->lval = pmr->val;
     pmr->ldvl = pmr->dval;
@@ -949,6 +940,9 @@ static void maybeRetry(motorRecord * pmr)
                 /* Too many retries. */
                 /* pmr->spmg = motorSPMG_Pause; MARK(M_SPMG); */
                 pmr->mip = MIP_DONE;
+                if ((pmr->jogf && !pmr->hls) || (pmr->jogr && !pmr->lls))
+                    pmr->mip |= MIP_JOG_REQ;
+
                 pmr->lval = pmr->val;
                 pmr->ldvl = pmr->dval;
                 pmr->lrvl = pmr->rval;
@@ -1285,7 +1279,7 @@ static long process(dbCommon *arg)
                         UNMARK(M_DMOV);
                         goto process_exit;
                     }
-                    else if (pmr->stup != motorSTUP_ON)
+                    else if (pmr->stup != motorSTUP_ON && pmr->mip != MIP_DONE)
                     {
                         pmr->mip &= ~MIP_DELAY;
                         MARK(M_MIP);    /* done delaying */
@@ -1775,7 +1769,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 
         /* Set the encoder ratio.  Note this is blatantly device dependent. */
         msta.All = pmr->msta;
-        if (msta.Bits.EA_PRESENT && pmr->ueip)
+        if (msta.Bits.EA_PRESENT)
         {
             /* defend against divide by zero */
             if (fabs(pmr->mres) < 1.e-9)

@@ -8,6 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <iostream>
+using std::endl;
+using std::cout;
+
 #include <epicsThread.h>
 
 #include <asynPortDriver.h>
@@ -49,6 +53,11 @@ asynMotorAxis::asynMotorAxis(class asynMotorController *pC, int axisNo)
   profileReadbacks_       = NULL;
   profileFollowingErrors_ = NULL;
   
+  /* Used to keep track of referencing mode in the driver.*/
+  referencingMode_ = 0;
+  /* Used to enable/disable move to home, and to tell driver how far to move.*/
+  referencingModeMove_ = 0;
+
   // Create the asynUser, connect to this axis
   pasynUser_ = pasynManager->createAsynUser(NULL, NULL);
   pasynManager->connectDevice(pasynUser_, pC->portName, axisNo);
@@ -113,6 +122,33 @@ asynStatus asynMotorAxis::poll(bool *moving)
   return asynError;
 }
 
+/**
+ * Default implementation of doMoveToHome. 
+ * Derived classes need to implement this to actually perform the 
+ * axis move to the home position.
+ */
+asynStatus asynMotorAxis::doMoveToHome()
+{
+  cout << "Dummy implementation of asynMotorAxis::doMoveToHome. Axis: " << pC_->moveToHomeAxis_ << endl;
+  return asynError;
+}
+
+/**
+ * Set method for referencingModeMove_
+ */
+void  asynMotorAxis::setReferencingModeMove(int distance)
+{
+  referencingModeMove_ = distance; 
+}
+
+/**
+ * Get method for referencingModeMove_
+ */
+int  asynMotorAxis::getReferencingModeMove() 
+{
+  return referencingModeMove_;
+}
+
 
 
 /** Set the current position of the motor.
@@ -151,6 +187,7 @@ asynStatus asynMotorAxis::setIntegerParam(int function, int value)
     }
   }
   // Call the base class method
+  pC_->setIntegerParam(axisNo_, pC_->motorStatus_, status);
   return pC_->setIntegerParam(axisNo_, function, value);
 }
 
@@ -192,8 +229,6 @@ asynStatus asynMotorAxis::callParamCallbacks()
   }
   return pC_->callParamCallbacks(axisNo_);
 }
-
-
 
 /* These are the functions for profile moves */
 asynStatus asynMotorAxis::initializeProfile(size_t maxProfilePoints)

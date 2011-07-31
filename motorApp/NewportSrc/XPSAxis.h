@@ -39,6 +39,7 @@ class XPSAxis : public asynMotorAxis
   asynStatus home(double min_velocity, double max_velocity, double acceleration, int forwards);
   asynStatus stop(double acceleration);
   asynStatus poll(bool *moving);
+  asynStatus doMoveToHome();
   asynStatus setPosition(double position);
 
   virtual asynStatus defineProfile(double *positions, size_t numPoints);
