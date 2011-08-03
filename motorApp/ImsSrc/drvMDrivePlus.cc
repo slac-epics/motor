@@ -275,13 +275,35 @@ static int set_status(int card, int signal)
             /* suspicious response */
             recv_mess(card, buff, FLUSH);
             Debug(0, "set_status(): MDrivePlus MV response seems out of sync, retrying...\n");
-            if(retry++ > 5) break;
+            if(retry++ > 3) break;
         }
     }
 
     /* check the power-cycle flag */
-    send_mess(card, "PR PU", MDrivePlus_axis[signal]);
-    recv_mess(card, buff, 1);
+    retry = 0;
+    while(1)
+    {
+        send_mess(card, "PR PU", MDrivePlus_axis[signal]);
+        rtn_state = recv_mess(card, buff, 1);
+        if (rtn_state > 0)
+            break;
+        else                                                   /* no response */
+        {
+            recv_mess(card, buff, FLUSH);
+            if (retry++ > 3)
+            {
+                Debug(0, "set_status(): MDrivePlus no response for PU for 3 tries, ERROR\n");
+                cntrl->status = COMM_ERR;
+                status.Bits.CNTRL_COMM_ERR = 1;
+                status.Bits.RA_PROBLEM     = 1;
+                rtn_state = 1;
+                goto exit;
+            }
+
+            Debug(0, "set_status(): MDrivePlus no response for PU, retrying ...\n");
+            epicsThreadSleep(2.0);
+        }
+    }
 
     status.Bits.RA_POWERUP = atoi(buff);
 
@@ -292,8 +314,30 @@ static int set_status(int card, int signal)
      */
 
     /* epicsThreadSleep(0.1); Sheng Peng */
-    send_mess(card, "PR P", MDrivePlus_axis[signal]);
-    recv_mess(card, buff, 1);
+    retry = 0;
+    while(1)
+    {
+        send_mess(card, "PR P", MDrivePlus_axis[signal]);
+        rtn_state = recv_mess(card, buff, 1);
+        if (rtn_state > 0)
+            break;
+        else                                                   /* no response */
+        {
+            recv_mess(card, buff, FLUSH);
+            if (retry++ > 3)
+            {
+                Debug(0, "set_status(): MDrivePlus no response for P for 3 tries, ERROR\n");
+                cntrl->status = COMM_ERR;
+                status.Bits.CNTRL_COMM_ERR = 1;
+                status.Bits.RA_PROBLEM     = 1;
+                rtn_state = 1;
+                goto exit;
+            }
+
+            Debug(0, "set_status(): MDrivePlus no response for P, retrying ...\n");
+            epicsThreadSleep(2.0);
+        }
+    }
 
     motorData = atof(buff);
 
@@ -338,7 +382,7 @@ static int set_status(int card, int signal)
             {
                 sprintf(buff, "PR I%d", confptr->plusLS);
                 send_mess(card, buff, MDrivePlus_axis[signal]);
-                rtn_state == recv_mess(card, buff, 1);
+                rtn_state = recv_mess(card, buff, 1);
 
                 if (rtn_state <= 0)
                 {
@@ -383,7 +427,7 @@ static int set_status(int card, int signal)
                     /* suspicious response */
                     recv_mess(card, buff, FLUSH);
                     Debug(0, "set_status(): MDrivePlus plusLS response seems out of sync, retrying...\n");
-                    if(retry++ > 5) break;
+                    if(retry++ > 3) break;
                 }
             }
 
@@ -437,7 +481,7 @@ static int set_status(int card, int signal)
                     /* suspicious response */
                     recv_mess(card, buff, FLUSH);
                     Debug(0, "set_status(): MDrivePlus minusLS response seems out of sync, retrying...\n");
-                    if(retry++ > 5) break;
+                    if(retry++ > 3) break;
                 }
             }
         }
@@ -488,7 +532,7 @@ static int set_status(int card, int signal)
                     /* suspicious response */
                     recv_mess(card, buff, FLUSH);
                     Debug(0, "set_status(): MDrivePlus homeLS response seems out of sync, retrying...\n");
-                    if(retry++ > 5) break;
+                    if(retry++ > 3) break;
                 }
             }
         }

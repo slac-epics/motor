@@ -571,9 +571,9 @@ static long init_record(dbCommon* arg, int pass)
             fclose(fp);
             sleep( 2 );
         }
-
-        pmr->msec = 0;
     }
+
+    if ( ( pmr->ims == 1 ) || ( pmr->urip == motorUEIP_Yes ) ) pmr->msec = 0;
 
     /*
      * .dol (Desired Output Location) is a struct containing either a link to
@@ -800,7 +800,7 @@ static long postProcess(motorRecord * pmr)
 
             /* Use if encoder or ReadbackLink is in use. */
             msta.All = pmr->msta;
-            bool use_rel = (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip) || pmr->urip);
+            bool use_rel = (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip));
             double relpos = pmr->diff / pmr->mres;
             double relbpos = ((pmr->dval - pmr->bdst) - pmr->drbv) / pmr->mres;
 
@@ -877,7 +877,7 @@ static long postProcess(motorRecord * pmr)
 
         /* Use if encoder or ReadbackLink is in use. */
         msta.All = pmr->msta;
-        bool use_rel = (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip) || pmr->urip);
+        bool use_rel = (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip));
         double relpos = pmr->diff / pmr->mres;
         double relbpos = ((pmr->dval - pmr->bdst) - pmr->drbv) / pmr->mres;
 
@@ -996,11 +996,17 @@ static void maybeRetry(motorRecord * pmr)
             MARK(M_SPMG);
         }
 
-        if ( pmr->ims == 1 )
+        Debug(0, "\"%s\" reached %f\n", pmr->name, pmr->rbv);
+        if ( ( pmr->ims == 1 )                                       ||
+             ( ( pmr->urip == motorUEIP_Yes ) &&
+               ( pmr->spmg == motorSPMG_Go  ) && ( pmr->ttry < 3 ) )    )
         {
             pmr->msec = time(NULL);
             MARK_AUX(M_MSEC);
         }
+
+        if ( ( pmr->urip == motorUEIP_Yes ) && ( pmr->ttry == 0 ) )
+            pmr->vtgt = pmr->val;
     }
 }
 
@@ -1378,6 +1384,60 @@ enter_do_work:
             Debug(0, "\"%s\" saved the state\n", pmr->name);
         }
     }
+    else if ( (pmr->urip == motorUEIP_Yes) && (pmr->dmov == TRUE) &&
+              (pmr->sdlt > 0) && (pmr->msec > 0) )
+    {
+        unsigned long nsec = time(NULL);
+        if ( (nsec - pmr->msec) > pmr->sdlt )   /* time to check for trimming */
+        {
+            /* get position from external device */
+            double epos;
+            long rstat;
+
+            rstat = dbGetLink( &(pmr->rdbl), DBR_DOUBLE, &epos, 0, 0 );
+            if ( RTN_SUCCESS(rstat) )
+            {
+                if ( pmr->ttry == 3 )       /* enough tries, no more trimming */
+                {
+                    Debug(0, "\"%s\" reached %f after 3 trims\n", pmr->name, epos);
+                    pmr->ttry = 0;
+                }
+                else
+                {
+                    if ( fabs(pmr->vtgt - epos) < pmr->rdbd )
+                    {
+                        if ( pmr->ttry == 0 )
+                        {
+                            Debug(0, "\"%s\" reached %f, no need to trim\n", pmr->name, epos);
+                        }
+                        else
+                        {
+                            Debug(0, "\"%s\" reached %f, no more trimming\n", pmr->name, epos);
+                        }
+
+                        pmr->ttry = 0;
+                    }
+                    else
+                    {
+                        Debug(0, "\"%s\" did not reach %f, trimming ...\n", pmr->name, pmr->vtgt);
+                        pmr->ttry++;
+                        pmr->val += pmr->vtgt - epos;
+                        db_post_events(pmr, &pmr->twf, DBE_VAL_LOG);
+                    }
+                }
+            }
+            else
+            {
+                Debug(0, "\"%s\" failed to get position from external device, no (more) trimming\n", pmr->name);
+                pmr->ttry = 0;
+            }
+
+            pmr->msec = 0;
+        }
+    }
+    else if ( (pmr->urip == motorUEIP_Yes) && (pmr->dmov == TRUE) &&
+              (pmr->hls || pmr->lls) && (pmr->ttry > 0) )
+        pmr->ttry = 0;
 
     /* Fire off readback link */
     status = dbPutLink(&(pmr->rlnk), DBR_DOUBLE, &(pmr->rbv), 1);
@@ -2187,7 +2247,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             msta.All = pmr->msta;
 
             /*** Use if encoder or ReadbackLink is in use. ***/
-            if (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip) || pmr->urip)
+            if (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip))
                 use_rel = true;
             else
                 use_rel = false;
@@ -2348,7 +2408,10 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 if (use_rel == true)
                     WRITE_MSG(MOVE_REL, &position);
                 else
+                {
+                    Debug(0, "\"%s\" move to %f\n", pmr->name, pmr->val);
                     WRITE_MSG(MOVE_ABS, &position);
+                }
                 WRITE_MSG(GO, NULL);
                 SEND_MSG();
             }
@@ -3211,8 +3274,11 @@ static void alarm_sub(motorRecord * pmr)
 
     msta.All  = pmr->msta;
 
-    /* disable all dbPutFields when POWERUP bit is set */
-    pmr->disp = msta.Bits.RA_PROBLEM | msta.Bits.CNTRL_COMM_ERR | msta.Bits.RA_POWERUP;
+    /* disable all dbPutFields during trimming or when problems */
+    if ( pmr->ttry > 0 )
+        pmr->disp = 1;
+    else
+        pmr->disp = msta.Bits.RA_PROBLEM | msta.Bits.CNTRL_COMM_ERR | msta.Bits.RA_POWERUP;
 
     if (pmr->udf == TRUE)
     {
@@ -3473,8 +3539,7 @@ static void
     else
     {
         pmr->rrbv = pmr->rmp;
-        if (pmr->urip == motorUEIP_No)
-            pmr->drbv = pmr->rrbv * pmr->mres;
+        pmr->drbv = pmr->rrbv * pmr->mres;
     }
 
     MARK(M_RMP);
@@ -3534,32 +3599,6 @@ static void
     if (pmr->athm != old_athm)
         MARK(M_ATHM);
 
-
-    /*
-     * If we've got an external readback device, get Dial readback from it, and
-     * propagate to User readback. We do this after motor and encoder readbacks
-     * have been read and propagated to .rbv in case .rdbl is a link involving
-     * that field.
-     */
-    if (pmr->urip && initcall == false)
-    {
-        long rtnstat;
-
-        old_drbv = pmr->drbv;
-        rtnstat = dbGetLink(&(pmr->rdbl), DBR_DOUBLE, &(pmr->drbv), 0, 0 );
-        if (!RTN_SUCCESS(rtnstat))
-            pmr->drbv = old_drbv;
-        else
-        {
-            pmr->drbv *= pmr->rres;
-            pmr->rbv = pmr->drbv * dir + pmr->off;
-            if (pmr->drbv != old_drbv)
-            {
-                MARK(M_DRBV);
-                MARK(M_RBV);
-            }
-        }
-    }
     pmr->diff = pmr->dval - pmr->drbv;
     MARK(M_DIFF);
     pmr->rdif = NINT(pmr->diff / pmr->mres);

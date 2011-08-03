@@ -800,7 +800,16 @@ recordtype(motor) {
 	}
 	field(PDBD,DBF_DOUBLE) {
 		initial("0.01")
-		prompt("Position Torlerance")
+		prompt("Position Tolerance")
 		interest(1)
+	}
+	field(VTGT,DBF_DOUBLE) {
+		prompt("Target Position")
+		special(SPC_NOMOD)
+	}
+	field(TTRY,DBF_SHORT) {
+		initial("0")
+		prompt("Trimming Counter")
+		special(SPC_NOMOD)
 	}
 }
