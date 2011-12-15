@@ -1,0 +1,13 @@
+motor-R6-6-RC2_1-0:
+Added support for SmarActMCS (model 3).
+Added model3 driver for IMS.
+(Initial versions for self-seeding.)
+
+motor-R6-6-RC2-lcls1: 
+From Mark Rivers: Fixes to Hytec and 64-bit linux
+From Matt Pearson: Add asyn Model2 support back in for Newport suport
+
+
+motor-R6-6-RC1-lcls1:
+From Jim Chen: Changes to make Hytec Driver Solid
+See documentation directory for other changes

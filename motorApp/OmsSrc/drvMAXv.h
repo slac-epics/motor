@@ -3,9 +3,9 @@ FILENAME...	drvMAXv.h
 USAGE...	OMS driver level "include" information that is specific to OMS
 		model MAXv.
 
-Version:        $Revision: 10834 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2010-04-29 10:04:39 -0700 (Thu, 29 Apr 2010) $
+Version:        $Revision: 13753 $
+Modified By:    $Author: mwpearson $
+Last Modified:  $Date: 2011-09-23 08:42:04 -0700 (Fri, 23 Sep 2011) $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/OmsSrc/drvMAXv.h $
 */
 
@@ -156,7 +156,9 @@ struct MAXv_motor
     epicsUInt32 msg_semaphore;
     epicsUInt32 queue_flush_mbox;
     epicsUInt32 gpio;
-    epicsUInt32 naA0[19];		/* N/A byte offset 0xA0 - 0xEB. */
+    epicsUInt32 naA0[2];		/* N/A byte offset 0xA0 - 0xA7. */
+    epicsUInt32 absPos[8];
+    epicsUInt32 naC8[9];		/* N/A byte offset 0xC8 - 0xEB. */
     epicsUInt32 flash_pgm_ptr;
     epicsUInt32 outPutIndex;
     epicsUInt32 outGetIndex;
