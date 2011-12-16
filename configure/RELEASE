@@ -7,22 +7,33 @@
 #
 # Note that "#!" marks lines that can be uncommented.
 #
-# Add your declarations here
 
-#!GATEWAY=
-#!SUPPORT=
+# Pickup variable definitions to be used below:
+include $(TOP)/RELEASE_SITE
+
+# =============================================================
+# If you don't want to install into $(TOP) then
+# define INSTALL_LOCATION_APP here
+# =============================================================
+#INSTALL_LOCATION_APP=<fullpathname>
+
+# =============================================================
+# Define location of module tree with respect to
+# EPICS_SITE_TOP -- comes from RELEASE_SITE
+# =============================================================
+EPICS_MODULES=$(MODULES_SITE_TOP)
+
+
 
 # If any motor controller communication mechanism besides the VME backplane is
 # required, then ASYN must be defined.
-# Recommended ASYN release: R4-13
-ASYN=$(SUPPORT)/asyn/4-13
+# Recommended ASYN release: R4-13 or higher
+#ASYN_MODULE_VERSION=asyn-R4-16-lcls2
+ASYN_MODULE_VERSION=asyn-R4-17-RC1-lcls1
 
 # Need the sequencer for the MM4005 and XPS trajectory scanning
-# Recommended SNCSEQ release: R2-0-12
-SNCSEQ=$(SUPPORT)/seq/2-0-12
-
-# Recommended EPICS release: R3.14.11
-EPICS_BASE=$(SUPPORT)/../base-3.14.11
+# Recommended SNCSEQ release: R2-0-12 or higher
+SEQ_MODULE_VERSION=seq-R2-0-11-lcls4
 
 # The following must be defined for the MXmotor device driver.
 #!MX=$(SUPPORT)/mx/mx
@@ -31,9 +42,33 @@ EPICS_BASE=$(SUPPORT)/../base-3.14.11
 # <motor>/motorExApp are built.  To build examples, the top Makefile,
 # <motor>/Makefile must also be edited.
 
-# Recommended IPAC release: R2-10
-#!IPAC=$(SUPPORT)/ipacR2-10
+# Recommended IPAC release: R2-10 or higher
+IPAC_MODULE_VERSION=ipac-R2-11-lcls1
 
 # The following is only needed for the motor examples in iocBoot.
 #!MOTOR=$(TOP)
+
+# ==============================================================
+# Define the version of EPICS BASE that you will use
+# =============================================================
+# Recommended EPICS release: R3.14.11 or higher
+# Note that base-R3-14-8-2-lcls6 is a softlink to base-R3-14-8-2-lcls6_p1
+#BASE_MODULE_VERSION=base-R3-14-8-2-lcls6_p1
+BASE_MODULE_VERSION=$(EPICS_BASE_VER)
+
+# ============================================================
+# External Support
+# ============================================================
+IPAC=$(EPICS_MODULES)/ipac/$(IPAC_MODULE_VERSION)
+ASYN=$(EPICS_MODULES)/asyn/$(ASYN_MODULE_VERSION)
+SNCSEQ=$(EPICS_MODULES)/seq/$(SEQ_MODULE_VERSION)
+
+
+# =================================================================
+# Define EPICS_BASE
+# EPICS_BASE usually appears last so other apps can override stuff:
+# =================================================================
+EPICS_BASE=$(EPICS_SITE_TOP)/base/$(BASE_MODULE_VERSION)
+
+# End of file
 
