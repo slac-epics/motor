@@ -173,7 +173,7 @@ asynStatus asynMotorAxis::setPosition(double position)
 asynStatus asynMotorAxis::setIntegerParam(int function, int value)
 {
   int mask;
-  epicsUInt32 status;
+  epicsUInt32 status=0;
   // This assumes the parameters defined above are in the same order as the bits the motor record expects!
   if (function >= pC_->motorStatusDirection_ && 
       function <= pC_->motorStatusHomed_) {
@@ -259,13 +259,20 @@ asynStatus asynMotorAxis::defineProfile(double *positions, size_t numPoints)
   int direction;
   double scale;
   int status=0;
-  //static const char *functionName = "defineProfile";
+  static const char *functionName = "defineProfile";
+  
+  asynPrint(pC_->pasynUserSelf, ASYN_TRACE_FLOW,
+            "%s:%s: axis=%d, numPoints=%d, positions[0]=%f\n",
+            driverName, functionName, axisNo_, numPoints, positions[0]);
 
   if (numPoints > pC_->maxProfilePoints_) return asynError;
 
   status |= pC_->getDoubleParam(axisNo_, pC_->profileMotorResolution_, &resolution);
   status |= pC_->getDoubleParam(axisNo_, pC_->profileMotorOffset_, &offset);
   status |= pC_->getIntegerParam(axisNo_, pC_->profileMotorDirection_, &direction);
+  asynPrint(pC_->pasynUserSelf, ASYN_TRACE_FLOW,
+            "%s:%s: axis=%d, status=%d, offset=%f direction=%d, resolution=%f\n",
+            driverName, functionName, axisNo_, status, offset, direction, resolution);
   if (status) return asynError;
   if (resolution == 0.0) return asynError;
   
@@ -275,6 +282,9 @@ asynStatus asynMotorAxis::defineProfile(double *positions, size_t numPoints)
   for (i=0; i<numPoints; i++) {
     profilePositions_[i] = (positions[i] - offset)*scale;
   }
+  asynPrint(pC_->pasynUserSelf, ASYN_TRACE_FLOW,
+            "%s:%s: axis=%d, scale=%f, offset=%f positions[0]=%f, profilePositions_[0]=%f\n",
+            driverName, functionName, axisNo_, scale, offset, positions[0], profilePositions_[0]);
   return asynSuccess;
 }
 
@@ -324,7 +334,7 @@ asynStatus asynMotorAxis::readbackProfile()
   int direction;
   int numReadbacks;
   int status=0;
-  static const char *functionName = "readbackProfile";
+  //static const char *functionName = "readbackProfile";
 
   status |= pC_->getDoubleParam(axisNo_, pC_->profileMotorResolution_, &resolution);
   status |= pC_->getDoubleParam(axisNo_, pC_->profileMotorOffset_, &offset);
