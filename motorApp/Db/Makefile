@@ -38,6 +38,7 @@ DB += profileMoveController.template
 DB += profileMoveAxis.template
 DB += profileMoveControllerXPS.template
 DB += profileMoveAxisXPS.template
+DB += IMS_extra.db
 
 #----------------------------------------------------
 # Declare template files which do not show up in DB
