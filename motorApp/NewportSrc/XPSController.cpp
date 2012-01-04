@@ -7,7 +7,7 @@ Modified By:    $Author: sluiter $
 Last Modified:  $Date: 2009-12-09 10:21:24 -0600 (Wed, 09 Dec 2009) $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/trunk/support/motor/vstub/motorApp/NewportSrc/XPSMotorDriver.cpp $
 */
-
+ 
 /*
 Original Author: Mark Rivers
 */
@@ -87,6 +87,7 @@ using std::endl;
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <errno.h>
 
 #include <epicsTime.h>
 #include <epicsThread.h>
@@ -282,11 +283,6 @@ asynStatus XPSController::processDeferredMovesInGroup(char *groupName)
           pAxis->deferredRelative_ ? 0 : pAxis->setpointPosition_;
       }
 
-      /* Reset deferred flag. */
-      /* We need to do this for the XPS, because we cannot do partial group moves. Every axis
-         in the group will be included the next time we do a group move. */
-      pAxis->deferredMove_ = 0;
-
       /* Next axis in this group. */
       positions_index++;
     }
@@ -303,6 +299,18 @@ asynStatus XPSController::processDeferredMovesInGroup(char *groupName)
                                groupName,
                                NbPositioners,
                                positions);
+  }
+
+  /*Clear the defer flag for all the axes in this group.*/
+  /*We need to do this for the XPS, because we cannot do partial group moves. Every axis
+    in the group will be included the next time we do a group move.*/
+  /* Loop over all axes in this controller. */
+  for (axis=0; axis<numAxes_; axis++) {
+    pAxis = getAxis(axis);
+    /* Ignore axes in other groups. */
+    if (!strcmp(pAxis->groupName_, groupName)) {
+      pAxis->deferredMove_ = 0;
+    }
   }
   
   if (status!=0) {
@@ -599,7 +607,7 @@ asynStatus XPSController::buildProfile()
   double minJerkTime, maxJerkTime;
   double preTimeMax, postTimeMax;
   double preVelocity[XPS_MAX_AXES], postVelocity[XPS_MAX_AXES];
-  double preDistance[XPS_MAX_AXES], postDistance[XPS_MAX_AXES];
+  bool inGroup[XPS_MAX_AXES];
   double time;
   int useAxis[XPS_MAX_AXES];
   static const char *functionName = "buildProfile";
@@ -625,8 +633,6 @@ asynStatus XPSController::buildProfile()
    * motors will decelerate from the velocity of the last "real" element to 0 
    * at the maximum allowed acceleration. */
 
-  /* Compute the velocity of each motor during the first real trajectory element, 
-   * and the time required to reach this velocity. */
   preTimeMax = 0.;
   postTimeMax = 0.;
   getIntegerParam(profileNumPoints_, &nPoints);
@@ -638,10 +644,11 @@ asynStatus XPSController::buildProfile()
     preVelocity[j] = 0.;
     postVelocity[j] = 0.;
     getIntegerParam(j, profileUseAxis_, &useAxis[j]);
+    inGroup[j] = (strcmp(pAxes_[j]->groupName_, groupName) == 0);
   }
   
   for (j=0; j<numAxes_; j++) {
-    if (!useAxis[j]) continue;
+    if (!useAxis[j] || !inGroup[j]) continue;
     status = PositionerSGammaParametersGet(pollSocket_, pAxes_[j]->positionerName_, 
                                            &maxVelocity, &maxAcceleration,
                                            &minJerkTime, &maxJerkTime);
@@ -655,10 +662,6 @@ asynStatus XPSController::buildProfile()
      * is "correct" but subject to roundoff errors when sending ASCII commands
      * to XPS.  Reduce acceleration 10% to account for this. */
     maxAcceleration *= 0.9;
-
-    /* Note: the preDistance and postDistance numbers computed here are
-     * in user coordinates, not XPS coordinates, because they are used for 
-     * EPICS moves at the start and end of the scan */
     distance = pAxes_[j]->profilePositions_[1] - pAxes_[j]->profilePositions_[0];
     preVelocity[j] = distance/profileTimes_[0];
     time = fabs(preVelocity[j]) / maxAcceleration;
@@ -668,16 +671,21 @@ asynStatus XPSController::buildProfile()
     postVelocity[j] = distance/profileTimes_[nPoints-1];
     time = fabs(postVelocity[j]) / maxAcceleration;
     postTimeMax = MAX(postTimeMax, time);
+    asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
+              "%s:%s: axis %d profilePositions[0]=%f, profilePositions[%d]=%f, maxAcceleration=%f, preTimeMax=%f, postTimeMax=%f\n",
+              driverName, functionName, j, pAxes_[j]->profilePositions_[0], nPoints-1, pAxes_[j]->profilePositions_[nPoints-1],
+              maxAcceleration, preTimeMax, postTimeMax);
   }
-
-  /* Compute the distance that each motor moves during its acceleration phase.
-   * Only move it this far. */
+    
+  // preTimeMax and postTimeMax can be very small if the scan velocity is small, because it can accelerate to this velocity
+  // almost instantly.  This leads to errors with the XPS reporting acceleration too high, due to roundoff.
+  // Fix this by using a minimum time for acceleration.
+  preTimeMax = MAX(preTimeMax, XPS_MIN_PROFILE_ACCEL_TIME);
+  postTimeMax = MAX(postTimeMax, XPS_MIN_PROFILE_ACCEL_TIME); 
+  
   for (j=0; j<numAxes_; j++) {
-    preDistance[j] =  0.5 * preVelocity[j] *  preTimeMax; 
-    postDistance[j] = 0.5 * postVelocity[j] * postTimeMax;
-    // Save these distances, they are needed to start and complete the profile move
-    pAxes_[j]->profilePreDistance_ = preDistance[j];
-    pAxes_[j]->profilePostDistance_ = postDistance[j];
+    pAxes_[j]->profilePreDistance_  =  0.5 * preVelocity[j]  * preTimeMax; 
+    pAxes_[j]->profilePostDistance_ =  0.5 * postVelocity[j] * postTimeMax; 
   }
 
   /* Create the profile file */
@@ -686,7 +694,8 @@ asynStatus XPSController::buildProfile()
   /* Create the initial acceleration element */
   fprintf(trajFile,"%f", preTimeMax);
   for (j=0; j<numAxes_; j++) {
-    fprintf(trajFile,", %f, %f", preDistance[j], preVelocity[j]);
+    if (!inGroup[j]) continue;
+    fprintf(trajFile,", %f, %f", pAxes_[j]->profilePreDistance_, preVelocity[j]);
   }
   fprintf(trajFile,"\n");
  
@@ -698,7 +707,9 @@ asynStatus XPSController::buildProfile()
       T1 = profileTimes_[i+1];
     else
       T1 = T0;
+    fprintf(trajFile,"%f", profileTimes_[i]);
     for (j=0; j<numAxes_; j++) {
+      if (!inGroup[j]) continue;
       D0 = pAxes_[j]->profilePositions_[i+1] - 
            pAxes_[j]->profilePositions_[i];
       if (i < nElements-1) 
@@ -706,24 +717,22 @@ asynStatus XPSController::buildProfile()
              pAxes_[j]->profilePositions_[i+1];
       else
         D1 = D0;
-
       /* Average either side of the point */
       trajVel = ((D0 + D1) / (T0 + T1));
       if (!useAxis[j]) {
         D0 = 0.0;  /* Axis turned off*/
         trajVel = 0.0;
       }
-    
-      if (j == 0) fprintf(trajFile,"%f", profileTimes_[i]);
       fprintf(trajFile,", %f, %f",D0,trajVel);
-      if (j == (numAxes_-1)) fprintf(trajFile,"\n");
     }  
+    fprintf(trajFile,"\n");
   }
 
   /* Create the final acceleration element. Final velocity must be 0. */
   fprintf(trajFile,"%f", postTimeMax);
   for (j=0; j<numAxes_; j++) {
-    fprintf(trajFile,", %f, %f", postDistance[j], 0.);
+    if (!inGroup[j]) continue;
+    fprintf(trajFile,", %f, %f", pAxes_[j]->profilePostDistance_, 0.);
   }
   fprintf(trajFile,"\n");
   fclose (trajFile);
@@ -783,6 +792,7 @@ asynStatus XPSController::buildProfile()
 
   /* Read dynamic parameters*/
   for (j=0; j<numAxes_; j++) {
+    if (!inGroup[j]) continue;
     maxVelocityActual = 0;
     maxAccelerationActual = 0;   
     status = MultipleAxesPVTVerificationResultGet(pollSocket_,
@@ -798,6 +808,8 @@ asynStatus XPSController::buildProfile()
       sprintf(message, "MultipleAxesPVTVerificationResultGet error for axis %s, status=%d\n",
               pAxes_[j]->positionerName_, status);
     }
+    // Don't do the rest if the axis is not being used
+    if (!useAxis[j]) continue;
     /* Check that the trajectory won't exceed the software limits
      * The XPS does not check this because the trajectory is defined in relative moves and it does
      * not know where we will be in absolute coordinates when we execute the trajectory */
@@ -879,6 +891,7 @@ asynStatus XPSController::runProfile()
   char groupName[MAX_GROUPNAME_LEN];
   int eventId;
   int useAxis[XPS_MAX_AXES];
+  bool inGroup[XPS_MAX_AXES];
   XPSAxis *pAxis;
   static const char *functionName = "runProfile";
   
@@ -891,6 +904,7 @@ asynStatus XPSController::runProfile()
   getIntegerParam(profileNumPulses_,   &numPulses);
   for (j=0; j<numAxes_; j++) {
     getIntegerParam(j, profileUseAxis_, &useAxis[j]);
+    inGroup[j] = (strcmp(pAxes_[j]->groupName_, groupName) == 0);
   }
   strcpy(message, " ");
   setStringParam(profileExecuteMessage_, message);
@@ -901,9 +915,9 @@ asynStatus XPSController::runProfile()
 
   // Move the motors to the start position
   for (j=0; j<numAxes_; j++) {
-    if (!useAxis[j]) continue;
+    if (!useAxis[j] || !inGroup[j]) continue;
     pAxis = getAxis(j);
-    position = pAxis->profilePositions_[numPoints-1] - pAxis->profilePreDistance_;
+    position = pAxis->profilePositions_[0] - pAxis->profilePreDistance_;
     status = GroupMoveAbsolute(pAxis->moveSocket_,
                                pAxis->positionerName_,
                                1,
@@ -968,11 +982,14 @@ asynStatus XPSController::runProfile()
   // Compute the time between pulses as the total time over which pulses should be output divided 
   //  by the number of pulses to be output. */
   time = 0;
-  for (i=startPulses; i<=endPulses; i++) {
+  for (i=startPulses; i<endPulses; i++) {
     time += profileTimes_[i-1];
   }
+  // We put out pulses starting at the beginning of element startPulses and ending at the beginning of element
+  // endPulses.  To get exactly numPulses pulses we need to subtract 1 from numPulses when determining the
+  // pulsePeriod
   if (numPulses != 0)
-    pulsePeriod = time / numPulses;
+    pulsePeriod = time / (numPulses-1);
   else
     pulsePeriod = 0;
   
@@ -980,8 +997,9 @@ asynStatus XPSController::runProfile()
    * startPulses and endPulses are defined as 1=first real element, need to add
    * 1 to each to skip the acceleration element.  
    * The XPS is told the element to stop outputting pulses, and it seems to stop
-   * outputting at the start of that element.  So we need to have that element be
-   * the decceleration endPulses is the element, which means adding another +1. */
+   * outputting at the end of that element.  So we need to have that element be
+   * the decceleration element, which means adding another +1, or we come up 1 pulse short.
+   * But this means we will almost always get too many pulses */
   asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
             "%s:%s: calling MultipleAxesPVTPulseOutputSet(%d, %s, %d, %d, %f)\n", 
             driverName, functionName, pollSocket_, groupName,
@@ -1000,8 +1018,8 @@ asynStatus XPSController::runProfile()
                                                 "", "", "", "");
   if (status != 0) {
     executeOK = false;
-    sprintf(message, "Error performing EventExtendedConfigurationTriggerSet, status=%d, buffer=%s", 
-            status, buffer);
+    sprintf(message, "Error performing EventExtendedConfigurationTriggerSet, status=%d, buffer=%s, strlen(buffer)=%d", 
+            status, buffer, strlen(buffer));
     goto done;
   }
 
@@ -1085,7 +1103,7 @@ asynStatus XPSController::runProfile()
 
   // Move the motors to the end position
   for (j=0; j<numAxes_; j++) {
-    if (!useAxis[j]) continue;
+    if (!useAxis[j] ||!inGroup[j]) continue;
     pAxis = getAxis(j);
     position = pAxis->profilePositions_[numPoints-1] + pAxis->profilePostDistance_;
     status = GroupMoveAbsolute(pAxis->moveSocket_,
@@ -1175,16 +1193,12 @@ asynStatus XPSController::readbackProfile()
   int i, j;
   int nitems;
   int numRead=0, numInBuffer, numChars;
-  int useAxis[XPS_MAX_AXES];
-  static const char *functionName = "buildProfile";
+  static const char *functionName = "readbackProfile";
     
   asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
             "%s:%s: entry\n",
             driverName, functionName);
 
-  for (j=0; j<numAxes_; j++) {
-    getIntegerParam(j, profileUseAxis_, &useAxis[j]);
-  }
   strcpy(message, "");
   setStringParam(profileReadbackMessage_, message);
   setIntegerParam(profileReadbackState_, PROFILE_READBACK_BUSY);
@@ -1195,7 +1209,6 @@ asynStatus XPSController::readbackProfile()
 
   /* Erase the readback and error arrays */
   for (j=0; j<numAxes_; j++) {
-    if (!useAxis[j]) continue;
     memset(pAxes_[j]->profileReadbacks_,       0, maxProfilePoints_*sizeof(double));
     memset(pAxes_[j]->profileFollowingErrors_, 0, maxProfilePoints_*sizeof(double));
   }
@@ -1209,10 +1222,12 @@ asynStatus XPSController::readbackProfile()
     sprintf(message, "Error calling GatherCurrentNumberGet, status=%d", status);
     goto done;
   }
-  if (currentSamples != numPulses) {
+  if (currentSamples < numPulses) {
     readbackOK = false;
     sprintf(message, "Error, numPulses=%d, currentSamples=%d", numPulses, currentSamples);
     //goto done;
+  } else {
+    currentSamples = numPulses; // Only read as many as were asked for
   }
   buffer = (char *)calloc(GATHERING_MAX_READ_LEN, sizeof(char));
   numInBuffer = 0;
@@ -1239,7 +1254,6 @@ asynStatus XPSController::readbackProfile()
       tptr = strstr(bptr, "\n");
       if (tptr) *tptr = 0;
       for (j=0; j<numAxes_; j++) {
-        if (!useAxis[j]) continue;
         nitems = sscanf(bptr, "%lf;%lf%n", 
                         &setpointPosition, &actualPosition, &numChars);
         bptr += numChars+1;
@@ -1302,9 +1316,9 @@ asynStatus XPSController::noDisableError()
 
 extern "C" {
 
-asynStatus XPSConfig(const char *portName, const char *IPAddress, int IPPort,
-                         int numAxes, int movingPollPeriod, int idlePollPeriod,
-                         int enableSetPosition, int setPositionSettlingTime)
+asynStatus XPSCreateController(const char *portName, const char *IPAddress, int IPPort,
+                               int numAxes, int movingPollPeriod, int idlePollPeriod,
+                               int enableSetPosition, int setPositionSettlingTime)
 {
     XPSController *pXPSController
         = new XPSController(portName, IPAddress, IPPort, numAxes, 
@@ -1316,14 +1330,15 @@ asynStatus XPSConfig(const char *portName, const char *IPAddress, int IPPort,
 
 
 
-asynStatus XPSConfigAxis(const char *XPSName,         /* specify which controller by port name */
+asynStatus XPSCreateAxis(const char *XPSName,         /* specify which controller by port name */
                          int axis,                    /* axis number 0-7 */
                          const char *positionerName,  /* groupName.positionerName e.g. Diffractometer.Phi */
-                         int stepsPerUnit)            /* steps per user unit */
+                         const char *stepsPerUnit)    /* steps per user unit */
 {
   XPSController *pC;
   XPSAxis *pAxis;
-  static const char *functionName = "XPSConfigAxis";
+  double stepSize;
+  static const char *functionName = "XPSCreateAxis";
 
   pC = (XPSController*) findAsynPortDriver(XPSName);
   if (!pC) {
@@ -1331,21 +1346,29 @@ asynStatus XPSConfigAxis(const char *XPSName,         /* specify which controlle
            driverName, functionName, XPSName);
     return asynError;
   }
+  errno = 0;
+  stepSize = strtod(stepsPerUnit, NULL);
+  if (errno != 0) {
+    printf("%s:%s: Error invalid steps per unit=%s\n",
+           driverName, functionName, stepsPerUnit);
+    return asynError;
+  }
+  
   pC->lock();
-  pAxis = new XPSAxis(pC, axis, positionerName, 1./stepsPerUnit);
+  pAxis = new XPSAxis(pC, axis, positionerName, 1./stepSize);
   pAxis = NULL;
   pC->unlock();
   return asynSuccess;
 }
 
 
-asynStatus XPSConfigProfile(const char *XPSName,         /* specify which controller by port name */
+asynStatus XPSCreateProfile(const char *XPSName,         /* specify which controller by port name */
                             int maxPoints,               /* maximum number of profile points */
                             const char *ftpUsername,      /* FTP account name */
                             const char *ftpPassword)     /* FTP password */
 {
   XPSController *pC;
-  static const char *functionName = "XPSConfigProfile";
+  static const char *functionName = "XPSCreateProfile";
 
   pC = (XPSController*) findAsynPortDriver(XPSName);
   if (!pC) {
@@ -1392,65 +1415,65 @@ asynStatus XPSNoDisableError(const char *XPSName)
 
 /* Code for iocsh registration */
 
-/* XPSConfig */
-static const iocshArg XPSConfigArg0 = {"Controller port name", iocshArgString};
-static const iocshArg XPSConfigArg1 = {"IP address", iocshArgString};
-static const iocshArg XPSConfigArg2 = {"IP port", iocshArgInt};
-static const iocshArg XPSConfigArg3 = {"Number of axes", iocshArgInt};
-static const iocshArg XPSConfigArg4 = {"Moving poll rate (ms)", iocshArgInt};
-static const iocshArg XPSConfigArg5 = {"Idle poll rate (ms)", iocshArgInt};
-static const iocshArg XPSConfigArg6 = {"Enable set position", iocshArgInt};
-static const iocshArg XPSConfigArg7 = {"Set position settling time (ms)", iocshArgInt};
-static const iocshArg * const XPSConfigArgs[] = {&XPSConfigArg0,
-                                                 &XPSConfigArg1,
-                                                 &XPSConfigArg2,
-                                                 &XPSConfigArg2,
-                                                 &XPSConfigArg4,
-                                                 &XPSConfigArg5,
-                                                 &XPSConfigArg6,
-                                                 &XPSConfigArg7};
-static const iocshFuncDef configXPS = {"XPSConfig", 8, XPSConfigArgs};
+/* XPSCreateController */
+static const iocshArg XPSCreateControllerArg0 = {"Controller port name", iocshArgString};
+static const iocshArg XPSCreateControllerArg1 = {"IP address", iocshArgString};
+static const iocshArg XPSCreateControllerArg2 = {"IP port", iocshArgInt};
+static const iocshArg XPSCreateControllerArg3 = {"Number of axes", iocshArgInt};
+static const iocshArg XPSCreateControllerArg4 = {"Moving poll rate (ms)", iocshArgInt};
+static const iocshArg XPSCreateControllerArg5 = {"Idle poll rate (ms)", iocshArgInt};
+static const iocshArg XPSCreateControllerArg6 = {"Enable set position", iocshArgInt};
+static const iocshArg XPSCreateControllerArg7 = {"Set position settling time (ms)", iocshArgInt};
+static const iocshArg * const XPSCreateControllerArgs[] = {&XPSCreateControllerArg0,
+                                                           &XPSCreateControllerArg1,
+                                                           &XPSCreateControllerArg2,
+                                                           &XPSCreateControllerArg2,
+                                                           &XPSCreateControllerArg4,
+                                                           &XPSCreateControllerArg5,
+                                                           &XPSCreateControllerArg6,
+                                                           &XPSCreateControllerArg7};
+static const iocshFuncDef configXPS = {"XPSCreateController", 8, XPSCreateControllerArgs};
 static void configXPSCallFunc(const iocshArgBuf *args)
 {
-  XPSConfig(args[0].sval, args[1].sval, args[2].ival, 
-            args[3].ival, args[4].ival, args[5].ival,
-            args[6].ival, args[7].ival);
+  XPSCreateController(args[0].sval, args[1].sval, args[2].ival, 
+                      args[3].ival, args[4].ival, args[5].ival,
+                      args[6].ival, args[7].ival);
 }
 
 
 
-/* XPSConfigAxis */
-static const iocshArg XPSConfigAxisArg0 = {"Controller port name", iocshArgString};
-static const iocshArg XPSConfigAxisArg1 = {"Axis number", iocshArgInt};
-static const iocshArg XPSConfigAxisArg2 = {"Axis name", iocshArgString};
-static const iocshArg XPSConfigAxisArg3 = {"Steps per unit", iocshArgInt};
-static const iocshArg * const XPSConfigAxisArgs[] = {&XPSConfigAxisArg0,
-                                                     &XPSConfigAxisArg1,
-                                                     &XPSConfigAxisArg2,
-                                                     &XPSConfigAxisArg3};
-static const iocshFuncDef configXPSAxis = {"XPSConfigAxis", 4, XPSConfigAxisArgs};
+/* XPSCreateAxis */
+static const iocshArg XPSCreateAxisArg0 = {"Controller port name", iocshArgString};
+static const iocshArg XPSCreateAxisArg1 = {"Axis number", iocshArgInt};
+static const iocshArg XPSCreateAxisArg2 = {"Axis name", iocshArgString};
+static const iocshArg XPSCreateAxisArg3 = {"Steps per unit", iocshArgString};
+static const iocshArg * const XPSCreateAxisArgs[] = {&XPSCreateAxisArg0,
+                                                     &XPSCreateAxisArg1,
+                                                     &XPSCreateAxisArg2,
+                                                     &XPSCreateAxisArg3};
+static const iocshFuncDef configXPSAxis = {"XPSCreateAxis", 4, XPSCreateAxisArgs};
 
 static void configXPSAxisCallFunc(const iocshArgBuf *args)
 {
-  XPSConfigAxis(args[0].sval, args[1].ival, args[2].sval, args[3].ival);
+  XPSCreateAxis(args[0].sval, args[1].ival, args[2].sval, args[3].sval);
 }
 
 
 
-/* XPSConfigProfile */
-static const iocshArg XPSConfigProfileArg0 = {"Controller port name", iocshArgString};
-static const iocshArg XPSConfigProfileArg1 = {"Max points", iocshArgInt};
-static const iocshArg XPSConfigProfileArg2 = {"FTP username", iocshArgString};
-static const iocshArg XPSConfigProfileArg3 = {"FTP password", iocshArgString};
-static const iocshArg * const XPSConfigProfileArgs[] = {&XPSConfigProfileArg0,
-                                                        &XPSConfigProfileArg1,
-                                                        &XPSConfigProfileArg2,
-                                                        &XPSConfigProfileArg3};
-static const iocshFuncDef configXPSProfile = {"XPSConfigProfile", 4, XPSConfigProfileArgs};
+/* XPSCreateProfile */
+static const iocshArg XPSCreateProfileArg0 = {"Controller port name", iocshArgString};
+static const iocshArg XPSCreateProfileArg1 = {"Max points", iocshArgInt};
+static const iocshArg XPSCreateProfileArg2 = {"FTP username", iocshArgString};
+static const iocshArg XPSCreateProfileArg3 = {"FTP password", iocshArgString};
+static const iocshArg * const XPSCreateProfileArgs[] = {&XPSCreateProfileArg0,
+                                                        &XPSCreateProfileArg1,
+                                                        &XPSCreateProfileArg2,
+                                                        &XPSCreateProfileArg3};
+static const iocshFuncDef configXPSProfile = {"XPSCreateProfile", 4, XPSCreateProfileArgs};
 
 static void configXPSProfileCallFunc(const iocshArgBuf *args)
 {
-  XPSConfigProfile(args[0].sval, args[1].ival, args[2].sval, args[3].sval);
+  XPSCreateProfile(args[0].sval, args[1].ival, args[2].sval, args[3].sval);
 }
 
 
