@@ -2,9 +2,9 @@
 FILENAME...     XPSMotorDriver.cpp
 USAGE...        Newport XPS EPICS asyn motor device driver
 
-Version:        $Revision: 19717 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2009-12-09 10:21:24 -0600 (Wed, 09 Dec 2009) $
+Version:        $Revision: 1.2 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2011/10/05 14:29:00 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/trunk/support/motor/vstub/motorApp/NewportSrc/XPSMotorDriver.cpp $
 */
 
@@ -152,6 +152,7 @@ XPSAxis::XPSAxis(XPSController *pC, int axisNo, const char *positionerName, doub
   /* Set the poll rate on the moveSocket to a negative number, which means that SendAndReceive should do only a write, no read */
   TCP_SetTimeout(moveSocket_, -0.1);
   pollSocket_ = pC_->pollSocket_;
+  axisBitMask_ = (1 << axisNo);
   
   /* Set an EPICS exit handler that will shut down polling before asyn kills the IP sockets */
   epicsAtExit(shutdownCallback, pC_);
@@ -541,13 +542,22 @@ asynStatus XPSAxis::poll(bool *moving)
                           &axisStatus_);
   if (status) {
     asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
-              "%s:%s: [%s,%d]: error calling GroupStatusGet status=%d\n",
-              driverName, functionName, pC_->portName, axisNo_, status);
+              "%s:%s: [%s,%d]: error calling GroupStatusGet status=%d, pollSocket_=%d, moveSocket_=%d\n",
+              driverName, functionName, pC_->portName, axisNo_, status, pollSocket_, moveSocket_);
+    // set polling error mask bit for this axis
+    pC_->pollSocketAxesErrors_ = pC_->pollSocketAxesErrors_ | axisBitMask_;  
+	asynPrint(pasynUser_, ASYN_TRACE_ERROR, "%s:%s: [%s,%d]: axisBitMask_=%d, pollSocketAxesErrors_=%d\n", 
+              driverName, functionName, pC_->portName, axisNo_, axisBitMask_, pC_->pollSocketAxesErrors_);
+    // update axis status PV
+    axisStatus_ = status;
+    setIntegerParam(pC_->XPSStatus_, axisStatus_);
     goto done;
   }
   asynPrint(pasynUser_, ASYN_TRACE_FLOW, 
             "%s:%s: [%s,%d]: %s axisStatus=%d\n",
             driverName, functionName, pC_->portName, axisNo_, positionerName_, axisStatus_);
+  /* Set the status */
+  setIntegerParam(pC_->XPSStatus_, axisStatus_);
   /* Set done flag by default */
   axisDone = 1;
   if (axisStatus_ >= 10 && axisStatus_ <= 18) {
@@ -557,13 +567,13 @@ asynStatus XPSAxis::poll(bool *moving)
     /* These states mean it is moving/homeing/jogging etc*/
     axisDone = 0;
   }
-  /* Set the status */
-  setIntegerParam(pC_->XPSStatus_, axisStatus_);
   /* Set the axis done parameter */
   /* AND the done flag with the inverse of deferred_move.*/
   axisDone &= !deferredMove_;
   *moving = axisDone ? false : true;
-  setIntegerParam(pC_->motorStatusDone_, axisDone);
+  setIntegerParam(pC_->motorStatusDone_, axisDone); 
+  // update polling error mask with no error
+  pC_->pollSocketAxesErrors_ = pC_->pollSocketAxesErrors_ & ~axisBitMask_; 
 
   /*Read the controller software limits in case these have been changed by a TCL script.*/
   status = PositionerUserTravelLimitsGet(pollSocket_, positionerName_, &lowLimit_, &highLimit_);
@@ -1132,7 +1142,7 @@ asynStatus XPSAxis::PositionerCorrectorPIDDualFFVoltageSet()
 
 /** Function to define the motor positions for a profile move. 
   * This calls the base class function to convert to steps, but since the
-  * XPS works in user-units we need to do an additional convertion by stepSize_. 
+  * XPS works in user-units we need to do an additional conversion by stepSize_. 
   * \param[in] positions Array of profile positions for this axis in user units.
   * \param[in] numPoints The number of positions in the array.
   */

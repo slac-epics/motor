@@ -2,9 +2,9 @@
 FILENAME...	drvOms58.cc
 USAGE...	Motor record driver level support for OMS model VME58.
 
-Version:        $Revision: 12209 $
+Version:        $Revision: 13841 $
 Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2011-01-26 11:13:47 -0800 (Wed, 26 Jan 2011) $
+Last Modified:  $Date: 2011-10-20 14:38:58 -0700 (Thu, 20 Oct 2011) $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/OmsSrc/drvOms58.cc $
 */
 
@@ -112,6 +112,8 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/mot
  * .40  01-26-11 rls - added reboot flag to DPRAM R/W reserved area. Driver
  *                     sets flag to 0x4321; set_status() disables board if flag
  *                     does not read 0x4321.
+ * .41  10-20-11 rls - Added counter in send_mess() to prevent endless loop
+ *                     after VME58 reboot.
  *
  */
 
@@ -657,6 +659,7 @@ static RTN_STATUS send_mess(int card, char const *com, char *name)
     epicsInt16 putIndex;
     char outbuf[MAX_MSG_SIZE], *p;
     RTN_STATUS return_code;
+    int count;
 
     if (strlen(com) > MAX_MSG_SIZE)
     {
@@ -714,7 +717,7 @@ static RTN_STATUS send_mess(int card, char const *com, char *name)
 
     pmotor->outPutIndex = putIndex; /* Message Sent */
 
-    while (putIndex != pmotor->outGetIndex)
+    for (count = 0; (putIndex != pmotor->outGetIndex) && (count < 1000); count++)
     {
 #ifdef	DEBUG
         epicsInt16 deltaIndex, delta;
@@ -725,6 +728,12 @@ static RTN_STATUS send_mess(int card, char const *com, char *name)
 #endif
         epicsThreadSleep(quantum);
     };
+    
+    if (count >= 1000)
+    {
+        errlogPrintf("\n*** VME58 card #%d communication timeout ***\n", card);
+        return_code = ERROR;
+    }
 
     return(return_code);
 }

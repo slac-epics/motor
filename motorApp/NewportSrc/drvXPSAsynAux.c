@@ -30,6 +30,8 @@
 
 typedef struct {
     char *portName;
+    char *ipAddress;
+    int port;
     int socketID;
     epicsMutexId lock;
     epicsEventId pollerEventId;
@@ -148,7 +150,8 @@ static void XPSAuxPoller(drvXPSAsynAuxPvt *pPvt);
 
 static void shutdownCallback(drvXPSAsynAuxPvt *pPvt);
 
-
+static void reconnectTCPSocket(drvXPSAsynAuxPvt *pPvt);
+
 int XPSAuxConfig(const char *portName, /* asyn port name */
                  const char *ip,       /* XPS IP address or IP name */
                  int port,             /* IP port number that XPS is listening on */
@@ -161,6 +164,8 @@ int XPSAuxConfig(const char *portName, /* asyn port name */
 
     pPvt = callocMustSucceed(1, sizeof(*pPvt), "XPSAuxConfig");
     pPvt->portName = epicsStrDup(portName);
+    pPvt->ipAddress = epicsStrDup(ip);
+    pPvt->port = port;
     pPvt->lock = epicsMutexCreate();
     pPvt->pollerEventId = epicsEventCreate(epicsEventEmpty);
 
@@ -482,6 +487,22 @@ static void shutdownCallback(drvXPSAsynAuxPvt *pPvt)
     epicsMutexUnlock(pPvt->lock);
 }
 
+/** Reset controller and axis sockets to handle communication loss (e.g. during power cycle, network loss)
+ */
+static void reconnectTCPSocket(drvXPSAsynAuxPvt *pPvt)
+{
+  // close socket
+  TCP_CloseSocket(pPvt->socketID);
+  // reconnect
+  pPvt->socketID = TCP_ConnectToServer((char *)pPvt->ipAddress, pPvt->port, TCP_TIMEOUT);
+  if (pPvt->socketID < 0) {
+    printf("drvXPSAsynAux::reconnectTCPSocket error calling TCP_ConnectToServer for reconnect\n");
+    return;
+  } else {
+    printf("drvXPSAsynAux::reconnectTCPSocket success calling TCP_ConnectToServer for socketID reconnect, socketID=%d\n", pPvt->socketID);
+  }
+}
+
 static void XPSAuxPoller(drvXPSAsynAuxPvt *pPvt)
 {
     char analogNames[100] = "";
@@ -520,6 +541,9 @@ static void XPSAuxPoller(drvXPSAsynAuxPvt *pPvt)
                           "drvXPSAsynAux::XPSAuxPoller error calling GPIODigitalGet=%d\n", status);
             }
         }
+
+        // try reconnecting socket if error
+        if (status) { reconnectTCPSocket(pPvt); }
 
         /* Call back any clients who have registered for callbacks on changed digital bits */
         pasynManager->interruptStart(pPvt->uint32DInterruptPvt, &pclientList);

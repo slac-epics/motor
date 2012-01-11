@@ -83,6 +83,7 @@ class XPSAxis : public asynMotorAxis
   double deferredPosition_;
   int deferredMove_;
   int deferredRelative_;
+  unsigned int axisBitMask_;      // bit masking that can be used to track various axis info
 
   friend class XPSController;
 };

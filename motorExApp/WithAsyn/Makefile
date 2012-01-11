@@ -1,9 +1,9 @@
 #FILENAME...     Makefile
 #USAGE...        Makefile for motor application example with Asyn
 
-#Version:        $Revision: 12336 $
+#Version:        $Revision: 13567 $
 #Modified By:    $Author: rivers $
-#Last Modified:  $Date: 2011-03-22 15:11:33 -0700 (Tue, 22 Mar 2011) $
+#Last Modified:  $Date: 2011-08-30 12:11:01 -0700 (Tue, 30 Aug 2011) $
 #HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorExApp/WithAsyn/Makefile $
 
 # "#!" marks lines that can be uncommented.
@@ -33,9 +33,10 @@ COMMONDBDS += devSmartMotorMotor.dbd
 COMMONDBDS += devKohzuMotor.dbd
 COMMONDBDS += devAttocube.dbd
 COMMONDBDS += devAerotech.dbd
+COMMONDBDS += ACRMotorSupport.dbd
 COMMONDBDS += drvAsynSerialPort.dbd
 COMMONDBDS += drvAsynIPPort.dbd
-COMMONDBDS += ACRMotorSupport.dbd
+COMMONDBDS += busySupport.dbd
 
 DBD += WithAsyn.dbd
 WithAsyn_DBD += $(COMMONDBDS)
@@ -80,6 +81,8 @@ ifdef SNCSEQ
 WithAsyn_LIBS += seqDev seq pv
 endif
 WithAsyn_LIBS += $(EPICS_BASE_IOC_LIBS)
+
+WithAsyn_LIBS += busy
 
 WithAsynVx_LIBS += $(COMMONLIBS)
 ifdef IPAC
