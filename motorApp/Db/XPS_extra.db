@@ -31,3 +31,14 @@ grecord(ai,"$(P)$(R)XPS_STATUS") {
     field(SCAN, "I/O Intr")
     field(INP,"@asyn($(PORT),$(ADDR))XPS_STATUS")
 }
+
+record(waveform,"$(P)$(R)XPS_STATUS_STRING") {
+    field(DESC,"XPS Group Status String")
+    field(DTYP, "asynInt8ArrayIn")
+    field(FTVL, "CHAR")
+    field(NELM, "100")
+    field(PINI, "1")
+    field(SCAN, "I/O Intr")
+    field(INP,"@asyn($(PORT),$(ADDR))XPS_STATUS_STRING")
+}
+

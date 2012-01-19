@@ -1,0 +1,35 @@
+motor-R6-7-RC3_2-2:
+01/19/2012 Fix XPS_STATUS_STRING type to be asynInt8ArrayIn and use doCallbacksInt8Array() to update it.
+
+motor-R6-7-RC3_2-1:
+01/12/2012 Add Newport XPS_STATUS_STRING pv
+
+motor-R6-7-RC3_2-0:
+01/11/2012 Add Newport TCP reconnect functionality if error polling for XPSAxis, XPSController, and drvXPSAsynAux model 3 driver.
+           Update Newport XPS_STATUS XPSAxis status if error polling for more information from controller.
+
+motor-R6-7-RC3_1-2:
+01/04/2012 Upgrade to asyn-R4-18-lcls1 & seq-R2-1-3-lcls1 to compile on testfac-srv01
+
+motor-R6-7-RC3_1-1:
+Change tag name since Release 6-7 still in beta mode.
+
+motor-R6-7_1-0:
+Update comm and problem motor status bits if polling is successful for IMS module.
+
+motor-R6-6-RC2_1-1:
+Add home, pos limit switch, and neg limit switch support for IMS model3 driver.
+
+motor-R6-6-RC2_1-0:
+Added support for SmarActMCS (model 3).
+Added model3 driver for IMS.
+(Initial versions for self-seeding.)
+
+motor-R6-6-RC2-lcls1: 
+From Mark Rivers: Fixes to Hytec and 64-bit linux
+From Matt Pearson: Add asyn Model2 support back in for Newport suport
+
+
+motor-R6-6-RC1-lcls1:
+From Jim Chen: Changes to make Hytec Driver Solid
+See documentation directory for other changes
