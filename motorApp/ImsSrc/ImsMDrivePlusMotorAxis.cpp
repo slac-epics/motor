@@ -1,45 +1,31 @@
-//! File: ImsMDrivePlusMotorAxis.cpp
-//!       Motor record driver level support for Intelligent Motion Systems, Inc.
-//!       MDrivePlus series; M17, M23, M34.
-//!	     Use "model 3" asyn motor, asynMotorController and asynMotorAxis classes.
-//!  DESIGN LIMITATIONS AND ASSUMPTIONS...
-//!       1 - Like all controllers, the MDrivePlus must be powered-on when EPICS is first booted up.
-//!       2 - The MDrivePlus cannot be power cycled while EPICS is up and running.
-//!           The consequences are permanent communication lose with the MDrivePlus until EPICS is rebooted.
-//!       3 - Assume single controller-card-axis relationship; 1 controller = 1 axis.  This may be wrong.
-//!       4 - Must be used in party-mode so pre/append Line Feed to beginning and end of command string
-//!       5 - If not using device name to address device, config ImsMDrivePlusCreateController() with empty string "" for deviceName
+//! @File : ImsMDrivePlusMotorAxis.cpp
+//!         Motor record driver level support for Intelligent Motion Systems, Inc.
+//!         MDrivePlus series; M17, M23, M34.
+//!         Use "model 3" asyn motor, asynMotorController and asynMotorAxis classes.
+//!
+//! Author : Nia Fong
+//! Date : 11-21-2011
+//
+//  Revision History
+//  ----------------
+//  11-21-2011  NF Initial version
 
-// Right now just copy from Hytec driver
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdarg.h>
-//#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <exception>
-
-//#include <epicsFindSymbol.h>
-//#include <epicsTime.h>
 #include <epicsThread.h>
-//#include <epicsMutex.h>
-//#include <ellLib.h>
-//#include <epicsMessageQueue.h>
-
-//#include <drvSup.h>
 #include <epicsExport.h>
-//#include <devLib.h>
-//#include <drvIpac.h>
 #include <iocsh.h>
-
 #include <asynOctetSyncIO.h>
 
-//#include "ImsMDrivePlusMotorAxis.h"
-#include "ImsMDrivePlusMotorController.h"  // something is not right, but can't compile without this
+#include "ImsMDrivePlusMotorController.h"
 
 ////////////////////////////////////////////////////////
 //! ImsMDrivePlusMotorAxis()
-// Constructor
+//  Constructor
 //
 //! @param[in] pC pointer to ImsMDrivePlusMotorController
 //! @param[in] axisNum axis number
@@ -61,7 +47,7 @@ ImsMDrivePlusMotorAxis::ImsMDrivePlusMotorAxis(ImsMDrivePlusMotorController *pC,
 
 ////////////////////////////////////////
 //! configAxis()
-//! Used smarACTMCSMotorDriver.cpp as reference
+//! Used smarACTMCMotorDriver.cpp as reference
 //
 //! check communication by checking version returns a good string
 //! set moving status (PR MV)
@@ -70,7 +56,7 @@ asynStatus ImsMDrivePlusMotorAxis::configAxis()
 {
 	asynStatus status = asynError;
 	char cmd[MAX_CMD_LEN];
-	char inbuff[MAX_BUFF_LEN];
+	char resp[MAX_BUFF_LEN];
 	size_t nread;
 	int maxRetries=3;
 	static const char *functionName = "configAxis()";
@@ -79,13 +65,13 @@ asynStatus ImsMDrivePlusMotorAxis::configAxis()
 	// try getting firmware version to make sure communication works
 	sprintf(cmd, "PR VR");
 	for (int i=0; i<maxRetries; i++) {
-		status = pController->writeReadController(cmd, inbuff, sizeof(inbuff), &nread, IMS_TIMEOUT);
+		status = pController->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
 		asynPrint(pController->pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: Version retry.\n", DRIVER_NAME, functionName);
 		if (status == asynError) {
 			asynPrint(pController->pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: Version inquiry FAILED.\n", DRIVER_NAME, functionName);
 		} else { // ok to check firmware level/format or just strlen? v3.009
-			if (strlen(inbuff) < 2) {
-				asynPrint(pController->pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: Version inquiry FAILED version=%s.\n", DRIVER_NAME, functionName, inbuff);
+			if (strlen(resp) < 2) {
+				asynPrint(pController->pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: Version inquiry FAILED version=%s.\n", DRIVER_NAME, functionName, resp);
 				setIntegerParam(pController->motorStatusProblem_, 1);
 				setIntegerParam(pController->motorStatusCommsError_, 1);
 				status = asynError; return(status);
@@ -96,9 +82,9 @@ asynStatus ImsMDrivePlusMotorAxis::configAxis()
 
 	// set encoder flags
 	sprintf(cmd, "PR EE");
-	status = pController->writeReadController(cmd, inbuff, sizeof(inbuff), &nread, IMS_TIMEOUT);
+	status = pController->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
 	if (status == asynSuccess) {
-		int val = atoi(inbuff);
+		int val = atoi(resp);
 		setIntegerParam(pController->motorStatusHasEncoder_, val ? 1:0);
 		setIntegerParam(pController->motorStatusGainSupport_, val ? 1:0);
 		asynPrint(pController->pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: set motorStatusHasEncoder_=%d, motorStatusGainSupport_=%d.\n", DRIVER_NAME, functionName, val, val);
@@ -134,18 +120,21 @@ asynStatus ImsMDrivePlusMotorAxis::setAxisMoveParameters(double minVelocity, dou
 		}
 		// set base velocity
 		sprintf(cmd, "VI=%ld", (long)minVelocity);
-		if (status = pController->writeController(cmd, IMS_TIMEOUT)) goto bail;
+		status = pController->writeController(cmd, IMS_TIMEOUT);
+		if (status) goto bail;
 	}
 
 
 	// set velocity
 	sprintf(cmd, "VM=%ld", (long)maxVelocity);
-	if (status = pController->writeController(cmd, IMS_TIMEOUT)) goto bail;
+	status = pController->writeController(cmd, IMS_TIMEOUT);
+	if (status) goto bail;
 
 	// set accceleration
 	if (acceleration != 0) {
 		sprintf(cmd, "A=%ld", (long)maxVelocity);
-		if (status = pController->writeController(cmd, IMS_TIMEOUT)) goto bail;
+		status = pController->writeController(cmd, IMS_TIMEOUT);
+		if (status) goto bail;
 	}
 
 	bail:
@@ -177,7 +166,8 @@ asynStatus ImsMDrivePlusMotorAxis::move(double position, int relative, double mi
 	static const char *functionName = "move()";
 
 	// sent commands to motor to set velocities and acceleration
-	if (status = setAxisMoveParameters(minVelocity, maxVelocity, acceleration)) goto bail;
+	status = setAxisMoveParameters(minVelocity, maxVelocity, acceleration);
+	if (status) goto bail;
 
 	// move
 	asynPrint(pController->pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: VBASE=%f, VELO=%f, ACCL=%f, position=%f, relative=%d\n", DRIVER_NAME, functionName, minVelocity, maxVelocity, acceleration, position, relative);
@@ -186,7 +176,8 @@ asynStatus ImsMDrivePlusMotorAxis::move(double position, int relative, double mi
 	} else { // absolute move MA
 		sprintf(cmd, "MA %ld", (long)position);
 	}
-	if (status = pController->writeController(cmd, IMS_TIMEOUT)) goto bail;
+	status = pController->writeController(cmd, IMS_TIMEOUT);
+	if (status) goto bail;
 
 	bail:
 	if (status) {
@@ -216,12 +207,14 @@ asynStatus ImsMDrivePlusMotorAxis::moveVelocity(double minVelocity, double maxVe
 	static const char *functionName = "moveVelocity()";
 
 	// sent commands to motor to set velocities and acceleration
-	if (status = setAxisMoveParameters(minVelocity, maxVelocity, acceleration)) goto bail;
+	status = setAxisMoveParameters(minVelocity, maxVelocity, acceleration);
+	if (status) goto bail;
 
 	// move
 	asynPrint(pController->pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: VBASE=%f, VELO=%f, ACCL=%f\n", DRIVER_NAME, functionName, minVelocity, maxVelocity, acceleration);
 	sprintf(cmd, "SL %ld", (long)maxVelocity);
-	if (status = pController->writeController(cmd, IMS_TIMEOUT)) goto bail;
+	status = pController->writeController(cmd, IMS_TIMEOUT);
+	if (status) goto bail;
 
 	bail:
 	if (status) {
@@ -250,12 +243,14 @@ asynStatus ImsMDrivePlusMotorAxis::stop(double acceleration)
 	// set accceleration
 	if (acceleration != 0) {
 		sprintf(cmd, "A=%ld", (long)acceleration);
-		if (status = pController->writeController(cmd, IMS_TIMEOUT)) goto bail;
+		status = pController->writeController(cmd, IMS_TIMEOUT);
+		if (status) goto bail;
 	}
 
 	// move
 	sprintf(cmd, "SL 0");
-	if (status = pController->writeController(cmd, IMS_TIMEOUT)) goto bail;
+	status = pController->writeController(cmd, IMS_TIMEOUT);
+	if (status) goto bail;
 
 	bail:
 	if (status) {
@@ -285,7 +280,7 @@ asynStatus ImsMDrivePlusMotorAxis::home(double minVelocity, double maxVelocity, 
 {
 	asynStatus status = asynError;
 	char cmd[MAX_CMD_LEN];
-	char inbuff[MAX_BUFF_LEN];
+	char resp[MAX_BUFF_LEN];
 	size_t nread;
 	int direction = 1;  // direction to home, initialize homing in minus direction
 	double baseVelocity=0;
@@ -300,8 +295,9 @@ asynStatus ImsMDrivePlusMotorAxis::home(double minVelocity, double maxVelocity, 
 		}
 	} else { // base velocity needs to be set because creeping back to home switch at base velocity, so make sure it's nonzero
 		sprintf(cmd, "PR VI");  // get base velocity setting
-		if (status = pController->writeReadController(cmd, inbuff, sizeof(inbuff), &nread, IMS_TIMEOUT)) goto bail;
-		baseVelocity = atof(inbuff);
+		status = pController->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
+		if (status) goto bail;
+		baseVelocity = atof(resp);
 		if (baseVelocity == 0) { // set to factory default of 1000
 			baseVelocity=1000;
 		}
@@ -316,7 +312,8 @@ asynStatus ImsMDrivePlusMotorAxis::home(double minVelocity, double maxVelocity, 
 	}
 	asynPrint(pController->pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: VBASE=%f, VELO=%f, ACCL=%f, forwards=%d\n", DRIVER_NAME, functionName, minVelocity, maxVelocity, acceleration, forwards);
 	sprintf(cmd, "HM %d", direction);
-	if (status = pController->writeController(cmd, IMS_TIMEOUT)) goto bail;
+	status  = pController->writeController(cmd, IMS_TIMEOUT);
+	if (status) goto bail;
 
 	bail:
 	if (status) {
@@ -345,7 +342,8 @@ asynStatus ImsMDrivePlusMotorAxis::setPosition(double position)
 	// set position
 	asynPrint(pController->pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: position=%f\n", DRIVER_NAME, functionName, position);
 	sprintf(cmd, "P=%ld", (long)position);
-	if (status = pController->writeController(cmd, IMS_TIMEOUT)) goto bail;
+	status = pController->writeController(cmd, IMS_TIMEOUT);
+	if (status) goto bail;
 
 	bail:
 	if (status) {
@@ -372,7 +370,7 @@ asynStatus ImsMDrivePlusMotorAxis::poll(bool *moving)
 {
 	asynStatus status = asynError;
 	char cmd[MAX_CMD_LEN];
-	char inbuff[MAX_BUFF_LEN];
+	char resp[MAX_BUFF_LEN];
 	size_t nread;
 	int val=0;
 	double position;
@@ -382,16 +380,18 @@ asynStatus ImsMDrivePlusMotorAxis::poll(bool *moving)
 
 	// get position
 	sprintf(cmd, "PR P");
-	if (status = pController->writeReadController(cmd, inbuff, sizeof(inbuff), &nread, IMS_TIMEOUT)) goto bail;
-	position = atof(inbuff);
+	status = pController->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
+	if (status) goto bail;
+	position = atof(resp);
 	// update motor record position values, just update encoder's even if not using one
-    setDoubleParam(pController->motorEncoderPosition_, position);
-    setDoubleParam(pController->motorPosition_, position);
+	setDoubleParam(pController->motorEncoderPosition_, position);
+	setDoubleParam(pController->motorPosition_, position);
 
-    // get moving flag
+	// get moving flag
 	sprintf(cmd, "PR MV");
-	if (status = pController->writeReadController(cmd, inbuff, sizeof(inbuff), &nread, IMS_TIMEOUT)) goto bail;
-	val = atoi(inbuff);
+	status = pController->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
+	if (status) goto bail;
+	val = atoi(resp);
 	if (val == 1) *moving = true;  	// updating moving flag
 /*	else { // not moving
 		if (prevMovingState == 1) {// state changed, moving before, start idle timer
@@ -421,6 +421,34 @@ asynStatus ImsMDrivePlusMotorAxis::poll(bool *moving)
 	}
 */
 
+	// get home switch value
+	if (pController->homeSwitchInput != -1) {
+		sprintf(cmd, "PR I%d", pController->homeSwitchInput);
+		status = pController->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
+		if (status) goto bail;
+		val = atoi(resp);
+		setIntegerParam(pController->motorStatusHome_, val);
+	}
+
+	// get positive limit switch value
+	if (pController->posLimitSwitchInput != -1) {
+		sprintf(cmd, "PR I%d", pController->posLimitSwitchInput);
+		status = pController->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
+		if (status) goto bail;
+		val = atoi(resp);
+		setIntegerParam(pController->motorStatusHighLimit_, val);
+	}
+
+	// get negative limit switch value
+	if (pController->negLimitSwitchInput != -1) {
+		sprintf(cmd, "PR I%d", pController->negLimitSwitchInput);
+		status = pController->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
+		if (status) goto bail;
+		val = atoi(resp);
+		setIntegerParam(pController->motorStatusLowLimit_, val);
+	}
+
+	// error polling
 	bail:
 	if (status) {
 		char buff[LOCAL_LINE_LEN];
@@ -428,12 +456,18 @@ asynStatus ImsMDrivePlusMotorAxis::poll(bool *moving)
 		handleAxisError(buff);
 	}
 
-	// update motor record
-    callParamCallbacks();
+	// update motor status if polling was successful
+	if (status == 0) {
+		setIntegerParam(pController->motorStatusCommsError_, 0);  // reset COMM error
+		setIntegerParam(pController->motorStatusProblem_, 0);     // reset problem error, bit 10
+	}
 
-    int mstat;
-    pController->getIntegerParam(pController->motorStatus_, &mstat);
-    asynPrint(pController->pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: POS=%f, MSTAT=%d\n", DRIVER_NAME, functionName, position, mstat);
+	// update motor record
+	callParamCallbacks();
+
+	int mstat;
+	pController->getIntegerParam(pController->motorStatus_, &mstat);
+	asynPrint(pController->pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: POS=%f, MSTAT=%d\n", DRIVER_NAME, functionName, position, mstat);
 
 	return status;
 
@@ -452,7 +486,8 @@ asynStatus ImsMDrivePlusMotorAxis::saveToNVM()
 
 	// send save command
 	sprintf(cmd, "S");
-	if (status = pController->writeController(cmd, IMS_TIMEOUT)) goto bail;
+	status = pController->writeController(cmd, IMS_TIMEOUT);
+	if (status) goto bail;
 	asynPrint(pController->pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: Saved to NVM\n", DRIVER_NAME, functionName);
 
 	bail:
@@ -476,7 +511,7 @@ asynStatus ImsMDrivePlusMotorAxis::saveToNVM()
 void ImsMDrivePlusMotorAxis::handleAxisError(char *errMsg)
 {
 	char cmd[MAX_CMD_LEN];
-	char inbuff[MAX_BUFF_LEN];
+	char resp[MAX_BUFF_LEN];
 	size_t nread=0;
 	int errCode=0;
 	char errCodeString[MAX_BUFF_LEN];
@@ -487,8 +522,8 @@ void ImsMDrivePlusMotorAxis::handleAxisError(char *errMsg)
 
 	// read error code
 	sprintf(cmd, "PR ER");
-	pController->writeReadController(cmd, inbuff, sizeof(inbuff), &nread, IMS_TIMEOUT);
-	errCode = atoi(inbuff);
+	pController->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
+	errCode = atoi(resp);
 
 	switch (errCode) {
 	case 0: strcpy(errCodeString, "No Error"); break;
