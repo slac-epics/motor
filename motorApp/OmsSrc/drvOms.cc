@@ -2,9 +2,9 @@
 FILENAME...     drvOms.cc
 USAGE...        Driver level support for OMS models VME8, VME44 and VS4.
 
-Version:        $Revision: 10834 $
+Version:        $Revision: 14155 $
 Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2010-04-29 10:04:39 -0700 (Thu, 29 Apr 2010) $
+Last Modified:  $Date: 2011-11-29 12:50:00 -0800 (Tue, 29 Nov 2011) $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/OmsSrc/drvOms.cc $
 */
 
@@ -125,18 +125,18 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/mot
 #define DONE_QUERY      "RA"
 
 /*----------------debugging-----------------*/
-#ifdef __GNUG__
-    #ifdef      DEBUG
-        #define Debug(l, f, args...) {if (l <= drvOMSdebug) \
-				    errlogPrintf(f, ## args);}
-    #else
-        #define Debug(l, f, args...)
-    #endif
-#else
-    #define Debug
-#endif
 volatile int drvOMSdebug = 0;
 extern "C" {epicsExportAddress(int, drvOMSdebug);}
+static inline void Debug(int level, const char *format, ...) {
+  #ifdef DEBUG
+    if (level < drvOMSdebug) {
+      va_list pVar;
+      va_start(pVar, format);
+      vprintf(format, pVar);
+      va_end(pVar);
+    }
+  #endif
+}
 
 /* Global data. */
 int oms44_num_cards = 0;

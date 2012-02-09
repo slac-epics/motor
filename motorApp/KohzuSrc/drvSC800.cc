@@ -2,9 +2,9 @@
 FILENAME...     drvSC800.cc
 USAGE...        Motor record driver level support for Kohzu SC800                
 
-Version:        $Revision: 9857 $
+Version:        $Revision: 14155 $
 Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2009-12-09 08:21:24 -0800 (Wed, 09 Dec 2009) $
+Last Modified:  $Date: 2011-11-29 12:50:00 -0800 (Tue, 29 Nov 2011) $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/KohzuSrc/drvSC800.cc $
 
 */
@@ -67,17 +67,19 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/mot
 #define MOTION_DELAY 0.1
 
 /*----------------debugging-----------------*/
-#ifdef __GNUG__
-    #ifdef      DEBUG
-        #define Debug(l, f, args...) { if(l<=drvSC800debug) printf(f,## args); }
-    #else
-        #define Debug(l, f, args...)
-    #endif
-#else
-    #define Debug()
-#endif
 volatile int drvSC800debug = 0;
 extern "C" {epicsExportAddress(int, drvSC800debug);}
+
+static inline void Debug(int level, const char *format, ...) {
+  #ifdef DEBUG
+    if (level < drvSC800debug) {
+      va_list pVar;
+      va_start(pVar, format);
+      vprintf(format, pVar);
+      va_end(pVar);
+    }
+  #endif
+}
 
 /* --- Local data. --- */
 int SC800_num_cards = 0;

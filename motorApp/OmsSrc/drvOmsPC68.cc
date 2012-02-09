@@ -2,9 +2,9 @@
 FILENAME...     drvOmsPC68.cc
 USAGE...        Motor record driver level support for OMS PC68 serial device.
 
-Version:	$Revision: 10834 $
+Version:	$Revision: 14155 $
 Modified By:	$Author: sluiter $
-Last Modified:	$Date: 2010-04-29 10:04:39 -0700 (Thu, 29 Apr 2010) $
+Last Modified:	$Date: 2011-11-29 12:50:00 -0800 (Tue, 29 Nov 2011) $
 */
 
 /*
@@ -86,19 +86,18 @@ Last Modified:	$Date: 2010-04-29 10:04:39 -0700 (Thu, 29 Apr 2010) $
 #define TIMEOUT             (2.0)   /* Command timeout in sec. */
 
 /*----------------debugging-----------------*/
-#ifdef __GNUG__
-    #ifdef      DEBUG
-        #define Debug(l, f, args...) {if(l<=drvOmsPC68debug) printf(f,## args);}
-    #else
-        #define Debug(l, f, args...)
-    #endif
-#else
-    #define Debug()
-#endif
-
 volatile int drvOmsPC68debug = 0;
-
 extern "C" {epicsExportAddress(int, drvOmsPC68debug);}
+static inline void Debug(int level, const char *format, ...) {
+  #ifdef DEBUG
+    if (level < drvOmsPC68debug) {
+      va_list pVar;
+      va_start(pVar, format);
+      vprintf(format, pVar);
+      va_end(pVar);
+    }
+  #endif
+}
 
 /* --- Global data. --- */
 int OmsPC68_num_cards = 0;
