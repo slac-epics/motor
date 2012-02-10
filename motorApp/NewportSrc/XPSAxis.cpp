@@ -2,9 +2,9 @@
 FILENAME...     XPSMotorDriver.cpp
 USAGE...        Newport XPS EPICS asyn motor device driver
 
-Version:        $Revision: 19717 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2009-12-09 10:21:24 -0600 (Wed, 09 Dec 2009) $
+Version:        $Revision: 1.6 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/02/09 06:32:29 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/trunk/support/motor/vstub/motorApp/NewportSrc/XPSMotorDriver.cpp $
 */
 
@@ -152,6 +152,7 @@ XPSAxis::XPSAxis(XPSController *pC, int axisNo, const char *positionerName, doub
   /* Set the poll rate on the moveSocket to a negative number, which means that SendAndReceive should do only a write, no read */
   TCP_SetTimeout(moveSocket_, -0.1);
   pollSocket_ = pC_->pollSocket_;
+  axisBitMask_ = (1 << axisNo);
   
   /* Set an EPICS exit handler that will shut down polling before asyn kills the IP sockets */
   epicsAtExit(shutdownCallback, pC_);
@@ -198,7 +199,6 @@ XPSAxis::XPSAxis(XPSController *pC, int axisNo, const char *positionerName, doub
   /* Wake up the poller task which will make it do a poll, 
    * updating values for this axis to use the new resolution (stepSize_) */   
   pC_->wakeupPoller();
-
 }
 
 asynStatus XPSAxis::move(double position, int relative, double min_velocity, double max_velocity, double acceleration)
@@ -541,8 +541,15 @@ asynStatus XPSAxis::poll(bool *moving)
                           &axisStatus_);
   if (status) {
     asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
-              "%s:%s: [%s,%d]: error calling GroupStatusGet status=%d\n",
-              driverName, functionName, pC_->portName, axisNo_, status);
+              "%s:%s: [%s,%d]: error calling GroupStatusGet status=%d, pollSocket_=%d, moveSocket_=%d\n",
+              driverName, functionName, pC_->portName, axisNo_, status, pollSocket_, moveSocket_);
+    // Set polling error mask bit for this axis 
+    pC_->pollSocketAxesErrors_ = pC_->pollSocketAxesErrors_ | axisBitMask_;  
+	asynPrint(pasynUser_, ASYN_TRACE_ERROR, "%s:%s: [%s,%d]: axisBitMask_=%d, pollSocketAxesErrors_=%d\n", 
+              driverName, functionName, pC_->portName, axisNo_, axisBitMask_, pC_->pollSocketAxesErrors_);
+    // Update axis status 
+    axisStatus_ = status;
+    sprintf(axisStatusString_, "%d",axisStatus_);
     goto done;
   }
   asynPrint(pasynUser_, ASYN_TRACE_FLOW, 
@@ -558,12 +565,17 @@ asynStatus XPSAxis::poll(bool *moving)
     axisDone = 0;
   }
   /* Set the status */
-  setIntegerParam(pC_->XPSStatus_, axisStatus_);
+  //setIntegerParam(pC_->XPSStatus_, axisStatus_);
   /* Set the axis done parameter */
   /* AND the done flag with the inverse of deferred_move.*/
   axisDone &= !deferredMove_;
   *moving = axisDone ? false : true;
   setIntegerParam(pC_->motorStatusDone_, axisDone);
+  /* Update polling error mask with no error */
+  pC_->pollSocketAxesErrors_ = pC_->pollSocketAxesErrors_ & ~axisBitMask_; 
+
+  /* Get the XPS status string */
+  status = GroupStatusStringGet(pollSocket_, axisStatus_, axisStatusString_);
 
   /*Read the controller software limits in case these have been changed by a TCL script.*/
   status = PositionerUserTravelLimitsGet(pollSocket_, positionerName_, &lowLimit_, &highLimit_);
@@ -683,6 +695,8 @@ asynStatus XPSAxis::poll(bool *moving)
   setIntegerParam(pC_->motorStatusMoving_,    (fabs(currentVelocity_) > XPS_VELOCITY_DEADBAND));
 
   done:
+  setIntegerParam(pC_->XPSStatus_, axisStatus_);
+  pC_->doCallbacksInt8Array(axisStatusString_, strlen(axisStatusString_), pC_->XPSStatusString_, axisNo_);  
   setIntegerParam(pC_->motorStatusCommsError_, status ? 1 : 0);
   callParamCallbacks();
   return status ? asynError : asynSuccess;

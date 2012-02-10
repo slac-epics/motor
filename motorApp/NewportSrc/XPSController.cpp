@@ -2,9 +2,9 @@
 FILENAME...     XPSMotorDriver.cpp
 USAGE...        Newport XPS EPICS asyn motor device driver
 
-Version:        $Revision: 19717 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2009-12-09 10:21:24 -0600 (Wed, 09 Dec 2009) $
+Version:        $Revision: 1.7 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/02/09 06:32:29 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/trunk/support/motor/vstub/motorApp/NewportSrc/XPSMotorDriver.cpp $
 */
  
@@ -143,8 +143,8 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
                              int numAxes, double movingPollPeriod, double idlePollPeriod,
                              int enableSetPosition, double setPositionSettlingTime)
   :  asynMotorController(portName, numAxes, NUM_XPS_PARAMS, 
-                         0, // No additional interfaces
-                         0, // No addition interrupt interfaces
+                         asynInt8ArrayMask, // additional interfaces
+                         asynInt8ArrayMask, // addition interrupt interfaces
                          ASYN_CANBLOCK | ASYN_MULTIDEVICE, 
                          1, // autoconnect
                          0, 0),  // Default priority and stack size
@@ -168,6 +168,7 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
   createParam(XPSProfileGroupNameString,         asynParamOctet, &XPSProfileGroupName_);
   createParam(XPSTrajectoryFileString,           asynParamOctet, &XPSTrajectoryFile_);
   createParam(XPSStatusString,                   asynParamInt32, &XPSStatus_);
+  createParam(XPSStatusStringString,         asynParamInt8Array, &XPSStatusString_);
 
   // This socket is used for polling by the controller and all axes
   pollSocket_ = TCP_ConnectToServer((char *)IPAddress, IPPort, XPS_POLL_TIMEOUT);
@@ -175,7 +176,13 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
     printf("%s:%s: error calling TCP_ConnectToServer for pollSocket\n",
            driverName, functionName);
   }
-  
+  // initialize poll socket errors
+  pollSocketAxesErrors_ = 0; 
+  // calculate bit mask value for all axes
+  for (int i=0; i<numAxes; i++) {
+    axesBitMaskSum_ = axesBitMaskSum_ | (1 << i);
+  }  
+
   // This socket is used for moving motors during profile moves
   // Each axis also has its own moveSocket
   moveSocket_ = TCP_ConnectToServer((char *)IPAddress, IPPort, XPS_MOVE_TIMEOUT);
@@ -1147,6 +1154,54 @@ asynStatus XPSController::runProfile()
   return executeOK ? asynSuccess : asynError; 
 }
 
+/** Reset controller and axis sockets to handle communication loss (e.g. during power cycle, network problems)
+ */
+void XPSController::reconnectTCPSockets()
+{
+  XPSAxis *pAxis=NULL;
+  static const char *functionName = "reconnectSockets";
+
+  // Close polling socket used by controller and all axes
+  // This socket is used for polling by the controller and all axes
+  TCP_CloseSocket(pollSocket_);
+  // Reconnect controller's poll socket
+  pollSocket_ = TCP_ConnectToServer((char *)IPAddress_, IPPort_, XPS_POLL_TIMEOUT);
+  if (pollSocket_ < 0) {
+    asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: error calling TCP_ConnectToServer for pollSocket_ reconnect\n", driverName, functionName);
+    return;
+  } else {
+    asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: success calling TCP_ConnectToServer for pollSocket_ reconnect, pollSocket_=%d\n", driverName, functionName, pollSocket_);         
+    pollSocketAxesErrors_ = 0;
+  }
+  // Reconnect controller's move socket
+  moveSocket_ = TCP_ConnectToServer((char *)IPAddress_, IPPort_, XPS_POLL_TIMEOUT);
+  if (moveSocket_ < 0) {
+    asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: error calling TCP_ConnectToServer for controller moveSocket_ reconnect\n", driverName, functionName);
+    return;
+  } else {
+    asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: success calling TCP_ConnectToServer for controller moveSocket_ reconnect, pollSocket_=%d\n", driverName, functionName, pollSocket_);         
+  }
+
+  // Update each axis poll socket and each move socket
+  // for now don't track move socket errors and just assume they occur along with poll socket errors
+  // Loop over all axes in this controller. 
+  for (int axis=0; axis<numAxes_; axis++) {
+    pAxis = getAxis(axis);
+    pAxis->pollSocket_ = pollSocket_;  // each axis copies the poll socket number
+    // reset moveSocket_ for each axis
+    TCP_CloseSocket(pAxis->moveSocket_);
+    pAxis->moveSocket_ = TCP_ConnectToServer((char *)IPAddress_, IPPort_, XPS_POLL_TIMEOUT);
+    if (pAxis->moveSocket_ < 0) {
+      asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: error calling TCP_ConnectToServer for moveSocket_ reconnect axis[%d] \n", driverName, functionName, axis);      
+    } else {
+      // Set the poll rate on the moveSocket to a negative number, which means that SendAndReceive should do only a write, no read 
+      asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: success calling TCP_ConnectToServer for moveSocket_ reconnect, axis[%d] moveSocket_=%d\n", driverName, functionName, axis, pAxis->moveSocket_);      
+      TCP_SetTimeout(pAxis->moveSocket_, -0.1);	  
+    }
+  } 
+}
+
+
 /** Polls the controller, rather than individual axis
   * Used during profile moves */
 asynStatus XPSController::poll()
@@ -1157,6 +1212,11 @@ asynStatus XPSController::poll()
   char fileName[MAX_FILENAME_LEN];
   char groupName[MAX_GROUPNAME_LEN];
   
+  // if polling errors on all axes, reset TCP connection
+  if (pollSocketAxesErrors_ == axesBitMaskSum_) { 
+    reconnectTCPSockets();
+  }
+
   getIntegerParam(profileExecuteState_, &executeState);
   if (executeState != PROFILE_EXECUTE_EXECUTING) return asynSuccess;
 

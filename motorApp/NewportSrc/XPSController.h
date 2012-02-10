@@ -25,6 +25,7 @@ USAGE...        Newport XPS EPICS asyn motor device driver
 #define XPSProfileGroupNameString       "XPS_PROFILE_GROUP_NAME"
 #define XPSTrajectoryFileString         "XPS_TRAJECTORY_FILE"
 #define XPSStatusString                 "XPS_STATUS"
+#define XPSStatusStringString           "XPS_STATUS_STRING"
 
 class XPSController : public asynMotorController {
 
@@ -74,9 +75,12 @@ class XPSController : public asynMotorController {
   int XPSProfileGroupName_;
   int XPSTrajectoryFile_;
   int XPSStatus_;
-  #define LAST_XPS_PARAM XPSStatus_
+  int XPSStatusString_;
+  #define LAST_XPS_PARAM XPSStatusString_
 
   private:
+  void reconnectTCPSockets();              // reset TCP communication (pollSocket_ and moveSocket_)
+
   bool enableSetPosition_;          /**< Enable/disable setting the position from EPICS */ 
   double setPositionSettlingTime_;  /**< The settling (sleep) time used when setting position. */
   char *IPAddress_;
@@ -85,6 +89,8 @@ class XPSController : public asynMotorController {
   char *ftpPassword_;
   int pollSocket_;
   int moveSocket_;
+  unsigned int pollSocketAxesErrors_;  // error bits from XPSAxis::poll GroupStatusGet call
+  unsigned int axesBitMaskSum_;        // mask sum for all axes
   char firmwareVersion_[100];
   int movesDeferred_;
   epicsEventId profileExecuteEvent_;

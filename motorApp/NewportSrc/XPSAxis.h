@@ -77,12 +77,14 @@ class XPSAxis : public asynMotorAxis
   char *groupName_;
   int positionerError_;
   int axisStatus_;
+  char axisStatusString_[100];
   double profilePreDistance_;
   double profilePostDistance_;
   xpsCorrectorInfo_t xpsCorrectorInfo_;
   double deferredPosition_;
   int deferredMove_;
   int deferredRelative_;
+  unsigned int axisBitMask_;      /* bit masking that can be used to track various axis info */
 
   friend class XPSController;
 };

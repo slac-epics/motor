@@ -1,38 +1,31 @@
-//! @file ImsMDrivePlusController.cpp
-//!       Motor record driver level support for Intelligent Motion Systems, Inc.
-//!       MDrivePlus series; M17, M23, M34.
+//! @File : ImsMDrivePlusController.cpp
+//!         Motor record driver level support for Intelligent Motion Systems, Inc.
+//!         MDrivePlus series; M17, M23, M34.
 //!	      Simple implementation using "model 3" asynMotorController and asynMotorAxis base classes (derived from asynPortDriver)
 //!
-//!  DESIGN LIMITATIONS AND ASSUMPTIONS...
-//!       1 - Like all controllers, the MDrivePlus must be powered-on when EPICS is first booted up.
-//!       2 - The MDrivePlus cannot be power cycled while EPICS is up and running.
-//!           The consequences are permanent communication lose with the MDrivePlus until EPICS is rebooted.
-//!       3 - Assume single controller-card-axis relationship; 1 controller = 1 axis.  This may be wrong.
-//!       4 - Must be used in party-mode so pre/append Line Feed to beginning and end of command string
-//!       5 - If not using device name to address device, config ImsMDrivePlusCreateController() with empty string "" for deviceName
+//!  Author : Nia Fong 
+//!  Date : 11-21-2011
+//!
+//!  Assumptions :
+//!    1) Like all controllers, the MDrivePlus must be powered-on when EPICS is first booted up.
+//!    2) Assume single controller-card-axis relationship; 1 controller = 1 axis.  
+//!    3) Append Line Feed (ctrl-J) to end of command string for party mode support
+//!    4) If not using device name to address device, config ImsMDrivePlusCreateController() with empty string "" for deviceName
+//
+//  Revision History
+//  ----------------
+//  11-21-2011  NF Initial version
 
-// Right now just copy from Hytec driver
+
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdarg.h>
-//#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <exception>
-
-//#include <epicsFindSymbol.h>
-//#include <epicsTime.h>
 #include <epicsThread.h>
-//#include <epicsMutex.h>
-//#include <ellLib.h>
-//#include <epicsMessageQueue.h>
-
-//#include <drvSup.h>
 #include <epicsExport.h>
-//#include <devLib.h>
-//#include <drvIpac.h>
 #include <iocsh.h>
-
 #include <asynOctetSyncIO.h>
 
 #include "ImsMDrivePlusMotorController.h"
@@ -45,7 +38,7 @@
 //! @param[in] motorPortName     Name assigned to the port created to communicate with the motor
 //! @param[in] IOPortName        Name assigned to the asyn IO port, name that was assigned in drvAsynIPPortConfigure()
 //! @param[in] devName           Name of device (DN) assigned to motor axis in MCode, the device name is prepended to the MCode command to support Party Mode (PY) multidrop communication setup
-//!                          set to empty string "" if no device name needed/not using Party Mode
+//!                              set to empty string "" if no device name needed/not using Party Mode
 //! @param[in] movingPollPeriod  Moving polling period in milliseconds
 //! @param[in] idlePollPeriod    Idle polling period in milliseconds
 ////////////////////////////////////////////////////////
@@ -55,47 +48,49 @@ ImsMDrivePlusMotorController::ImsMDrivePlusMotorController(const char *motorPort
 						  asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask,
 						  ASYN_CANBLOCK | ASYN_MULTIDEVICE,
 						  1, // autoconnect
-						  0, 0),  // Default priority and stack si
-	  pAsynUserIMS(0)
+						  0, 0),  // Default priority and stack size
+    pAsynUserIMS(0)
 {
 	static const char *functionName = "ImsMDrivePlusMotorController()";
 	asynStatus status;
-    ImsMDrivePlusMotorAxis *pAxis;
-    // asynMotorController constructor calloc's memory for array of axis pointers
-    pAxes_ = (ImsMDrivePlusMotorAxis **)(asynMotorController::pAxes_);
+	ImsMDrivePlusMotorAxis *pAxis;
+	// asynMotorController constructor calloc's memory for array of axis pointers
+	pAxes_ = (ImsMDrivePlusMotorAxis **)(asynMotorController::pAxes_);
 
-    // copy names
-    strcpy(motorName, motorPortName);
+	// copy names
+	strcpy(motorName, motorPortName);
 
-    // setup communication
-    status = pasynOctetSyncIO->connect(IOPortName, 0, &pAsynUserIMS, NULL);
-    if (status != asynSuccess) {
-			printf("\n\n%s:%s: ERROR connecting to Controller's IO port=%s\n\n", DRIVER_NAME, functionName, IOPortName);
-            // TODO would be good to implement exceptions
-            // TODO THROW_(SmarActMCSException(MCSConnectionError, "SmarActMCSController: unable to connect serial channel"));
-    }
+	// setup communication
+	status = pasynOctetSyncIO->connect(IOPortName, 0, &pAsynUserIMS, NULL);
+	if (status != asynSuccess) {
+		printf("\n\n%s:%s: ERROR connecting to Controller's IO port=%s\n\n", DRIVER_NAME, functionName, IOPortName);
+		// TODO would be good to implement exceptions
+		// TODO THROW_(SmarActMCSException(MCSConnectionError, "SmarActMCSController: unable to connect serial channel"));
+	}
 
 	// write version, cannot use asynPrint() in constructor since controller (motorPortName) hasn't been created yet
-    printf("%s:%s: version=%s\n", DRIVER_NAME, functionName, VERSION);
-    printf("%s:%s: motorPortName=%s, IOPortName=%s, devName=%s \n", DRIVER_NAME, functionName, motorPortName, IOPortName, devName);
+	printf("%s:%s: motorPortName=%s, IOPortName=%s, devName=%s \n", DRIVER_NAME, functionName, motorPortName, IOPortName, devName);
 
 
-    // init
-    pasynOctetSyncIO->setInputEos(pAsynUserIMS, "\n", 1);
-    pasynOctetSyncIO->setOutputEos(pAsynUserIMS, "\r\n", 2);
+	// init
+	pasynOctetSyncIO->setInputEos(pAsynUserIMS, "\n", 1);
+	pasynOctetSyncIO->setOutputEos(pAsynUserIMS, "\r\n", 2); 
 
-    // Create controller-specific parameters
-    createParam(ImsMDrivePlusSaveToNVMControlString, asynParamInt32, &ImsMDrivePlusSaveToNVM_);
-    createParam(ImsMDrivePlusLoadMCodeControlString, asynParamOctet, &this->ImsMDrivePlusLoadMCode_);
-    createParam(ImsMDrivePlusClearMCodeControlString, asynParamOctet, &this->ImsMDrivePlusClearMCode_);
+	// Create controller-specific parameters
+	createParam(ImsMDrivePlusSaveToNVMControlString, asynParamInt32, &ImsMDrivePlusSaveToNVM_);
+	createParam(ImsMDrivePlusLoadMCodeControlString, asynParamOctet, &this->ImsMDrivePlusLoadMCode_);
+	createParam(ImsMDrivePlusClearMCodeControlString, asynParamOctet, &this->ImsMDrivePlusClearMCode_);
 
-    // Check the validity of the arguments and init controller object
-    initController(devName, movingPollPeriod, idlePollPeriod);
+	// Check the validity of the arguments and init controller object
+	initController(devName, movingPollPeriod, idlePollPeriod);
 
-    // Create axis
+	// Create axis
 	// Assuming single axis per controller the way drvAsynIPPortConfigure( "M06", "ts-b34-nw08:2101", 0, 0 0 ) is called in st.cmd script
-    pAxis = new ImsMDrivePlusMotorAxis(this, 0);
+	pAxis = new ImsMDrivePlusMotorAxis(this, 0);
 	pAxis = NULL;  // asynMotorController constructor tracking array of axis pointers
+
+	// read home and limit config from S1-S4
+	readHomeAndLimitConfig();
 
 	startPoller(movingPollPeriod, idlePollPeriod, 2);
 }
@@ -118,10 +113,56 @@ void ImsMDrivePlusMotorController::initController(const char *devName, double mo
 	this->movingPollPeriod_ = movingPollPeriod;
 	this->idlePollPeriod_ = idlePollPeriod;
 
+	// initialize switch inputs
+	this->homeSwitchInput=-1;
+	this->posLimitSwitchInput=-1;
+	this->negLimitSwitchInput=-1;
+
 	// flush io buffer
 	pasynOctetSyncIO->flush(pAsynUserIMS);
 }
 
+////////////////////////////////////////
+//! readHomeAndLimitConfig
+//! read home, positive limit, and neg limit switch configuration from MCode S1-S4 settings
+//! S1-S4 must be set up beforehand
+//! I1-I4 are used to read the status of S1-S4
+//  Use logic from existing drvMDrive.cc
+////////////////////////////////////////
+int ImsMDrivePlusMotorController::readHomeAndLimitConfig()
+{
+	asynStatus status = asynError;
+	char cmd[MAX_CMD_LEN];
+	char resp[MAX_BUFF_LEN];
+	size_t nread;
+	static const char *functionName = "readHomeAndLimitConfig()";
+	int type;
+
+	// iterate through S1-S4 and parse each configuration to see if home, pos, and neg limits are set
+	for (int i=1; i<=4; i++) {
+		sprintf(cmd, "PR S%d", i); // query S1-S4 setting
+		status = this->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
+		sscanf(resp, "%d", &type);
+		//asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: S%d: type=%d\n", DRIVER_NAME, functionName, i, type);
+		if (type != 0)
+			//printf("%s:%s: S%d: type=%d\n", DRIVER_NAME, functionName, i, type);
+		switch (type) {
+		case 0: break; // general purpose input
+		case 1: // home switch input
+			homeSwitchInput = i; break;
+		case 2: // positive limit switch input
+			posLimitSwitchInput = i; break;
+		case 3: // negative limit switch input
+			negLimitSwitchInput = i; break;
+		default:
+			printf("%s:%s: ERROR invalid data type for S%d=%d\n", DRIVER_NAME, functionName, i, type);
+		}
+	}
+
+	printf("homeSwitchInput=%d, posLimitSwitchInput=%d, negLimitSwitchInput=%d\n", homeSwitchInput, posLimitSwitchInput, negLimitSwitchInput);
+
+	return status;
+}
 
 ////////////////////////////////////////
 //! getAxis()
@@ -134,10 +175,10 @@ void ImsMDrivePlusMotorController::initController(const char *devName, double mo
 ////////////////////////////////////////
 ImsMDrivePlusMotorAxis* ImsMDrivePlusMotorController::getAxis(asynUser *pasynUser)
 {
-    int axisNo;
+	int axisNo;
 
-    getAddress(pasynUser, &axisNo);
-    return getAxis(axisNo);
+	getAddress(pasynUser, &axisNo);
+	return getAxis(axisNo);
 }
 
 ////////////////////////////////////////
@@ -151,8 +192,8 @@ ImsMDrivePlusMotorAxis* ImsMDrivePlusMotorController::getAxis(asynUser *pasynUse
 ////////////////////////////////////////
 ImsMDrivePlusMotorAxis* ImsMDrivePlusMotorController::getAxis(int axisNo)
 {
-    if ((axisNo < 0) || (axisNo >= numAxes_)) return NULL;
-    return pAxes_[axisNo];
+	if ((axisNo < 0) || (axisNo >= numAxes_)) return NULL;
+	return pAxes_[axisNo];
 }
 
 ////////////////////////////////////////
@@ -165,7 +206,7 @@ ImsMDrivePlusMotorAxis* ImsMDrivePlusMotorController::getAxis(int axisNo)
 ////////////////////////////////////////
 asynStatus ImsMDrivePlusMotorController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 {
-	int function = pasynUser->reason;
+	int reason = pasynUser->reason;
 	int status = asynSuccess;
 	ImsMDrivePlusMotorAxis *pAxis;
 	static const char *functionName = "writeInt32";
@@ -177,9 +218,9 @@ asynStatus ImsMDrivePlusMotorController::writeInt32(asynUser *pasynUser, epicsIn
 
 	// Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
 	// status at the end, but that's OK
-	status = pAxis->setIntegerParam(function, value);
+	status = pAxis->setIntegerParam(reason, value);
 
-	if (function == ImsMDrivePlusSaveToNVM_) {
+	if (reason == ImsMDrivePlusSaveToNVM_) {
 		if (value == 1) { // save current user parameters to NVM
 			status = pAxis->saveToNVM();
 			if (status) asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: ERROR saving to NVM\n", DRIVER_NAME, functionName);
@@ -195,57 +236,12 @@ asynStatus ImsMDrivePlusMotorController::writeInt32(asynUser *pasynUser, epicsIn
 	return (asynStatus)status;
 }
 
-/*
 ////////////////////////////////////////
-//! writeFloat64()
-//! Override asynMotorController function to add hooks to IMS records
-// Based on XPSController.cpp
-//
-//! param[in] pointer to asynUser object
-//! param[in] value to pass to function
-////////////////////////////////////////
-asynStatus ImsMDrivePlusMotorController::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
-{
-	int function = pasynUser->reason;
-	int status = asynSuccess;
-	ImsMDrivePlusMotorAxis *pAxis;
-	static const char *functionName = "writeFloat64";
-
-	asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: here\n", DRIVER_NAME, functionName);
-
-	pAxis = this->getAxis(pasynUser);
-	if (!pAxis) return asynError;
-
-	asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: got axis\n", DRIVER_NAME, functionName);
-
-	// Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
-	// status at the end, but that's OK
-	status = pAxis->setIntegerParam(function, value);
-
-	if (function == ImsMDrivePlusSaveToNVM_) {
-		if (value == 1) { // save current user parameters to NVM
-asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: sending S command....\n", DRIVER_NAME, functionName);
-			status = pAxis->saveToNVM();
-			if (status) asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: ERROR saving to NVM\n", DRIVER_NAME, functionName);
-			else asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s: saved to NVM\n", DRIVER_NAME, functionName);
-		} else {
-			asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: ERROR, value of 1 to save to NVM\n", DRIVER_NAME, functionName);
-		}
-	} else { // call base class method to continue handling
-			status = asynMotorController::writeFloat64(pasynUser, value);
-	}
-
-	callParamCallbacks(pAxis->axisNo_);
-	return (asynStatus)status;
-}
-*/
-
-////////////////////////////////////////
-//! writeReadController()
+//! writeController()
 //! reference ACRMotorDriver
 //
 //! Writes a string to the IMS controller.
-//! Prepends deviceName to command string
+//! Prepends deviceName to command string, if party mode not enabled, set device name to ""
 //! @param[in] output the string to be written.
 //! @param[in] timeout Timeout before returning an error.
 ////////////////////////////////////////
@@ -256,10 +252,9 @@ asynStatus ImsMDrivePlusMotorController::writeController(const char *output, dou
 	char outbuff[MAX_BUFF_LEN];
 	static const char *functionName = "writeController()";
 
-	// in party-mode Line Feed must surround command string
-	//sprintf(outbuff, "\n%s%s\r\n", deviceName, output);
-	sprintf(outbuff, "\n%s%s", deviceName, output);
-	//asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: writeController():: deviceName=%s, command=%s\n", DRIVER_NAME, functionName, deviceName, output);
+	// in party-mode Line Feed must follow command string
+	sprintf(outbuff, "%s%s", deviceName, output);
+	asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: deviceName=%s, command=%s\n", DRIVER_NAME, functionName, deviceName, outbuff);
 	status = pasynOctetSyncIO->write(pAsynUserIMS, outbuff, strlen(outbuff), timeout, &nwrite);
 	if (status) { // update comm flag
 		setIntegerParam(this->motorStatusCommsError_, 1);
@@ -287,15 +282,13 @@ asynStatus ImsMDrivePlusMotorController::writeReadController(const char *output,
 	char outbuff[MAX_BUFF_LEN];
 	static const char *functionName = "writeReadController()";
 
-	// in party-mode Line Feed must surround command string
-	//sprintf(outbuff, "\n%s%s\r\n", deviceName, output);
-	sprintf(outbuff, "\n%s%s", deviceName, output);
-	//asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: deviceName=%s, command=%s", DRIVER_NAME, functionName, deviceName, output);
+	// in party-mode Line Feed must follow command string
+	sprintf(outbuff, "%s%s", deviceName, output);
 	status = pasynOctetSyncIO->writeRead(pAsynUserIMS, outbuff, strlen(outbuff), input, maxChars, timeout, &nwrite, nread, &eomReason);
 	if (status) { // update comm flag
 		setIntegerParam(this->motorStatusCommsError_, 1);
 	}
-	//asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "response=%s\n", input);
+	asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: deviceName=%s, command=%s, response=%s\n", DRIVER_NAME, functionName, deviceName, outbuff, input);
 	return status;
 }
 
@@ -320,10 +313,10 @@ asynStatus ImsMDrivePlusMotorController::writeReadController(const char *output,
 ////////////////////////////////////////////////////////
 extern "C" int ImsMDrivePlusCreateController(const char *motorPortName, const char *IOPortName, char *devName, double movingPollPeriod, double idlePollPeriod)
 {
-  ImsMDrivePlusMotorController *pImsController;
-  pImsController = new ImsMDrivePlusMotorController(motorPortName, IOPortName, devName, movingPollPeriod/1000., idlePollPeriod/1000.);
-  pImsController = NULL; // ?? haven't found who is allocating this memory yet
-  return(asynSuccess);
+	ImsMDrivePlusMotorController *pImsController;
+	pImsController = new ImsMDrivePlusMotorController(motorPortName, IOPortName, devName, movingPollPeriod/1000., idlePollPeriod/1000.);
+	pImsController = NULL; 
+	return(asynSuccess);
 }
 
 ////////////////////////////////////////////////////////
@@ -355,9 +348,9 @@ static void ImsMDrivePlusCreateControllerCallFunc(const iocshArgBuf *args)
 
 static void ImsMDrivePlusMotorRegister(void)
 {
-  iocshRegister(&ImsMDrivePlusCreateControllerDef, ImsMDrivePlusCreateControllerCallFunc);
+	iocshRegister(&ImsMDrivePlusCreateControllerDef, ImsMDrivePlusCreateControllerCallFunc);
 }
 
 extern "C" {
-epicsExportRegistrar(ImsMDrivePlusMotorRegister);
+	epicsExportRegistrar(ImsMDrivePlusMotorRegister);
 }

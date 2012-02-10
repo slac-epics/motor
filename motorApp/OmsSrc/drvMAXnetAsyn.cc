@@ -3,9 +3,9 @@
  * USAGE...	Asyn motor driver level support for OMS MAXnet.
  *
  *
- * Version:        $Revision$
- * Modified By:    $Author$
- * Last Modified:  $Date$
+ * Version:        $Revision: 1.1.1.1 $
+ * Modified By:    $Author: ernesto $
+ * Last Modified:  $Date: 2011/05/11 14:57:30 $
  * HeadURL:        $URL $
  *
  *      Author: Jens Eden (PTB)
