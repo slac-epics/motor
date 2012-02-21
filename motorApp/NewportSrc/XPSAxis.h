@@ -77,6 +77,7 @@ class XPSAxis : public asynMotorAxis
   char *groupName_;
   int positionerError_;
   int axisStatus_;
+  char axisStatusString_[100];
   double profilePreDistance_;
   double profilePostDistance_;
   xpsCorrectorInfo_t xpsCorrectorInfo_;

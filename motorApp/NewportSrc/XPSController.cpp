@@ -79,10 +79,6 @@ Versions: Release 4-5 and higher.
           LOSS OR DAMAGES.
 */
 
-#include <iostream>
-using std::cout;
-using std::endl;
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -143,8 +139,8 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
                              int numAxes, double movingPollPeriod, double idlePollPeriod,
                              int enableSetPosition, double setPositionSettlingTime)
   :  asynMotorController(portName, numAxes, NUM_XPS_PARAMS, 
-                         0, // No additional interfaces
-                         0, // No addition interrupt interfaces
+                         asynInt8ArrayMask, // additional interfaces
+                         asynInt8ArrayMask, // addition interrupt interfaces
                          ASYN_CANBLOCK | ASYN_MULTIDEVICE, 
                          1, // autoconnect
                          0, 0),  // Default priority and stack size
@@ -168,6 +164,7 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
   createParam(XPSProfileGroupNameString,         asynParamOctet, &XPSProfileGroupName_);
   createParam(XPSTrajectoryFileString,           asynParamOctet, &XPSTrajectoryFile_);
   createParam(XPSStatusString,                   asynParamInt32, &XPSStatus_);
+  createParam(XPSStatusStringString,         asynParamInt8Array, &XPSStatusString_);
 
   // This socket is used for polling by the controller and all axes
   pollSocket_ = TCP_ConnectToServer((char *)IPAddress, IPPort, XPS_POLL_TIMEOUT);
@@ -1402,7 +1399,7 @@ asynStatus XPSDisableAutoEnable(const char *XPSName)
 
   pC = (XPSController*) findAsynPortDriver(XPSName);
   if (!pC) {
-    cout << driverName << "::" << functionName << " Error port " << XPSName << "not found." << endl;
+    printf("%s:%s: Error port %s not found\n", driverName, functionName, XPSName);
     return asynError;
   }
 
@@ -1417,7 +1414,7 @@ asynStatus XPSNoDisableError(const char *XPSName)
 
   pC = (XPSController*) findAsynPortDriver(XPSName);
   if (!pC) {
-    cout << driverName << "::" << functionName << " Error port " << XPSName << "not found." << endl;
+    printf("%s:%s: Error port %s not found\n", driverName, functionName, XPSName);
     return asynError;
   }
 

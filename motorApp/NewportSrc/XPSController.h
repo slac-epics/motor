@@ -25,6 +25,7 @@ USAGE...        Newport XPS EPICS asyn motor device driver
 #define XPSProfileGroupNameString       "XPS_PROFILE_GROUP_NAME"
 #define XPSTrajectoryFileString         "XPS_TRAJECTORY_FILE"
 #define XPSStatusString                 "XPS_STATUS"
+#define XPSStatusStringString           "XPS_STATUS_STRING"
 
 class XPSController : public asynMotorController {
 
@@ -74,7 +75,8 @@ class XPSController : public asynMotorController {
   int XPSProfileGroupName_;
   int XPSTrajectoryFile_;
   int XPSStatus_;
-  #define LAST_XPS_PARAM XPSStatus_
+  int XPSStatusString_;
+  #define LAST_XPS_PARAM XPSStatusString_
 
   private:
   bool enableSetPosition_;          /**< Enable/disable setting the position from EPICS */ 

@@ -543,6 +543,9 @@ asynStatus XPSAxis::poll(bool *moving)
     asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
               "%s:%s: [%s,%d]: error calling GroupStatusGet status=%d\n",
               driverName, functionName, pC_->portName, axisNo_, status);
+    /* Update axis status and status string with error */
+    axisStatus_ = status;
+    sprintf(axisStatusString_, "%d",axisStatus_);
     goto done;
   }
   asynPrint(pasynUser_, ASYN_TRACE_FLOW, 
@@ -557,13 +560,14 @@ asynStatus XPSAxis::poll(bool *moving)
     /* These states mean it is moving/homeing/jogging etc*/
     axisDone = 0;
   }
-  /* Set the status */
-  setIntegerParam(pC_->XPSStatus_, axisStatus_);
   /* Set the axis done parameter */
   /* AND the done flag with the inverse of deferred_move.*/
   axisDone &= !deferredMove_;
   *moving = axisDone ? false : true;
   setIntegerParam(pC_->motorStatusDone_, axisDone);
+
+  /* Get the XPS status string */
+  status = GroupStatusStringGet(pollSocket_, axisStatus_, axisStatusString_);
 
   /*Read the controller software limits in case these have been changed by a TCL script.*/
   status = PositionerUserTravelLimitsGet(pollSocket_, positionerName_, &lowLimit_, &highLimit_);
@@ -683,6 +687,8 @@ asynStatus XPSAxis::poll(bool *moving)
   setIntegerParam(pC_->motorStatusMoving_,    (fabs(currentVelocity_) > XPS_VELOCITY_DEADBAND));
 
   done:
+  setIntegerParam(pC_->XPSStatus_, axisStatus_);
+  pC_->doCallbacksInt8Array(axisStatusString_, strlen(axisStatusString_), pC_->XPSStatusString_, axisNo_);  
   setIntegerParam(pC_->motorStatusCommsError_, status ? 1 : 0);
   callParamCallbacks();
   return status ? asynError : asynSuccess;
