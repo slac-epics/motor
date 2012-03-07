@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 266
-y 343
+x 806
+y 65
 w 430
 h 611
 font "helvetica-medium-r-18.0"
@@ -89,8 +89,8 @@ x 2
 y 90
 w 75
 h 20
-font "helvetica-medium-r-10.0"
-fgColor index 0
+font "helvetica-medium-r-12.0"
+fgColor index 14
 bgColor index 0
 useDisplayBg
 value {
@@ -108,8 +108,8 @@ x 285
 y 90
 w 110
 h 20
-font "helvetica-medium-r-10.0"
-fgColor index 0
+font "helvetica-medium-r-12.0"
+fgColor index 14
 bgColor index 0
 useDisplayBg
 value {
@@ -378,8 +378,8 @@ x 2
 y 32
 w 75
 h 20
-font "helvetica-medium-r-10.0"
-fgColor index 0
+font "helvetica-medium-r-12.0"
+fgColor index 14
 bgColor index 0
 useDisplayBg
 value {
@@ -898,8 +898,8 @@ x 3
 y 305
 w 200
 h 20
-font "helvetica-medium-r-10.0"
-fgColor index 0
+font "helvetica-medium-r-12.0"
+fgColor index 14
 bgColor index 0
 useDisplayBg
 value {
@@ -913,11 +913,11 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 241
-y 353
+x 240
+y 370
 w 50
-h 18
-font "helvetica-medium-r-10.0"
+h 20
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 0
 useDisplayBg
@@ -932,11 +932,11 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 241
-y 428
+x 240
+y 437
 w 50
-h 18
-font "helvetica-medium-r-10.0"
+h 20
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 0
 useDisplayBg
@@ -951,11 +951,11 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 241
-y 403
+x 240
+y 414
 w 50
-h 18
-font "helvetica-medium-r-10.0"
+h 20
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 0
 useDisplayBg
@@ -970,11 +970,11 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 241
-y 378
+x 240
+y 392
 w 50
-h 18
-font "helvetica-medium-r-10.0"
+h 20
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 0
 useDisplayBg
@@ -989,17 +989,16 @@ beginObjectProperties
 major 4
 minor 2
 release 0
-x 171
-y 378
-w 70
-h 18
+x 175
+y 392
+w 65
+h 20
 controlPv "$(MOTOR).EGU"
 format "decimal"
-font "helvetica-medium-r-10.0"
+font "helvetica-medium-r-12.0"
 fontAlign "right"
 fgColor index 44
 bgColor index 3
-autoHeight
 nullColor index 32
 smartRefresh
 fastUpdate
@@ -1014,17 +1013,16 @@ beginObjectProperties
 major 4
 minor 2
 release 0
-x 171
-y 428
-w 70
-h 18
+x 175
+y 437
+w 65
+h 20
 controlPv "$(MOTOR).EGU"
 format "decimal"
-font "helvetica-medium-r-10.0"
+font "helvetica-medium-r-12.0"
 fontAlign "right"
 fgColor index 44
 bgColor index 3
-autoHeight
 nullColor index 32
 smartRefresh
 fastUpdate
@@ -1039,17 +1037,16 @@ beginObjectProperties
 major 4
 minor 2
 release 0
-x 171
-y 403
-w 70
-h 18
+x 175
+y 414
+w 65
+h 20
 controlPv "$(MOTOR).EGU"
 format "decimal"
-font "helvetica-medium-r-10.0"
+font "helvetica-medium-r-12.0"
 fontAlign "right"
 fgColor index 44
 bgColor index 3
-autoHeight
 nullColor index 32
 smartRefresh
 fastUpdate
@@ -1064,11 +1061,11 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 171
-y 353
+x 170
+y 370
 w 70
-h 18
-font "helvetica-medium-r-10.0"
+h 20
+font "helvetica-medium-r-12.0"
 fontAlign "right"
 fgColor index 14
 bgColor index 0
@@ -1084,17 +1081,16 @@ beginObjectProperties
 major 4
 minor 2
 release 0
-x 91
-y 375
+x 90
+y 392
 w 80
-h 25
+h 20
 controlPv "$(MOTOR).UREV"
 format "decimal"
-font "helvetica-medium-r-10.0"
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 51
 editable
-autoHeight
 motifWidget
 nullColor index 32
 smartRefresh
@@ -1110,10 +1106,10 @@ beginObjectProperties
 major 4
 minor 0
 release 0
-x 3
-y 400
+x 5
+y 414
 w 168
-h 25
+h 20
 
 beginGroup
 
@@ -1124,16 +1120,15 @@ major 4
 minor 2
 release 0
 x 91
-y 400
+y 414
 w 80
-h 25
+h 20
 controlPv "$(MOTOR).ERES"
 format "decimal"
-font "helvetica-medium-r-10.0"
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 51
 editable
-autoHeight
 motifWidget
 nullColor index 32
 smartRefresh
@@ -1149,11 +1144,11 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 3
-y 403
+x 5
+y 416
 w 60
-h 18
-font "helvetica-medium-r-10.0"
+h 14
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 0
 useDisplayBg
@@ -1172,10 +1167,10 @@ beginObjectProperties
 major 4
 minor 0
 release 0
-x 3
-y 425
+x 5
+y 437
 w 168
-h 25
+h 20
 
 beginGroup
 
@@ -1186,16 +1181,15 @@ major 4
 minor 2
 release 0
 x 91
-y 425
+y 437
 w 80
-h 25
+h 20
 controlPv "$(MOTOR).RRES"
 format "decimal"
-font "helvetica-medium-r-10.0"
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 51
 editable
-autoHeight
 motifWidget
 nullColor index 32
 smartRefresh
@@ -1211,11 +1205,11 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 3
-y 428
+x 5
+y 439
 w 70
-h 18
-font "helvetica-medium-r-10.0"
+h 14
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 0
 useDisplayBg
@@ -1234,17 +1228,16 @@ beginObjectProperties
 major 4
 minor 2
 release 0
-x 91
-y 350
+x 90
+y 370
 w 80
-h 25
+h 20
 controlPv "$(MOTOR).SREV"
 format "decimal"
-font "helvetica-medium-r-10.0"
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 51
 editable
-autoHeight
 motifWidget
 nullColor index 32
 smartRefresh
@@ -1260,17 +1253,16 @@ beginObjectProperties
 major 4
 minor 2
 release 0
-x 91
+x 90
 y 325
 w 80
-h 25
+h 20
 controlPv "$(MOTOR).EGU"
 format "decimal"
-font "helvetica-medium-r-10.0"
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 51
 editable
-autoHeight
 motifWidget
 nullColor index 32
 smartRefresh
@@ -1286,8 +1278,8 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 296
-y 403
+x 310
+y 420
 w 30
 h 18
 font "helvetica-medium-r-10.0"
@@ -1305,8 +1297,8 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 296
-y 428
+x 310
+y 445
 w 30
 h 18
 font "helvetica-medium-r-10.0"
@@ -1324,16 +1316,16 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 3
-y 365
+x 5
+y 392
 w 60
-h 18
+h 20
 font "helvetica-medium-r-10.0"
 fgColor index 14
 bgColor index 0
 useDisplayBg
 value {
-  "Motor:"
+  "UREV"
 }
 endObjectProperties
 
@@ -1343,11 +1335,11 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 3
-y 328
+x 5
+y 325
 w 60
-h 18
-font "helvetica-medium-r-10.0"
+h 20
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 0
 useDisplayBg
@@ -1423,8 +1415,8 @@ x 216
 y 485
 w 75
 h 20
-font "helvetica-medium-r-10.0"
-fgColor index 0
+font "helvetica-medium-r-12.0"
+fgColor index 14
 bgColor index 0
 useDisplayBg
 value {
@@ -1606,8 +1598,8 @@ x 3
 y 485
 w 127
 h 20
-font "helvetica-medium-r-10.0"
-fgColor index 0
+font "helvetica-medium-r-12.0"
+fgColor index 14
 bgColor index 0
 useDisplayBg
 value {
@@ -1621,17 +1613,16 @@ beginObjectProperties
 major 4
 minor 2
 release 0
-x 91
-y 450
+x 90
+y 460
 w 200
-h 25
+h 20
 controlPv "$(MOTOR).RDBL"
 format "string"
-font "helvetica-medium-r-10.0"
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 40
 editable
-autoHeight
 motifWidget
 nullColor index 32
 smartRefresh
@@ -1647,11 +1638,11 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 3
-y 453
+x 5
+y 460
 w 70
-h 18
-font "helvetica-medium-r-10.0"
+h 20
+font "helvetica-medium-r-12.0"
 fgColor index 14
 bgColor index 0
 useDisplayBg
@@ -1666,8 +1657,8 @@ beginObjectProperties
 major 4
 minor 2
 release 0
-x 301
-y 374
+x 315
+y 390
 w 80
 h 25
 controlPv "$(MOTOR).DLY"
@@ -1692,8 +1683,8 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 301
-y 345
+x 315
+y 360
 w 80
 h 14
 font "helvetica-medium-r-10.0"
@@ -1712,8 +1703,8 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 301
-y 360
+x 315
+y 375
 w 80
 h 14
 font "helvetica-medium-r-10.0"
@@ -1723,25 +1714,6 @@ bgColor index 0
 useDisplayBg
 value {
   "delay (s)"
-}
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 0
-x 368
-y 573
-w 25
-h 10
-font "helvetica-medium-r-10.0"
-fgColor index 0
-bgColor index 0
-useDisplayBg
-value {
-  "V1.8"
 }
 endObjectProperties
 
@@ -1974,8 +1946,8 @@ beginObjectProperties
 major 4
 minor 0
 release 0
-x 326
-y 403
+x 340
+y 420
 w 70
 h 20
 fgColor index 14
@@ -1995,8 +1967,8 @@ beginObjectProperties
 major 4
 minor 0
 release 0
-x 326
-y 428
+x 340
+y 445
 w 70
 h 20
 fgColor index 14
@@ -2102,6 +2074,131 @@ xPoints {
 yPoints {
   0 596
   1 596
+}
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 0
+x 5
+y 370
+w 60
+h 20
+font "helvetica-medium-r-10.0"
+fgColor index 14
+bgColor index 0
+useDisplayBg
+value {
+  "SREV"
+}
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 0
+x 175
+y 325
+w 140
+h 20
+font "helvetica-bold-r-12.0"
+fgColor index 14
+bgColor index 34
+useDisplayBg
+value {
+  "UREV = MRES * SREV"
+}
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 0
+x 240
+y 348
+w 50
+h 20
+font "helvetica-medium-r-12.0"
+fgColor index 14
+bgColor index 0
+useDisplayBg
+value {
+  "/Step"
+}
+endObjectProperties
+
+# (Text Control)
+object activeXTextDspClass
+beginObjectProperties
+major 4
+minor 2
+release 0
+x 175
+y 348
+w 65
+h 20
+controlPv "$(MOTOR).EGU"
+format "decimal"
+font "helvetica-medium-r-12.0"
+fontAlign "right"
+fgColor index 44
+bgColor index 3
+nullColor index 32
+smartRefresh
+fastUpdate
+useHexPrefix
+newPos
+objType "controls"
+endObjectProperties
+
+# (Text Control)
+object activeXTextDspClass
+beginObjectProperties
+major 4
+minor 2
+release 0
+x 90
+y 348
+w 80
+h 20
+controlPv "$(MOTOR).MRES"
+format "decimal"
+font "helvetica-medium-r-12.0"
+fgColor index 14
+bgColor index 51
+editable
+motifWidget
+nullColor index 32
+smartRefresh
+fastUpdate
+useHexPrefix
+newPos
+objType "controls"
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 0
+x 5
+y 348
+w 60
+h 20
+font "helvetica-medium-r-10.0"
+fgColor index 14
+bgColor index 0
+useDisplayBg
+value {
+  "MRES"
 }
 endObjectProperties
 
