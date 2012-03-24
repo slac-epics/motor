@@ -2,9 +2,9 @@
 FILENAME...	devMAXV.cc
 USAGE... Device level support for OMS MAXv model.
 
-Version:        $Revision: 10834 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2010-04-29 10:04:39 -0700 (Thu, 29 Apr 2010) $
+Version:        $Revision: 1.1.1.1 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2011/05/11 14:57:31 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/OmsSrc/devMAXv.cc $
 */
 

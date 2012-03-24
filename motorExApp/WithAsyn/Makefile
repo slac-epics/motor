@@ -1,9 +1,9 @@
 #FILENAME...     Makefile
 #USAGE...        Makefile for motor application example with Asyn
 
-#Version:        $Revision: 13567 $
-#Modified By:    $Author: rivers $
-#Last Modified:  $Date: 2011-08-30 12:11:01 -0700 (Tue, 30 Aug 2011) $
+#Version:        $Revision: 1.1.1.2 $
+#Modified By:    $Author: ernesto $
+#Last Modified:  $Date: 2012/02/09 06:00:03 $
 #HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorExApp/WithAsyn/Makefile $
 
 # "#!" marks lines that can be uncommented.
