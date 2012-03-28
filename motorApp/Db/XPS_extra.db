@@ -34,7 +34,7 @@ grecord(ai,"$(P)$(R)XPS_STATUS") {
 
 record(waveform,"$(P)$(R)XPS_STATUS_STRING") {
     field(DESC,"XPS Group Status String")
-    field(DTYP, "asynInt8ArrayIn")
+	field(DTYP, "asynOctetRead")
     field(FTVL, "CHAR")
     field(NELM, "100")
     field(PINI, "1")

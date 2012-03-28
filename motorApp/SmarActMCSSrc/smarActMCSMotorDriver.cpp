@@ -113,12 +113,11 @@ SmarActMCSController::SmarActMCSController(const char *portName, const char *IOP
 	                      0,0) // default priority and stack size
 	, asynUserMot_p_(0)
 {
-SmarActMCSAxis *axis_p;
 asynStatus       status;
-int              ax;
 char             junk[100];
 size_t           got_junk;
 int              eomReason;
+pAxes_ = (SmarActMCSAxis **)(asynMotorController::pAxes_);
 
 	status = pasynOctetSyncIO->connect(IOPortName, 0, &asynUserMot_p_, NULL);
 	if ( status ) {
@@ -139,9 +138,12 @@ int              eomReason;
 	pasynOctetSyncIO->setOutputEos( asynUserMot_p_, "\n", 1 );
 
 	// Create axes
-	for ( ax=0; ax<numAxes; ax++ ) {
-		axis_p = new SmarActMCSAxis(this, ax);
+/*	for ( ax=0; ax<numAxes; ax++ ) {
+		//axis_p = new SmarActMCSAxis(this, ax);
+		pAxes_[ax] = new SmarActMCSAxis(this, ax);
 	}
+*/
+	// move to iocsh function smarActMCSCreateAxis()
 
 	// FIXME the 'forcedFastPolls' may need to be set if the 'sleep/wakeup' feature
 	//       of the sensor/readback is used.
@@ -160,6 +162,8 @@ asynStatus status;
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 
 	status = pasynOctetSyncIO->writeRead( asynUserMot_p_, buf, strlen(buf), rep, len, timeout, &nwrite, got_p, &eomReason);
+
+	//asynPrint(c_p_->pasynUserSelf, ASYN_TRACEIO_DRIVER, "sendCmd()=%s", buf);
 
 	return status;
 }
@@ -208,10 +212,13 @@ int val;
 	return val;
 }
 
-SmarActMCSAxis::SmarActMCSAxis(class SmarActMCSController *cnt_p, int axis)
+SmarActMCSAxis::SmarActMCSAxis(class SmarActMCSController *cnt_p, int axis, int channel)
 	: asynMotorAxis(cnt_p, axis), c_p_(cnt_p)
 {
-int    val;
+	int val;
+	channel_ = channel;
+
+	asynPrint(c_p_->pasynUserSelf, ASYN_TRACEIO_DRIVER, "SmarActMCSAxis::SmarActMCSAxis -- creating axis %u\n", axis);
 
 	comStatus_ = getVal("GCLS",&vel_);
 #ifdef DEBUG
@@ -223,13 +230,13 @@ int    val;
 		goto bail;
 
 	if ( Holding == val ) {
-		/* still holding? This means that - in a previous life - the
-		 * axis was configured for 'infinite holding'. Inherit this
-		 * (until the next 'move' command that is).
-		 */
+		// still holding? This means that - in a previous life - the
+		// axis was configured for 'infinite holding'. Inherit this
+		// (until the next 'move' command that is).
+		///
 		holdTime_ = HOLD_FOREVER;
 	} else {
-		/* initial value from 'closed-loop' property */
+		// initial value from 'closed-loop' property
 		holdTime_ = getClosedLoop() ? HOLD_FOREVER : 0;
 	}
 
@@ -247,6 +254,7 @@ bail:
 	if ( comStatus_ ) {
 		THROW_(SmarActMCSException(MCSCommunicationError, "SmarActMCSAxis::SmarActMCSAxis -- channel %u ASYN error %i", axis, comStatus_));
 	}
+
 }
 
 /* Read a parameter from the MCS (nothing to do with asyn's parameter
@@ -264,7 +272,10 @@ char       rep[REP_LEN];
 asynStatus st;
 int        ax;
 
-	st = c_p_->sendCmd(rep, sizeof(rep), ":%s%u", parm_cmd, this->axisNo_);
+	//asynPrint(c_p_->pasynUserSelf, ASYN_TRACEIO_DRIVER, "getVal() cmd=:%s%u", parm_cmd, this->channel_);
+
+	//st = c_p_->sendCmd(rep, sizeof(rep), ":%s%u", parm_cmd, this->axisNo_);
+	st = c_p_->sendCmd(rep, sizeof(rep), ":%s%u", parm_cmd, this->channel_);
 	if ( st )
 		return st;
 	return c_p_->parseReply(rep, &ax, val_p) ? asynError: asynSuccess;
@@ -378,7 +389,7 @@ asynStatus status;
 
 	if ( (vel = (long)rint(fabs(velocity))) != vel_ ) {
 		/* change speed */
-		if ( asynSuccess == (status = moveCmd(":SCLS%u,%ld", axisNo_, vel)) ) {
+		if ( asynSuccess == (status = moveCmd(":SCLS%u,%ld", channel_, vel)) ) {
 			vel_ = vel;
 		}
 		return status;
@@ -402,7 +413,7 @@ const char *fmt = relative ? ":MPR%u,%ld,%d" : ":MPA%u,%ld,%d";
 	/* cache 'closed-loop' setting until next move */
 	holdTime_  = getClosedLoop() ? HOLD_FOREVER : 0;
 
-	comStatus_ = moveCmd(fmt, axisNo_, (long)rint(position), holdTime_);
+	comStatus_ = moveCmd(fmt, channel_, (long)rint(position), holdTime_);
 
 bail:
 	if ( comStatus_ ) {
@@ -427,7 +438,7 @@ SmarActMCSAxis::home(double min_vel, double max_vel, double accel, int forwards)
 	/* cache 'closed-loop' setting until next move */
 	holdTime_  = getClosedLoop() ? HOLD_FOREVER : 0;
 
-	comStatus_ = moveCmd(":FRM%u,%u,%d,0", axisNo_, forwards ? 0 : 1, holdTime_);
+	comStatus_ = moveCmd(":FRM%u,%u,%d,0", channel_, forwards ? 0 : 1, holdTime_);
 
 bail:
 	if ( comStatus_ ) {
@@ -444,7 +455,7 @@ SmarActMCSAxis::stop(double acceleration)
 #ifdef DEBUG
 	printf("Stop\n");
 #endif
-	comStatus_ = moveCmd(":S%u", axisNo_);
+	comStatus_ = moveCmd(":S%u", channel_);
 
 	if ( comStatus_ ) {
 		setIntegerParam(c_p_->motorStatusProblem_, 1);
@@ -457,7 +468,7 @@ SmarActMCSAxis::stop(double acceleration)
 asynStatus
 SmarActMCSAxis::setPosition(double position)
 {
-	comStatus_ = moveCmd(":SP%u,%d", axisNo_, (long)rint(position));
+	comStatus_ = moveCmd(":SP%u,%d", channel_, (long)rint(position));
 	if ( comStatus_ ) {
 		setIntegerParam(c_p_->motorStatusProblem_,    1);
 		setIntegerParam(c_p_->motorStatusCommsError_, 1);
@@ -498,7 +509,7 @@ long       tgt_pos = FAR_AWAY;
 	if ( (comStatus_ = setSpeed(max_vel)) )
 		goto bail;
 
-	comStatus_ = moveCmd(":MPR%u,%ld,0", axisNo_, tgt_pos);
+	comStatus_ = moveCmd(":MPR%u,%ld,0", channel_, tgt_pos);
 
 bail:
 	if ( comStatus_ ) {
@@ -556,9 +567,79 @@ static void cc_fn(const iocshArgBuf *args)
 		args[4].dval);
 }
 
+
+static const iocshArg ca_a0 = {"Controller Port name [string]",    iocshArgString};
+static const iocshArg ca_a1 = {"Axis number [int]",                iocshArgInt};
+static const iocshArg ca_a2 = {"Channel [int]",                    iocshArgInt};
+
+static const iocshArg * const ca_as[] = {&ca_a0, &ca_a1, &ca_a2};
+
+/* iocsh wrapping and registration business (stolen from ACRMotorDriver.cpp) */
+/* smarActMCSCreateAxis called to create each axis of the smarActMCS controller*/
+static const iocshFuncDef ca_def = {"smarActMCSCreateAxis", 3, ca_as};
+
+extern "C" void *
+smarActMCSCreateAxis(
+	const char *controllerPortName,
+	int        axisNumber,
+	int        channel)
+{
+void *rval = 0;
+
+SmarActMCSController *pC;
+SmarActMCSAxis *pAxis;
+asynMotorAxis *pAsynAxis;
+
+	// the asyn stuff doesn't seem to be prepared for exceptions. I get segfaults
+	// if constructing a controller (or axis) incurs an exception even if its
+	// caught (IMHO asyn should behave as if the controller/axis never existed...)
+#ifdef ASYN_CANDO_EXCEPTIONS
+	try {
+#endif
+//		rval = new SmarActMCSAxis(, axisNumber, channel);
+		pC = (SmarActMCSController*) findAsynPortDriver(controllerPortName);
+		if (!pC) {
+			printf("smarActMCSCreateAxis: Error port %s not found\n", controllerPortName);
+			rval = 0;
+			return rval;
+		}
+		// check if axis number already exists
+		pAsynAxis = pC->getAxis(axisNumber);
+		if (pAsynAxis != NULL) { // axis already exists
+			epicsPrintf("SmarActMCSCreateAxis failed:axis %u already exists\n", axisNumber);
+#ifdef ASYN_CANDO_EXCEPTIONS
+			THROW_(SmarActMCSException(MCSCommunicationError, "axis %u already exists", axisNumber));
+#endif
+			rval = 0;
+			return rval;
+		}
+		pC->lock();
+		pAxis = new SmarActMCSAxis(pC, axisNumber, channel);
+		pAxis = NULL;
+		pC->unlock();
+
+#ifdef ASYN_CANDO_EXCEPTIONS
+	} catch (SmarActMCSException &e) {
+		epicsPrintf("SmarActMCSAxis failed (exception caught):\n%s\n", e.what());
+		rval = 0;
+	}
+#endif
+
+	return rval;
+}
+
+static void ca_fn(const iocshArgBuf *args)
+{
+	smarActMCSCreateAxis(
+		args[0].sval,
+		args[1].ival,
+		args[2].ival);
+}
+
 static void smarActMCSMotorRegister(void)
 {
-  iocshRegister(&cc_def, cc_fn);
+  iocshRegister(&cc_def, cc_fn);  // smarActMCSCreateController
+  iocshRegister(&ca_def, ca_fn);  // smarActMCSCreateAxis
 }
 
 extern "C" {

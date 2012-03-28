@@ -29,12 +29,12 @@ EPICS_MODULES=$(MODULES_SITE_TOP)
 # required, then ASYN must be defined.
 # Recommended ASYN release: R4-13 or higher
 #ASYN_MODULE_VERSION=asyn-R4-17-RC1-lcls1
-ASYN_MODULE_VERSION=asyn-R4-18-lcls1
+ASYN_MODULE_VERSION=asyn-R4-18-lcls2
 
 # Need the sequencer for the MM4005 and XPS trajectory scanning
 # Recommended SNCSEQ release: R2-0-12 or higher
 #SEQ_MODULE_VERSION=seq-R2-0-11-lcls4
-SEQ_MODULE_VERSION=seq-R2-1-3-lcls1
+#SEQ_MODULE_VERSION=seq-R2-1-3-lcls1
 
 # The following must be defined for the MXmotor device driver.
 #!MX=$(SUPPORT)/mx/mx
@@ -46,7 +46,7 @@ SEQ_MODULE_VERSION=seq-R2-1-3-lcls1
 # Recommended IPAC release: R2-10 or higher
 IPAC_MODULE_VERSION=ipac-R2-11-lcls1
 
-BUSY_MODULE_VERSION=busy-R1-4-lcls2
+BUSY_MODULE_VERSION=busy-R1-4-lcls3
 
 # The following is only needed for the motor examples in iocBoot.
 #!MOTOR=$(TOP)
@@ -64,7 +64,7 @@ BASE_MODULE_VERSION=$(EPICS_BASE_VER)
 # ============================================================
 IPAC=$(EPICS_MODULES)/ipac/$(IPAC_MODULE_VERSION)
 ASYN=$(EPICS_MODULES)/asyn/$(ASYN_MODULE_VERSION)
-SNCSEQ=$(EPICS_MODULES)/seq/$(SEQ_MODULE_VERSION)
+#SNCSEQ=$(EPICS_MODULES)/seq/$(SEQ_MODULE_VERSION)
 BUSY=$(EPICS_MODULES)/busy/$(BUSY_MODULE_VERSION)
 
 # =================================================================

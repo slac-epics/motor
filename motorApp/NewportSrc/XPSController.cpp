@@ -2,9 +2,9 @@
 FILENAME...     XPSMotorDriver.cpp
 USAGE...        Newport XPS EPICS asyn motor device driver
 
-Version:        $Revision: 19717 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2009-12-09 10:21:24 -0600 (Wed, 09 Dec 2009) $
+Version:        $Revision: 1.9 $
+Modified By:    $Author: niafong $
+Last Modified:  $Date: 2012/02/21 18:01:12 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/trunk/support/motor/vstub/motorApp/NewportSrc/XPSMotorDriver.cpp $
 */
  
@@ -139,8 +139,8 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
                              int numAxes, double movingPollPeriod, double idlePollPeriod,
                              int enableSetPosition, double setPositionSettlingTime)
   :  asynMotorController(portName, numAxes, NUM_XPS_PARAMS, 
-                         asynInt8ArrayMask, // additional interfaces
-                         asynInt8ArrayMask, // addition interrupt interfaces
+                         0,  // no additional interfaces
+                         0,  // no additional interrupt interfaces
                          ASYN_CANBLOCK | ASYN_MULTIDEVICE, 
                          1, // autoconnect
                          0, 0),  // Default priority and stack size
@@ -164,7 +164,7 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
   createParam(XPSProfileGroupNameString,         asynParamOctet, &XPSProfileGroupName_);
   createParam(XPSTrajectoryFileString,           asynParamOctet, &XPSTrajectoryFile_);
   createParam(XPSStatusString,                   asynParamInt32, &XPSStatus_);
-  createParam(XPSStatusStringString,         asynParamInt8Array, &XPSStatusString_);
+  createParam(XPSStatusStringString,             asynParamOctet, &XPSStatusString_);
 
   // This socket is used for polling by the controller and all axes
   pollSocket_ = TCP_ConnectToServer((char *)IPAddress, IPPort, XPS_POLL_TIMEOUT);

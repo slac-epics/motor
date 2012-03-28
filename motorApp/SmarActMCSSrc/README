@@ -137,7 +137,7 @@ a) the 'asyn', 'motor' and 'smarActMCSMotor' (this
 
 b) the application's '.dbd' file must contain
     - motorSupport.dbd
-    - smarActMCSMotorSupport.dbd
+    - devSmarActMCSMotor.dbd
    as well as an 'asyn' port driver for serial
    communication. In case of a connection via
    TCP/IP + terminal server this would be
@@ -146,7 +146,7 @@ b) the application's '.dbd' file must contain
    These '.dbd' files are best listed in the
    application Makefile:
     <app>_DBD += motorSupport.dbd
-    <app>_DBD += smarActMCSMotorSupport.dbd
+    <app>_DBD += devSmarActMCSMotor.dbd
     <app>_DBD += drvAsynIPPort.dbd
 
 c) the application must be linked against
@@ -215,7 +215,31 @@ addressed from a motorRecord's OUT field:
 
   field(DTYP, "asynMotor")
   field(OUT,  "asyn(myMotor1,0)")
-                 
+
+After creating a controller, one or more MCS axes 
+are created for that controller.  The respective
+call takes the following arguments:
+
+
+smarActMCSCreateAxis(
+        const char *motorPortName,
+        int        axisNumber,
+        int        channel)
+{
+
+ motorPortName: unique string to identify this
+                instance to be used in the
+                motor record's 'OUT' field.
+ axisNumber:    axis number being created.
+ channel:       channel that the axis is physically
+                connected to.
+                Note that the channel will be 
+                prepended to the command string
+                sent to the particular axis.
+
+Call the smarActMCSCreateAxis() function for
+each axis that needs to be configured.                
+
 Terminal Server / RS232 Port Notes
 - - - - - - - - - - - - - - - - - -
 It is the user's responsibility to configure
@@ -233,3 +257,4 @@ expects a 'raw' communication channel.
 On some terminal servers a raw TCP socket
 may listen on a different port number than
 used for a TELNET connection. 
+
