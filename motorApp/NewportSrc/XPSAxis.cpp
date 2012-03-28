@@ -2,9 +2,9 @@
 FILENAME...     XPSMotorDriver.cpp
 USAGE...        Newport XPS EPICS asyn motor device driver
 
-Version:        $Revision: 19717 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2009-12-09 10:21:24 -0600 (Wed, 09 Dec 2009) $
+Version:        $Revision: 1.8 $
+Modified By:    $Author: niafong $
+Last Modified:  $Date: 2012/02/21 18:01:12 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/trunk/support/motor/vstub/motorApp/NewportSrc/XPSMotorDriver.cpp $
 */
 
@@ -688,7 +688,7 @@ asynStatus XPSAxis::poll(bool *moving)
 
   done:
   setIntegerParam(pC_->XPSStatus_, axisStatus_);
-  pC_->doCallbacksInt8Array(axisStatusString_, strlen(axisStatusString_), pC_->XPSStatusString_, axisNo_);  
+  pC_->setStringParam(axisNo_, pC_->XPSStatusString_, axisStatusString_);
   setIntegerParam(pC_->motorStatusCommsError_, status ? 1 : 0);
   callParamCallbacks();
   return status ? asynError : asynSuccess;
