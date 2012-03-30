@@ -2,9 +2,9 @@
 FILENAME...     devOmsCom.cc
 USAGE... Data and functions common to all OMS device level support.
 
-Version:        1.11
-Modified By:    sluiter
-Last Modified:  2007/02/16 20:21:47
+Version:        $Revision: 1.16 $
+Modified By:    $Author: sluiter $
+Last Modified:  $Date: 2008-09-09 18:19:45 $
 */
 
 /*
@@ -59,12 +59,20 @@ Last Modified:  2007/02/16 20:21:47
  * .15  08-18-06 rls Output "slew <= base" error message only one time.
  * .16  02-16-07 rls Bug fix for overwriting PID parameter fields during
  *                   normalization calculation.
+ * .17  05-14-08 rls Fixed stop acceleration calculation.
+ * .18  05-14-08 rls For MAXv, restore slew acceleration after STOP command.
+ * .19  06-11-08 rls For MAXv, fix error on ER command; replace UU1.0 with UF.
+ * .20  07-24-08 rls For MAXv, normalize PID values based on 32,767 maximum.
+ * .21  03-01-10 rls Some MR commands still ignored; change fraction to .9.
+ *
  */
 
 #include <string.h>
+#include <stdio.h>
 #include <errlog.h>
 #include <math.h>
 #include <epicsThread.h>
+#include <epicsString.h>
 #include <dbAccess.h>
 
 #include "motorRecord.h"
@@ -184,13 +192,19 @@ RTN_STATUS oms_build_trans(motor_cmnd command, double *parms, struct motorRecord
 {
     struct motor_trans *trans = (struct motor_trans *) mr->dpvt;
     struct mess_node *motor_call;
+    struct controller *brdptr;
     char buffer[40];
     msg_types cmnd_type;
     RTN_STATUS rtnind;
     static bool invalid_velmsg_latch = false;
+    bool MAXv = false;
+    bool MAXv_PSE = false;
+    int card, signal;
 
     rtnind = OK;
     motor_call = &trans->motor_call;
+    card = motor_call->card;
+    signal = motor_call->signal;
 
     cmnd_type = oms_table[command].type;
     if (cmnd_type > motor_call->type)
@@ -199,6 +213,21 @@ RTN_STATUS oms_build_trans(motor_cmnd command, double *parms, struct motorRecord
     /* concatenate onto the dpvt message field */
     if (trans->state != BUILD_STATE)
         return(rtnind = ERROR);
+
+    brdptr = (*trans->tabptr->card_array)[card];
+    if (strncmp(brdptr->ident, "MAXv", 4) == 0)
+    {
+        MAXv = true;
+        if (brdptr->motor_info[signal].encoder_present == YES &&
+            brdptr->motor_info[signal].pid_present == NO)
+            MAXv_PSE = true;
+        /* Error check; ER command only for MAXv PSE type motors. */
+        if (command == SET_ENC_RATIO && MAXv_PSE == false)
+        {
+	    trans->state = IDLE_STATE;	/* No command sent to the controller. */
+            return(rtnind);
+        }
+    }
 
     if ((command == PRIMITIVE) && (mr->init != NULL) &&
         (strlen(mr->init) != 0))
@@ -219,10 +248,9 @@ RTN_STATUS oms_build_trans(motor_cmnd command, double *parms, struct motorRecord
                     int response, bitselect;
                     char respbuf[10];
 
-                    (*tabptr->getmsg)(motor_call->card, respbuf, -1);
-                    (*tabptr->sendmsg)(motor_call->card, "RB\r",
-                                       (char) NULL);
-                    (*tabptr->getmsg)(motor_call->card, respbuf, 1);
+                    (*tabptr->getmsg)(card, respbuf, -1);
+                    (*tabptr->sendmsg)(card, "RB\r", (char) NULL);
+                    (*tabptr->getmsg)(card, respbuf, 1);
                     if (sscanf(respbuf, "%x", &response) == 0)
                         response = 0;   /* Force an error. */
                     bitselect = (1 << motor_call->signal);
@@ -263,12 +291,16 @@ RTN_STATUS oms_build_trans(motor_cmnd command, double *parms, struct motorRecord
             }
             else if (command == STOP_AXIS)
             {
-                double acc = (mr->velo / fabs(mr->mres)) / mr->accl;
+                double acc = ((mr->velo - mr->vbas) / fabs(mr->mres)) / mr->accl;
             
                 /* Put in acceleration. */
+                if (MAXv == true)
+                    strcat(motor_call->message, "FL");
                 strcat(motor_call->message, oms_table[SET_ACCEL].command);
                 sprintf(buffer, "%ld", NINT(acc));
                 strcat(motor_call->message, buffer);
+                if (MAXv == true)
+                    strcat(motor_call->message, "; WQ");
             }
 
             if (cmnd_type == MOTION || cmnd_type == VELOCITY)
@@ -300,7 +332,7 @@ RTN_STATUS oms_build_trans(motor_cmnd command, double *parms, struct motorRecord
 
                             /* Point "start" to PV name argument. */
                             tail = NULL;
-                            start = strtok_r(&prem_buff[5], ",", &tail);
+                            start = epicsStrtok_r(&prem_buff[5], ",", &tail);
                             if (tail == NULL)
                                 goto errorexit;
 
@@ -311,12 +343,12 @@ RTN_STATUS oms_build_trans(motor_cmnd command, double *parms, struct motorRecord
                             }
 
                             /* Point "start" to PV value argument. */
-                            start = strtok_r(NULL, ",", &tail);
+                            start = epicsStrtok_r(NULL, ",", &tail);
                             if (tail == NULL)
                             {
                                 delay = 0.0;
                                 tail = start;
-                                start = strtok_r(NULL, ")", &tail);
+                                start = epicsStrtok_r(NULL, ")", &tail);
                                 if (tail == NULL)
                                     goto errorexit;
                             }
@@ -324,7 +356,7 @@ RTN_STATUS oms_build_trans(motor_cmnd command, double *parms, struct motorRecord
                             {
                                 char *last;
 
-                                last = strtok_r(NULL, ")", &tail);
+                                last = epicsStrtok_r(NULL, ")", &tail);
                                 if (last == NULL)
                                     goto errorexit;
                                 delay = atof(last);
@@ -386,7 +418,10 @@ errorexit:                  errMessage(-1, "Invalid device directive");
                 case SET_PGAIN:
                 case SET_IGAIN:
                 case SET_DGAIN:
-                    sprintf(buffer, "%.1f", (parms[itera] * 1999.9));
+                    if (MAXv == true)
+                        sprintf(buffer, "%.1f", (parms[itera] * 32767.0));
+                    else
+                        sprintf(buffer, "%.1f", (parms[itera] * 1999.9));
                     break;
 
                 case SET_VELOCITY:  /* OMS errors if VB = VL. */
@@ -416,10 +451,7 @@ errorexit:                  errMessage(-1, "Invalid device directive");
                         long relmove;
 
                         relmove = NINT(parms[itera]);
-                        if (relmove == 1 || relmove == -1)
-                            sprintf(buffer, "%ld.5", relmove);
-                        else
-                            sprintf(buffer, "%ld", relmove);
+                        sprintf(buffer, "%ld.9", relmove);
                     }
                     break;
 
@@ -450,7 +482,10 @@ errorexit:                  errMessage(-1, "Invalid device directive");
             switch (command)
             {
             case SET_ENC_RATIO:
-                sprintf(buffer, " UU%f", parms[0]/parms[1]);
+                if (MAXv == true && parms[0] == parms[1])
+                    sprintf(buffer, " UF");
+                else
+                    sprintf(buffer, " UU%f", parms[0]/parms[1]);
                 strcat(motor_call->message, buffer);
                 break;
 
