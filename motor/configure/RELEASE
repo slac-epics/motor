@@ -15,11 +15,11 @@
 # If any motor controller communication mechanism besides the VME backplane is
 # required, then ASYN must be defined.
 # Recommended ASYN release: R4-13
-ASYN=/afs/slac/g/spear/epics/modules/asyn/asyn-R4-14-spear1
+ASYN=/afs/slac/g/spear/epics/modules/asyn/asyn-R4-16-spear1
 
 # Need the sequencer for the MM4005 and XPS trajectory scanning
 # Recommended SNCSEQ release: R2-0-12
-SNCSEQ=/afs/slac/g/spear/epics/modules/seq/seq-R2-0-12-spear1
+SNCSEQ=/afs/slac/g/spear/epics/modules/seq/seq-R2-0-13-spear1
 
 # Recommended EPICS release: R3.14.11
 #EPICS_BASE=$(SUPPORT)/../base-3.14.11
