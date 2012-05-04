@@ -2,9 +2,9 @@
 FILENAME...	devSoft.cc
 USAGE...	Motor record device level support for Soft channel.
 
-Version:        $Revision: 10365 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2010-03-25 12:12:41 -0500 (Thu, 25 Mar 2010) $
+Version:        $Revision: 1.1.1.3 $
+Modified By:    $Author: saa $
+Last Modified:  $Date: 2010/03/25 17:12:41 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-5-1/motorApp/SoftMotorSrc/devSoft.cc $
 */
 
@@ -69,7 +69,7 @@ NOTES...
 #ifdef __GNUG__
   #ifdef	DEBUG
     #define Debug(l, f, args...) {if (l <= devSoftdebug) \
-				    errlogPrintf(f, ## args);}
+				    printf(f, ## args);}
   #else
     #define Debug(l, f, args...)
   #endif

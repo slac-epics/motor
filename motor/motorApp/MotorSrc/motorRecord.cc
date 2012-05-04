@@ -2,9 +2,9 @@
 FILENAME...     motorRecord.cc
 USAGE...        Motor Record Support.
 
-Version:        $Revision: 10830 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2010-04-29 09:21:17 -0500 (Thu, 29 Apr 2010) $
+Version:        $Revision: 1.1.1.5 $
+Modified By:    $Author: saa $
+Last Modified:  $Date: 2010/04/29 14:21:17 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-5-1/motorApp/MotorSrc/motorRecord.cc $
 */
 
@@ -179,6 +179,11 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-5
 volatile int motorRecordDebug = 0;
 extern "C" {epicsExportAddress(int, motorRecordDebug);}
 
+volatile int tillhack_enabled = 1;
+volatile int tillhack_count   = 0;
+
+volatile int tillhack_cb_cancelled = 0;
+
 
 /*** Forward references ***/
 
@@ -296,6 +301,7 @@ typedef union
         unsigned int M_MRES     :1;
         unsigned int M_ERES     :1;
         unsigned int M_UEIP     :1;
+	unsigned int M_URIP	:1;
         unsigned int M_STOP     :1;
         unsigned int M_LVIO     :1;
         unsigned int M_RVAL     :1;
@@ -425,6 +431,8 @@ static void callbackFunc(struct callback *pcb)
 #else
 	scanOnce((struct dbCommon *) pmr);
 #endif
+    } else {
+		tillhack_cb_cancelled++;
     }
 }
 
@@ -568,6 +576,7 @@ static long init_record(dbCommon* arg, int pass)
      */
     (*pdset->update_values) (pmr);
 
+    pmr->res = pmr->mres;	/* After R4.5, RES is always = MRES. */
     if (pmr->eres == 0.0)
     {
         pmr->eres = pmr->mres;
@@ -1730,7 +1739,22 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             if (pmr->mip & MIP_HOME)
                 clear_buttons(pmr);
             
-            pmr->mip = MIP_STOP;
+		if ( (pmr->mip & MIP_DELAY_REQ) && tillhack_enabled ) {
+			/* If someone tries to STOP while we're waiting for
+			 * being processed by the callback DONT effectively
+			 * cancel the callback by clearing MIP_DELAY_REQ;
+			 * this would result in DMOV never being set!
+			 *
+			 * Instead, just raise MIP_STOP and wait for the callback
+			 * to do further work...
+			 *
+			 * T.S., 20080915.
+			 */
+			pmr->mip |= MIP_STOP;
+			tillhack_count++;
+		} else {
+	    	pmr->mip = MIP_STOP;
+		}
             MARK(M_MIP);
             INIT_MSG();
             WRITE_MSG(STOP_AXIS, NULL);
@@ -1760,9 +1784,9 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
         }
     }
 
-    /*** Handle changes in motor/encoder resolution, and in .ueip. ***/
+    /*** Handle changes in motor/encoder resolution, and in .ueip/urip. ***/
     mmap_bits.All = pmr->mmap; /* Initialize for MARKED. */
-    if (MARKED(M_MRES) || MARKED(M_ERES) || MARKED(M_UEIP))
+    if (MARKED(M_MRES) || MARKED(M_ERES) || MARKED(M_UEIP) || MARKED(M_URIP))
     {
         /* encoder pulses, motor pulses */
         double ep_mp[2];
@@ -1777,6 +1801,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             if (fabs(pmr->mres) < 1.e-9)
             {
                 pmr->mres = 1.;
+                pmr->res = pmr->mres;	/* After R4.5, RES is always = MRES. */
                 MARK(M_MRES);
             }
             if (pmr->eres == 0.0)
@@ -2686,6 +2711,7 @@ static long special(DBADDR *paddr, int after)
     case motorRecordMRES:
         MARK(M_MRES);           /* MARK it so we'll remember to tell device
                                  * support */
+        pmr->res = pmr->mres;	/* After R4.5, RES is always = MRES. */
         if (pmr->urev != (temp_dbl = pmr->mres * pmr->srev))
         {
             pmr->urev = temp_dbl;
@@ -2701,6 +2727,7 @@ static long special(DBADDR *paddr, int after)
         if (pmr->mres != (temp_dbl = pmr->urev / pmr->srev))
         {
             pmr->mres = temp_dbl;
+            pmr->res = pmr->mres;	/* After R4.5, RES is always = MRES. */
             MARK(M_MRES);
         }
 
@@ -2737,6 +2764,7 @@ velcheckB:
         if (pmr->mres != pmr->urev / pmr->srev)
         {
             pmr->mres = pmr->urev / pmr->srev;
+            pmr->res = pmr->mres;	/* After R4.5, RES is always = MRES. */
             MARK(M_MRES);
         }
         break;
@@ -2754,6 +2782,11 @@ velcheckB:
         /* Ideally, we should be recalculating speeds, but at the moment */
         /* we don't know whether hardware even has an encoder. */
         break;
+
+	/* new urip flag */
+    case motorRecordURIP:
+	MARK(M_URIP);
+	break;
 
         /* Set to SET mode  */
     case motorRecordSSET:
@@ -3407,8 +3440,10 @@ static void monitor(motorRecord * pmr)
     }
     if ((local_mask = monitor_mask | (MARKED(M_ATHM) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->athm, local_mask);
-    if ((local_mask = monitor_mask | (MARKED(M_MRES) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_MRES) ? DBE_VAL_LOG : 0))) {
         db_post_events(pmr, &pmr->mres, local_mask);
+        db_post_events(pmr, &pmr->res, local_mask);
+    }
     if ((local_mask = monitor_mask | (MARKED(M_ERES) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->eres, local_mask);
     if ((local_mask = monitor_mask | (MARKED(M_UEIP) ? DBE_VAL_LOG : 0)))
@@ -3697,11 +3732,13 @@ static void check_speed_and_resolution(motorRecord * pmr)
     if (pmr->urev != 0.0)
     {
         pmr->mres = pmr->urev / pmr->srev;
+        pmr->res = pmr->mres;	/* After R4.5, RES is always = MRES. */
         MARK(M_MRES);
     }
     if (pmr->mres == 0.0)
     {
         pmr->mres = 1.0;
+        pmr->res = pmr->mres;	/* After R4.5, RES is always = MRES. */
         MARK(M_MRES);
     }
     if (pmr->urev != pmr->mres * pmr->srev)
