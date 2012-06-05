@@ -1,0 +1,117 @@
+4 0 0
+beginScreenProperties
+major 4
+minor 0
+release 0
+x 729
+y 391
+w 400
+h 230
+font "helvetica-medium-r-18.0"
+ctlFont "helvetica-bold-r-10.0"
+btnFont "helvetica-medium-r-18.0"
+fgColor index 14
+bgColor index 0
+textColor index 14
+ctlFgColor1 index 30
+ctlFgColor2 index 32
+ctlBgColor1 index 34
+ctlBgColor2 index 35
+topShadowColor index 37
+botShadowColor index 44
+snapToGrid
+gridSize 5
+endScreenProperties
+
+
+# (X-Y Graph)
+object xyGraphClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 0
+y 30
+w 400
+h 200
+# Appearance
+border
+graphTitle 
+xLabel "Point"
+yLabel "Position"
+fgColor index 14
+bgColor index 0
+gridColor index 14
+font "helvetica-medium-r-10.0"
+# Operating Modes
+plotMode "plotLastNPts"
+nPts 2000
+#  X axis properties
+showXAxis
+xAxisSrc "AutoScale"
+xLablePrecision 1
+#  Y axis properties
+showYAxis
+yAxisSrc "AutoScale"
+#  Trace Properties
+numTraces 1
+yPv {
+  0 "$(Y)"
+}
+plotStyle {
+  0 "line"
+}
+plotUpdateMode {
+  0 "x"
+}
+plotSymbolType {
+  0 "circle"
+}
+plotColor {
+  0 index 20
+}
+endObjectProperties
+
+# (Text Control)
+object activeXTextDspClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 69
+y 11
+w 85
+h 20
+controlPv "$(M).DESC"
+font "helvetica-bold-r-10.0"
+fontAlign "right"
+smartRefresh
+fastUpdate
+fgColor index 14
+bgColor index 0
+autoHeight
+format decimal
+nullColor index 32
+useHexPrefix
+objType "controls"
+newPos
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 161
+y 11
+w 80
+h 20
+font "helvetica-bold-r-10.0"
+fgColor index 14
+useDisplayBg
+value {
+ "$(TITLE)"
+}
+endObjectProperties
+
