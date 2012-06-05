@@ -2,6 +2,10 @@
 // Created source file XPS_C8_drivers.cpp for API description 
 // 
 
+#ifdef __rtems__
+#include <rtems.h>
+#include "strtok_r.h"
+#endif
 
 #include <stdio.h> 
 #include <stdlib.h> 
