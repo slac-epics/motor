@@ -3,9 +3,9 @@ FILENAME...	devIM483PL.cc
 USAGE...	Motor record device level support for Intelligent Motion
 		Systems, Inc. IM483(I/IE).
 
-Version:	1.5
+Version:	1.6
 Modified By:	sluiter
-Last Modified:	2004/12/20 21:06:43
+Last Modified:	2008/03/14 20:10:01
 */
 
 /*
@@ -113,7 +113,7 @@ static struct board_stat **IM483PL_cards;
 STATIC long IM483PL_init(void *arg)
 {
     long rtnval;
-    int after = (int) arg;
+    int after = (arg == 0) ? 0 : 1;
 
     if (after == 0)
     {

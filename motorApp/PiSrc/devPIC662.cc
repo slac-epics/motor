@@ -3,9 +3,9 @@ FILENAME...	devPIC662.cc
 USAGE...	Motor record device level support for Physik Instrumente (PI)
 		GmbH & Co. C-844 motor controller.
 
-Version:	1.1
-Modified By:	sullivan
-Last Modified:	2006/04/14 20:34:42
+Version:	1.2
+Modified By:	sluiter
+Last Modified:	2008/03/14 20:21:36
 */
 
 /*
@@ -107,7 +107,7 @@ static struct board_stat **PIC662_cards;
 static long PIC662_init(void *arg)
 {
     long rtnval;
-    int after = (int) arg;
+    int after = (arg == 0) ? 0 : 1;
 
     if (after == 0)
     {

@@ -324,10 +324,13 @@ typedef enum
     motorAxisMoving,           /**< non-zero velocity present (optional - not currently used in software?) */
     motorAxisHasClosedLoop,    /**< Motor supports closed-loop position control. */
     motorAxisCommError,        /**< Controller communication error. */
-    motorAxisLowHardLimit      /**< minus limit switch has been hit */
+    motorAxisLowHardLimit,     /**< minus limit switch has been hit */
+    motorAxisHomed,            /**< Motor has been homed.*/
+    motorAxisDeferMoves,       /**< Moves are not executed immediately, but are deferred until this parameter is set to zero */
+    motorAxisLastParam
 } motorAxisParam_t;
 
-#define MOTOR_AXIS_NUM_PARAMS ((int) motorAxisLowHardLimit + 1)
+#define MOTOR_AXIS_NUM_PARAMS ((int) motorAxisLastParam)
 
 /**\defgroup EPICS EPICS driver support interface routines
 @{
@@ -517,6 +520,7 @@ typedef int (*motorAxisSetIntegerFunc)( AXIS_HDL pAxis,  motorAxisParam_t, int )
 */
 
 #ifdef DEFINE_MOTOR_PROTOTYPES
+    /* XXXX Change the motorAxisParam_t to int */
 static int motorAxisSetInteger( AXIS_HDL pAxis, motorAxisParam_t function, int value );
 #endif
 
@@ -668,7 +672,7 @@ typedef int (*motorAxisProfileMoveFunc)( AXIS_HDL pAxis, int npoints, double pos
 
     The motion along the profile will not start until triggered. If
     the relative parameter is zero (i.e. the positions indicated are
-    absolute), then the controller should immediately move the the
+    absolute), then the controller should immediately move to the
     first position and stop awaiting the trigger.
 
     The trigger parameter defines when to initiate the motion along
@@ -737,6 +741,20 @@ static int motorAxisStop( AXIS_HDL pAxis, double acceleration );
 
 /**@} end motion group*/
 
+typedef int (*motorAxisforceCallbackFunc)( AXIS_HDL pAxis );
+/** Update status request.
+
+    This request a poller status update.
+
+    \param pAxis         [in]   Pointer to axis handle returned by motorAxisOpen.
+
+    \return Integer indicating 0 (MOTOR_AXIS_OK) for success. 
+*/
+
+#ifdef DEFINE_MOTOR_PROTOTYPES
+static int motorAxisforceCallback( AXIS_HDL pAxis );
+#endif
+
 /** The driver support entry table */
 
 typedef struct
@@ -756,6 +774,7 @@ typedef struct
     motorAxisMoveFunc            move;              /**< Pointer to function to execute a position move */
     motorAxisVelocityMoveFunc    velocityMove;      /**< Pointer to function to execute a velocity mode move */
     motorAxisStopFunc            stop;              /**< Pointer to function to stop motion */
+    motorAxisforceCallbackFunc   forceCallback;     /**< Pointer to function to request a poller status update */
 } motorAxisDrvSET_t;
 
 #ifdef __cplusplus

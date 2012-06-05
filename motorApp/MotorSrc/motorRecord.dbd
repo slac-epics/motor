@@ -1,8 +1,8 @@
 # FILENAME...	motorRecord.dbd
 
-# Version:		1.15
-# Modified By:		peterd
-# Last Modified:	2006/05/18 19:51:07
+# Version:		1.19
+# Modified By:		sluiter
+# Last Modified:	2008/11/19 21:07:10
 
 # Experimental Physics and Industrial Control System (EPICS)
 
@@ -65,6 +65,11 @@ menu(motorSTUP) {
 	choice(motorSTUP_ON,  "ON")
 	choice(motorSTUP_BUSY,"BUSY")
 }
+menu(motorRMOD) {
+	choice(motorRMOD_D,"Default")
+	choice(motorRMOD_A,"Arthmetic")
+	choice(motorRMOD_G,"Geometric")
+}
 
 include "menuOmsl.dbd"
 
@@ -76,11 +81,13 @@ recordtype(motor) {
 		initial("1")
 	}
 	field(OFF,DBF_DOUBLE) {
+		asl(ASL0)
 		prompt("User Offset (EGU)")
 		special(SPC_MOD)
 		pp(TRUE)
 	}
 	field(FOFF,DBF_MENU) {
+		asl(ASL0)
 		prompt("Offset-Freeze Switch")
 		promptgroup(GUI_COMMON)
 		special(SPC_MOD)
@@ -108,6 +115,7 @@ recordtype(motor) {
 		menu(motorDIR)
 	}
 	field(SET,DBF_MENU) {
+		asl(ASL0)
 		prompt("Set/Use Switch")
 		interest(1)
 		menu(motorSET)
@@ -133,14 +141,12 @@ recordtype(motor) {
 	field(VBAS,DBF_DOUBLE) {
 		prompt("Base Velocity (EGU/s)")
 		promptgroup(GUI_COMMON)
-		asl(ASL0)
 		special(SPC_MOD)
 		interest(1)
 	}
 	field(VMAX,DBF_DOUBLE) {
 		prompt("Max. Velocity (EGU/s)")
 		promptgroup(GUI_COMMON)
-		asl(ASL0)
 		special(SPC_MOD)
 		interest(1)
 	}
@@ -153,14 +159,12 @@ recordtype(motor) {
 	field(SBAS,DBF_DOUBLE) {
 		prompt("Base Speed (RPS)")
 		promptgroup(GUI_COMMON)
-		asl(ASL0)
 		special(SPC_MOD)
 		interest(1)
 	}
 	field(SMAX,DBF_DOUBLE) {
 		prompt("Max. Speed (RPS)")
 		promptgroup(GUI_COMMON)
-		asl(ASL0)
 		special(SPC_MOD)
 		interest(1)
 	}
@@ -173,6 +177,7 @@ recordtype(motor) {
 	}
 	field(BDST,DBF_DOUBLE) {
 		prompt("BL Distance (EGU)")
+		asl(ASL0)
 		promptgroup(GUI_COMMON)
 		special(SPC_MOD)
 		interest(1)
@@ -249,7 +254,6 @@ recordtype(motor) {
 	field(UREV,DBF_DOUBLE) {
 		prompt("EGU's per Revolution")
 		promptgroup(GUI_COMMON)
-		asl(ASL0)
 		special(SPC_MOD)
 		pp(TRUE)
 		interest(1)
@@ -257,7 +261,6 @@ recordtype(motor) {
 	field(MRES,DBF_DOUBLE) {
 		prompt("Motor Step Size (EGU)")
 		promptgroup(GUI_COMMON)
-		asl(ASL0)
 		special(SPC_MOD)
 		pp(TRUE)
 		interest(1)
@@ -435,6 +438,7 @@ recordtype(motor) {
 		interest(2)
 	}
 	field(SPMG,DBF_MENU) {
+		asl(ASL0)
 		prompt("Stop/Pause/Move/Go")
 		pp(TRUE)
 		interest(1)
@@ -449,6 +453,7 @@ recordtype(motor) {
 		initial("3")
 	}
 	field(STOP,DBF_SHORT) {
+		asl(ASL0)
 		prompt("Stop")
 		pp(TRUE)
 		interest(1)
@@ -466,33 +471,39 @@ recordtype(motor) {
 		interest(1)
 	}
 	field(JOGF,DBF_SHORT) {
+		asl(ASL0)
 		prompt("Jog motor Forward")
 		special(SPC_MOD)
 		pp(TRUE)
 		interest(1)
 	}
 	field(JOGR,DBF_SHORT) {
+		asl(ASL0)
 		prompt("Jog motor Reverse")
 		special(SPC_MOD)
 		pp(TRUE)
 		interest(1)
 	}
 	field(TWF,DBF_SHORT) {
+		asl(ASL0)
 		prompt("Tweak motor Forward")
 		pp(TRUE)
 		interest(1)
 	}
 	field(TWR,DBF_SHORT) {
+		asl(ASL0)
 		prompt("Tweak motor Reverse")
 		pp(TRUE)
 		interest(1)
 	}
 	field(TWV,DBF_DOUBLE) {
+		asl(ASL0)
 		prompt("Tweak Step Size (EGU)")
 		promptgroup(GUI_COMMON)
 		interest(1)
 	}
 	field(VAL,DBF_DOUBLE) {
+		asl(ASL0)
 		prompt("User Desired Value (EGU")
 		special(SPC_MOD)
 		pp(TRUE)
@@ -503,6 +514,7 @@ recordtype(motor) {
 		interest(1)
 	}
 	field(DVAL,DBF_DOUBLE) {
+		asl(ASL0)
 		prompt("Dial Desired Value (EGU")
 		special(SPC_MOD)
 		pp(TRUE)
@@ -513,6 +525,7 @@ recordtype(motor) {
 		interest(1)
 	}
 	field(RVAL,DBF_LONG) {
+		asl(ASL0)
 		prompt("Raw Desired Value (step")
 		special(SPC_MOD)
 		pp(TRUE)
@@ -523,6 +536,7 @@ recordtype(motor) {
 		interest(1)
 	}
 	field(RLV,DBF_DOUBLE) {
+		asl(ASL0)
 		prompt("Relative Value (EGU)")
 		special(SPC_MOD)
 		pp(TRUE)
@@ -654,6 +668,7 @@ recordtype(motor) {
 		initial("0")
 	}
 	field(CNEN,DBF_MENU) {
+		asl(ASL0)
 		prompt("Enable control")
 		promptgroup(GUI_COMMON)
 		special(SPC_MOD)
@@ -721,6 +736,13 @@ recordtype(motor) {
 		menu(menuYesNo)
 		initial("YES")
 	}
+	field(NTMF,DBF_USHORT) {
+                initial("2")
+                promptgroup(GUI_COMMON)
+		prompt("NTM Deadband Factor")
+		special(SPC_MOD)
+		interest(1)
+	}
 	field(HVEL,DBF_DOUBLE) {
 		prompt("Home Velocity (EGU/s)")
 		promptgroup(GUI_COMMON)
@@ -728,6 +750,7 @@ recordtype(motor) {
 		interest(1)
 	}
 	field(STUP,DBF_MENU) {
+		asl(ASL0)
 		prompt("Status Update")
 		promptgroup(GUI_COMMON)
 		menu(motorSTUP)
@@ -735,5 +758,12 @@ recordtype(motor) {
 		special(SPC_MOD)
 		interest(3)
 		initial("OFF")
+	}
+	field(RMOD,DBF_MENU) {
+                initial("Default")
+		promptgroup(GUI_COMMON)
+                prompt("Retry Mode")
+		interest(1)
+                menu(motorRMOD)
 	}
 }
