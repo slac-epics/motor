@@ -473,23 +473,28 @@ epicsShareFunc RTN_STATUS motor_end_trans_com(struct motorRecord *mr, struct dri
 {
     struct motor_trans *trans = (struct motor_trans *) mr->dpvt;
     struct mess_node *motor_call;
-    RTN_STATUS rc;
+    RTN_STATUS rc=OK;
 
-    rc = OK;
+    msta_field msta;
+    msta.All = mr->msta;
+
     motor_call = &(trans->motor_call);
     if ((*trans->tabptr->card_array)[motor_call->card] == NULL)
     {
-        msta_field msta;
-
         /* If the controller does not exits, then set "done moving"
          * and communication error TRUE.
          */
         mr->dmov = TRUE;
         db_post_events(mr, &mr->dmov, DBE_VAL_LOG);
-        msta.All = mr->msta;
+
         msta.Bits.CNTRL_COMM_ERR = 1;
         mr->msta = msta.All;
         return(rc = ERROR);
+    }
+    else
+    {
+        msta.Bits.CNTRL_COMM_ERR = 0;
+        mr->msta = msta.All;
     }
 
     switch (trans->state)

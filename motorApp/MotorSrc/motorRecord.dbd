@@ -677,7 +677,7 @@ recordtype(motor) {
 	field(INIT,DBF_STRING) {
 		promptgroup(GUI_COMMON)
 		prompt("Startup commands")
-		size(40)
+		size(80)
 		interest(1)
 	}
 	field(PREM,DBF_STRING) {
@@ -765,5 +765,51 @@ recordtype(motor) {
                 prompt("Retry Mode")
 		interest(1)
                 menu(motorRMOD)
+	}
+	field(IMS,DBF_USHORT) {
+                initial("0")
+		prompt("IMS Motor Or Not")
+		special(SPC_NOMOD)
+		interest(1)
+	}
+	field(MENV,DBF_STRING) {
+		prompt("Dir For The MCode Program, ENV Variable")
+		size(40)
+		special(SPC_NOMOD)
+		interest(1)
+	}
+	field(MPGM,DBF_STRING) {
+		prompt("Actual Path To The MCode Program")
+		size(40)
+		special(SPC_NOMOD)
+		interest(1)
+	}
+	field(SDLT,DBF_ULONG) {
+		initial("30")
+		prompt("Delay Seconds To Save, 0 -- No Save")
+		interest(1)
+	}
+	field(MSEC,DBF_ULONG) {
+		prompt("UTC Seconds When Last Move Was Done")
+		special(SPC_NOMOD)
+		interest(1)
+	}
+	field(PDIF,DBF_DOUBLE) {
+		prompt("Difference val-rbv")
+		special(SPC_NOMOD)
+	}
+	field(PDBD,DBF_DOUBLE) {
+		initial("0.01")
+		prompt("Position Tolerance")
+		interest(1)
+	}
+	field(VTGT,DBF_DOUBLE) {
+		prompt("Target Position")
+		special(SPC_NOMOD)
+	}
+	field(TTRY,DBF_SHORT) {
+		initial("0")
+		prompt("Trimming Counter")
+		special(SPC_NOMOD)
 	}
 }

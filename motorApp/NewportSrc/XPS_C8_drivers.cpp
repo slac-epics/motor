@@ -2,10 +2,6 @@
 // Created source file XPS_C8_drivers.cpp for API description 
 // 
 
-#ifdef __rtems__
-#include <rtems.h>
-#include "strtok_r.h"
-#endif
 
 #include <stdio.h> 
 #include <stdlib.h> 
@@ -21,6 +17,9 @@
         #endif
         #include "strtok_r.h"
 #else
+#ifdef __rtems__
+extern "C" char* strtok_r(char *, const char *, char **);
+#endif
 	#define DLL 
 #endif
 
@@ -80,6 +79,7 @@ char * __stdcall GetLibraryVersion(void)
  *            int SocketIndex
  *            double *ElapsedTime
  *     - Return :
+
  *            int errorCode
  ***********************************************************************/ 
 int __stdcall ElapsedTimeGet (int SocketIndex, double * ElapsedTime) 

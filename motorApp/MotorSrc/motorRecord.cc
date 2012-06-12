@@ -140,6 +140,7 @@ Last Modified:  2009/06/22 18:06:37
 #include    <dbEvent.h>
 #include    <devSup.h>
 #include    <math.h>
+#include    <time.h>
 
 #define GEN_SIZE_OFFSET
 #include    "motorRecord.h"
@@ -327,6 +328,7 @@ typedef union
         unsigned int M_JOGR     :1;
         unsigned int M_HOMF     :1;
         unsigned int M_HOMR     :1;
+        unsigned int M_MSEC     :1;
     } Bits;
 } nmap_field;
 
@@ -475,6 +477,7 @@ static long init_record(dbCommon* arg, int pass)
         pmr->vers = VERSION;
         return(OK);
     }
+
     /* Check that we have a device-support entry table. */
     pdset = (struct motor_dset *) pmr->dset;
     if (pdset == NULL)
@@ -482,6 +485,7 @@ static long init_record(dbCommon* arg, int pass)
         recGblRecordError(S_dev_noDSET, (void *) pmr, (char *) errmsg);
         return (S_dev_noDSET);
     }
+
     /* Check that DSET has pointers to functions we need. */
     if ((pdset->base.number < 8) ||
         (pdset->update_values == NULL) ||
@@ -534,6 +538,43 @@ static long init_record(dbCommon* arg, int pass)
                 return(ERROR);
         }
     }
+
+    if ( pmr->ims == 1 )
+    {
+        INIT_MSG();
+        WRITE_MSG(CLEAR_MCODE, NULL);
+        SEND_MSG();
+
+        sleep( 2 );
+
+        /* load the MCode program to the controller */
+        if ( ( pmr->menv != "" ) || ( pmr->mpgm != "" ) )
+        {
+            char line[256];
+            if ( pmr->menv != "" ) strcpy( line, getenv(pmr->menv) );
+            strcat( line, pmr->mpgm );
+
+            FILE *fp = fopen( line, "r" );
+
+            while( 1 )
+            {
+                fgets( line, 64, fp );
+                if ( ferror(fp) || feof(fp) ) break;
+
+                INIT_MSG();
+                WRITE_MSG(LOAD_MCODE, (double *)line);
+                SEND_MSG();
+
+                Debug(3, "%s", line);
+            }
+
+            fclose(fp);
+            sleep( 2 );
+        }
+    }
+
+    if ( ( pmr->ims == 1 ) || ( pmr->urip == motorUEIP_Yes ) ) pmr->msec = 0;
+
     /*
      * .dol (Desired Output Location) is a struct containing either a link to
      * some other field in this database, or a constant intended to initialize
@@ -584,6 +625,7 @@ static long init_record(dbCommon* arg, int pass)
     set_dial_lowlimit(pmr, pdset);
 
     /* Initialize miscellaneous control fields. */
+    Debug(1, "set dmov to 1 and movn to 0, location 1\n");
     pmr->dmov = TRUE;
     MARK(M_DMOV);
     pmr->movn = FALSE;
@@ -608,6 +650,7 @@ static long init_record(dbCommon* arg, int pass)
     }
 
     monitor(pmr);
+
     return(OK);
 }
 
@@ -711,6 +754,7 @@ static long postProcess(motorRecord * pmr)
             double hvel =  pmr->hvel / fabs(pmr->mres);
 
             pmr->mip &= ~MIP_STOP;
+            Debug(1, "set dmov to 0, location 2\n");
             pmr->dmov = FALSE;
             MARK(M_DMOV);
             pmr->rcnt = 0;
@@ -756,11 +800,12 @@ static long postProcess(motorRecord * pmr)
 
             /* Use if encoder or ReadbackLink is in use. */
             msta.All = pmr->msta;
-            bool use_rel = (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip) || pmr->urip);
+            bool use_rel = (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip));
             double relpos = pmr->diff / pmr->mres;
             double relbpos = ((pmr->dval - pmr->bdst) - pmr->drbv) / pmr->mres;
 
             /* Restore DMOV to false and UNMARK it so it is not posted. */
+            Debug(1, "set dmov to 0, location 3\n");
             pmr->dmov = FALSE;
             UNMARK(M_DMOV);
 
@@ -832,11 +877,12 @@ static long postProcess(motorRecord * pmr)
 
         /* Use if encoder or ReadbackLink is in use. */
         msta.All = pmr->msta;
-        bool use_rel = (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip) || pmr->urip);
+        bool use_rel = (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip));
         double relpos = pmr->diff / pmr->mres;
         double relbpos = ((pmr->dval - pmr->bdst) - pmr->drbv) / pmr->mres;
 
         /* Restore DMOV to false and UNMARK it so it is not posted. */
+        Debug(1, "set dmov to 0, location 4\n");
         pmr->dmov = FALSE;
         UNMARK(M_DMOV);
 
@@ -895,6 +941,7 @@ static void maybeRetry(motorRecord * pmr)
     {
         /* No, we're not close enough.  Try again. */
         Debug(1, "maybeRetry: not close enough; diff = %f\n", pmr->diff);
+
         /* If max retry count is zero, retry is disabled */
         if (pmr->rtry == 0)
         {
@@ -920,6 +967,7 @@ static void maybeRetry(motorRecord * pmr)
             }
             else
             {
+                Debug(1, "set dmov to 0, location 5\n");
                 pmr->dmov = FALSE;
                 MARK(M_DMOV);
                 pmr->mip = MIP_RETRY;
@@ -947,6 +995,18 @@ static void maybeRetry(motorRecord * pmr)
             pmr->spmg = motorSPMG_Pause;
             MARK(M_SPMG);
         }
+
+        Debug(0, "\"%s\" reached %f\n", pmr->name, pmr->rbv);
+        if ( ( pmr->ims == 1 )                                       ||
+             ( ( pmr->urip == motorUEIP_Yes ) &&
+               ( pmr->spmg == motorSPMG_Go  ) && ( pmr->ttry < 3 ) )    )
+        {
+            pmr->msec = time(NULL);
+            MARK_AUX(M_MSEC);
+        }
+
+        if ( ( pmr->urip == motorUEIP_Yes ) && ( pmr->ttry == 0 ) )
+            pmr->vtgt = pmr->val;
     }
 }
 
@@ -1119,8 +1179,7 @@ static long process(dbCommon *arg)
      * this is a callback.
      */
     process_reason = (*pdset->update_values) (pmr);
-    if (pmr->msta != old_msta)
-        MARK(M_MSTA);
+    Debug(4, "process: proc %d, reason %d, mip %d\n", pmr->proc, process_reason, pmr->mip);
 
     if ((process_reason == CALLBACK_DATA) || (pmr->mip & MIP_DELAY_ACK))
     {
@@ -1159,6 +1218,7 @@ static long process(dbCommon *arg)
              * of movn (inverted).
              */
             if (pmr->dmov) {
+                Debug(1, "set dmov to 0, location 6\n");
                 pmr->dmov = FALSE;
                 MARK(M_DMOV);
                 pmr->mip |= MIP_EXTERNAL;
@@ -1195,6 +1255,7 @@ static long process(dbCommon *arg)
             /* Assume we're done moving until we find out otherwise. */
             if (pmr->dmov != TRUE)
             {
+                Debug(1, "set dmov to 1, location 7\n");
                 pmr->dmov = TRUE;
                 MARK(M_DMOV);
             }
@@ -1203,8 +1264,9 @@ static long process(dbCommon *arg)
             if (pmr->mip != MIP_DONE && (pmr->rhls || pmr->rlls))
             {
                 /* Restore DMOV to false and UNMARK it so it is not posted. */
+                /* Sheng Peng Debug(1, "set dmov to 0, location 8\n");
                 pmr->dmov = FALSE;
-                UNMARK(M_DMOV);
+                UNMARK(M_DMOV); */
                 INIT_MSG();
                 WRITE_MSG(GET_INFO, NULL);
                 SEND_MSG();
@@ -1243,6 +1305,7 @@ static long process(dbCommon *arg)
                         WRITE_MSG(GET_INFO, NULL);
                         SEND_MSG();
                         /* Restore DMOV to false and UNMARK it so it is not posted. */
+                        Debug(1, "set dmov to 0, location 9\n");
                         pmr->dmov = FALSE;
                         UNMARK(M_DMOV);
                         goto process_exit;
@@ -1262,6 +1325,7 @@ static long process(dbCommon *arg)
                     callbackRequestDelayed(&pcallback->dly_callback, pmr->dly);
 
                     /* Restore DMOV to false and UNMARK it so it is not posted. */
+                    Debug(1, "set dmov to 0, location 10\n");
                     pmr->dmov = FALSE;
                     UNMARK(M_DMOV);
                     goto process_exit;
@@ -1305,12 +1369,94 @@ enter_do_work:
         status = do_work(pmr, process_reason);
     }
 
+    if ( (pmr->ims  == 1) && (process_reason != CALLBACK_DATA) &&
+         (pmr->proc == 1) && (pmr->sdlt > 0) && (pmr->msec > 0) )
+    {
+        unsigned long nsec = time(NULL);
+        if ( (nsec - pmr->msec) > pmr->sdlt )               /* save the state */
+        {
+            INIT_MSG();
+            WRITE_MSG(SAVE_TO_NVM, NULL);
+            SEND_MSG();
+
+            pmr->msec = 0;
+            MARK_AUX(M_MSEC);
+            Debug(0, "\"%s\" saved the state\n", pmr->name);
+        }
+    }
+    else if ( (pmr->urip == motorUEIP_Yes) && (pmr->dmov == TRUE) &&
+              (pmr->sdlt > 0) && (pmr->msec > 0) )
+    {
+        unsigned long nsec = time(NULL);
+        if ( (nsec - pmr->msec) > pmr->sdlt )   /* time to check for trimming */
+        {
+            /* get position from external device */
+            double epos;
+            long rstat;
+
+            rstat = dbGetLink( &(pmr->rdbl), DBR_DOUBLE, &epos, 0, 0 );
+            if ( RTN_SUCCESS(rstat) )
+            {
+                if ( pmr->ttry == 3 )       /* enough tries, no more trimming */
+                {
+                    Debug(0, "\"%s\" reached %f after 3 trims\n", pmr->name, epos);
+                    pmr->ttry = 0;
+                }
+                else
+                {
+                    if ( fabs(pmr->vtgt - epos) < pmr->rdbd )
+                    {
+                        if ( pmr->ttry == 0 )
+                        {
+                            Debug(0, "\"%s\" reached %f, no need to trim\n", pmr->name, epos);
+                        }
+                        else
+                        {
+                            Debug(0, "\"%s\" reached %f, no more trimming\n", pmr->name, epos);
+                        }
+
+                        pmr->ttry = 0;
+                    }
+                    else
+                    {
+                        Debug(0, "\"%s\" did not reach %f, trimming ...\n", pmr->name, pmr->vtgt);
+                        pmr->ttry++;
+                        pmr->val += pmr->vtgt - epos;
+                        db_post_events(pmr, &pmr->twf, DBE_VAL_LOG);
+                    }
+                }
+            }
+            else
+            {
+                Debug(0, "\"%s\" failed to get position from external device, no (more) trimming\n", pmr->name);
+                pmr->ttry = 0;
+            }
+
+            pmr->msec = 0;
+        }
+    }
+    else if ( (pmr->urip == motorUEIP_Yes) && (pmr->dmov == TRUE) &&
+              (pmr->hls || pmr->lls) && (pmr->ttry > 0) )
+        pmr->ttry = 0;
+
     /* Fire off readback link */
     status = dbPutLink(&(pmr->rlnk), DBR_DOUBLE, &(pmr->rbv), 1);
 
     if (pmr->dmov)
+    {
+        msta_field msta;
+
+        msta.All = pmr->msta;
+        if ( fabs(pmr->pdif) > pmr->pdbd ) msta.Bits.EA_SLIP_STALL = 1;
+        else                               msta.Bits.EA_SLIP_STALL = 0;
+
+        pmr->msta = msta.All;
+
         recGblFwdLink(pmr);     /* Process the forward-scan-link record. */
+    }
     
+    if ( pmr->msta != old_msta ) MARK(M_MSTA);
+
 process_exit:
     if (process_reason == CALLBACK_DATA && pmr->stup == motorSTUP_BUSY)
     {
@@ -1320,8 +1466,9 @@ process_exit:
 
     /*** We're done.  Report the current state of the motor. ***/
     recGblGetTimeStamp(pmr);
-    alarm_sub(pmr);                     /* If we've violated alarm limits, yell. */
-    monitor(pmr);               /* If values have changed, broadcast them. */
+    alarm_sub(pmr);                  /* If we've violated alarm limits, yell. */
+    monitor(pmr);                  /* If values have changed, broadcast them. */
+    pmr->proc = 0;
     pmr->pact = 0;
     Debug(4, "process:---------------------- end; motor \"%s\"\n", pmr->name);
     return (status);
@@ -1663,6 +1810,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                     {
                         pmr->mip = MIP_DONE;
                         MARK(M_MIP);
+                        Debug(1, "set dmov to 1, location 11\n");
                         pmr->dmov = TRUE;
                         MARK(M_DMOV);
                     }
@@ -1807,6 +1955,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
         {
             if (stop_or_pause == true)
             {
+                Debug(1, "set dmov to 0, location 12\n");
                 pmr->dmov = FALSE;
                 MARK(M_DMOV);
                 return(OK);
@@ -1866,6 +2015,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                  */
                 WRITE_MSG(GO, NULL);
                 SEND_MSG();
+                Debug(1, "set dmov to 0, location 13\n");
                 pmr->dmov = FALSE;
                 MARK(M_DMOV);
                 pmr->rcnt = 0;
@@ -1910,6 +2060,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 double jacc = pmr->jar / fabs(pmr->mres);
                 double vbase = pmr->vbas / fabs(pmr->mres);
 
+                Debug(1, "set dmov to 0, location 14\n");
                 pmr->dmov = FALSE;
                 MARK(M_DMOV);
                 pmr->pp = TRUE;
@@ -2012,6 +2163,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             pmr->lval = pmr->val;
             pmr->mip = MIP_DONE;
             MARK(M_MIP);
+            Debug(1, "set dmov to 1, location 15\n");
             pmr->dmov = TRUE;
             MARK(M_DMOV);
             return(OK);
@@ -2045,6 +2197,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
         MARK(M_RVAL);
         if (pmr->mip == MIP_DONE)
         {
+            Debug(1, "set dmov to 1, location 16\n");
             pmr->dmov = TRUE;
             MARK(M_DMOV);
         }
@@ -2094,7 +2247,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             msta.All = pmr->msta;
 
             /*** Use if encoder or ReadbackLink is in use. ***/
-            if (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip) || pmr->urip)
+            if (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip))
                 use_rel = true;
             else
                 use_rel = false;
@@ -2120,6 +2273,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             {
                 if (pmr->dmov == FALSE && (pmr->mip == MIP_DONE || pmr->mip == MIP_RETRY))
                 {
+                    Debug(1, "set dmov to 1, location 17\n");
                     pmr->dmov = TRUE;
                     MARK(M_DMOV);
                     if (pmr->mip != MIP_DONE)
@@ -2186,6 +2340,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 /* v1.96 Don't post dmov if special already did. */
                 if (pmr->dmov)
                 {
+                    Debug(1, "set dmov to 0, location 18\n");
                     pmr->dmov = FALSE;
                     MARK(M_DMOV);
                 }
@@ -2253,7 +2408,10 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 if (use_rel == true)
                     WRITE_MSG(MOVE_REL, &position);
                 else
+                {
+                    Debug(0, "\"%s\" move to %f\n", pmr->name, pmr->val);
                     WRITE_MSG(MOVE_ABS, &position);
+                }
                 WRITE_MSG(GO, NULL);
                 SEND_MSG();
             }
@@ -2315,6 +2473,7 @@ static long special(DBADDR *paddr, int after)
                     return(OK);
                 if (pmr->dmov == TRUE)
                 {
+                    Debug(1, "set dmov to 0, location 19\n");
                     pmr->dmov = FALSE;
                     db_post_events(pmr, &pmr->dmov, DBE_VAL_LOG);
                 }
@@ -3113,36 +3272,41 @@ static void alarm_sub(motorRecord * pmr)
     msta_field msta;
     int status;
 
+    msta.All  = pmr->msta;
+
+    /* disable all dbPutFields during trimming or when problems */
+    if ( pmr->ttry > 0 )
+        pmr->disp = 1;
+    else
+        pmr->disp = msta.Bits.RA_PROBLEM | msta.Bits.CNTRL_COMM_ERR | msta.Bits.RA_POWERUP;
+
     if (pmr->udf == TRUE)
     {
-        status = recGblSetSevr((dbCommon *) pmr, UDF_ALARM, INVALID_ALARM);
+        status = recGblSetSevr((dbCommon *) pmr, UDF_ALARM,   INVALID_ALARM);
         return;
     }
+    else if ((msta.Bits.RA_PROBLEM != 0) || (msta.Bits.CNTRL_COMM_ERR != 0))
+    {
+        status = recGblSetSevr((dbCommon *) pmr, COMM_ALARM,  INVALID_ALARM);
+        return;
+    }
+    else if ((msta.Bits.RA_POWERUP != 0) || (msta.Bits.EA_SLIP_STALL  != 0))
+    {
+        status = recGblSetSevr((dbCommon *) pmr, STATE_ALARM, MAJOR_ALARM  );
+        return;
+    }
+
     /* limit-switch and soft-limit violations */
     if (pmr->hlsv && (pmr->hls || (pmr->dval > pmr->dhlm)))
     {
         status = recGblSetSevr((dbCommon *) pmr, HIGH_ALARM, pmr->hlsv);
         return;
     }
+
     if (pmr->hlsv && (pmr->lls || (pmr->dval < pmr->dllm)))
     {
-        status = recGblSetSevr((dbCommon *) pmr, LOW_ALARM, pmr->hlsv);
+        status = recGblSetSevr((dbCommon *) pmr, LOW_ALARM,  pmr->hlsv);
         return;
-    }
-    
-    msta.All = pmr->msta;
-
-    if (msta.Bits.CNTRL_COMM_ERR != 0)
-    {
-        msta.Bits.CNTRL_COMM_ERR =  0;
-        pmr->msta = msta.All;
-        MARK(M_MSTA);
-        status = recGblSetSevr((dbCommon *) pmr, COMM_ALARM, INVALID_ALARM);
-    }
-
-    if ((msta.Bits.EA_SLIP_STALL != 0) || (msta.Bits.RA_PROBLEM != 0))
-    {
-      status = recGblSetSevr((dbCommon *) pmr, STATE_ALARM, MAJOR_ALARM);
     }
 
     return;
@@ -3337,6 +3501,9 @@ static void post_MARKed_fields(motorRecord * pmr, unsigned short mask)
     if ((local_mask = mask | (MARKED_AUX(M_HOMR) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->homr, local_mask);
 
+    if ((local_mask = mask | (MARKED_AUX(M_MSEC) ? DBE_VAL_LOG : 0)))
+        db_post_events(pmr, &pmr->msec, local_mask);
+
     UNMARK_ALL;
 }
 
@@ -3372,8 +3539,7 @@ static void
     else
     {
         pmr->rrbv = pmr->rmp;
-        if (pmr->urip == motorUEIP_No)
-            pmr->drbv = pmr->rrbv * pmr->mres;
+        pmr->drbv = pmr->rrbv * pmr->mres;
     }
 
     MARK(M_RMP);
@@ -3394,8 +3560,10 @@ static void
         MARK(M_TDIR);
 
     /* Get states of high, low limit switches. */
-    pmr->rhls = (msta.Bits.RA_PLUS_LS)  &&  pmr->cdir;
-    pmr->rlls = (msta.Bits.RA_MINUS_LS) && !pmr->cdir;
+/*  pmr->rhls = (msta.Bits.RA_PLUS_LS)  &&  pmr->cdir; */
+/*  pmr->rlls = (msta.Bits.RA_MINUS_LS) && !pmr->cdir; */
+    pmr->rhls =  msta.Bits.RA_PLUS_LS ;
+    pmr->rlls =  msta.Bits.RA_MINUS_LS;
 
     ls_active = (pmr->rhls || pmr->rlls) ? true : false;
     
@@ -3409,12 +3577,16 @@ static void
     /* Get motor-now-moving indicator. */
     if (ls_active == true || msta.Bits.RA_DONE || msta.Bits.RA_PROBLEM)
     {
+        Debug(1, "set movn to 0, location a\n");
         pmr->movn = 0;
         if (ls_active == true)
             clear_buttons(pmr);
     }
     else
+    {
+        Debug(1, "set movn to 1, location b\n");
         pmr->movn = 1;
+    }
     if (pmr->movn != old_movn)
         MARK(M_MOVN);
     
@@ -3427,36 +3599,12 @@ static void
     if (pmr->athm != old_athm)
         MARK(M_ATHM);
 
-
-    /*
-     * If we've got an external readback device, get Dial readback from it, and
-     * propagate to User readback. We do this after motor and encoder readbacks
-     * have been read and propagated to .rbv in case .rdbl is a link involving
-     * that field.
-     */
-    if (pmr->urip && initcall == false)
-    {
-        long rtnstat;
-
-        old_drbv = pmr->drbv;
-        rtnstat = dbGetLink(&(pmr->rdbl), DBR_DOUBLE, &(pmr->drbv), 0, 0 );
-        if (!RTN_SUCCESS(rtnstat))
-            pmr->drbv = old_drbv;
-        else
-        {
-            pmr->drbv *= pmr->rres;
-            pmr->rbv = pmr->drbv * dir + pmr->off;
-            if (pmr->drbv != old_drbv)
-            {
-                MARK(M_DRBV);
-                MARK(M_RBV);
-            }
-        }
-    }
     pmr->diff = pmr->dval - pmr->drbv;
     MARK(M_DIFF);
     pmr->rdif = NINT(pmr->diff / pmr->mres);
     MARK(M_RDIF);
+
+    pmr->pdif = pmr->val - pmr->rbv;
 }
 
 /* Calc and load new raw position into motor w/out moving it. */
@@ -3494,6 +3642,7 @@ static void load_pos(motorRecord * pmr)
     pmr->pp = TRUE;
     if (pmr->dmov == TRUE)
     {
+        Debug(1, "set dmov to 0, location 20\n");
         pmr->dmov = FALSE;
         MARK(M_DMOV);
     }

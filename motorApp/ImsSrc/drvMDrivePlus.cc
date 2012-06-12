@@ -11,6 +11,7 @@
 #include <epicsThread.h>
 #include <drvSup.h>
 #include "motor.h"
+#include "motorRecord.h"
 #include "drvIM483.h"
 #include "asynOctetSyncIO.h"
 #include "epicsExport.h"
@@ -180,40 +181,131 @@ static int set_status(int card, int signal)
     bool plusdir, ls_active = false;
     msta_field status;
 
+    int retry=0; /* Sheng Peng, add sanity check to maks sure command/resposne is in sync */
+
     cntrl = (struct IM483controller *) motor_state[card]->DevicePrivate;
     input_config *confptr = cntrl->inconfig;
     motor_info = &(motor_state[card]->motor_info[signal]);
     nodeptr = motor_info->motor_motion;
     status.All = motor_info->status.All;
 
-    send_mess(card, "PR MV", MDrivePlus_axis[signal]);
-    rtn_state = recv_mess(card, buff, 1);
-    if (rtn_state > 0)
+//     /* Send user-specified programming commands to motor the first
+//        time we're run.  JT - This should ideally be done in
+//        motor_init(), but I was unable to find a way to access the
+//        motor record's fields from that function. */
+//     if( ! cntrl->init_was_written )
+//     {
+//       cntrl->init_was_written = 1;
+// 
+//       struct motorRecord* mr = (motorRecord*) nodeptr->mrecord;
+//       char init_cmds[80];
+//       strncpy( init_cmds, mr->init, 80 );
+//       char* curr_cmd_begin = init_cmds;
+//       char* curr_cmd_end = NULL;
+//       int cmds_len = strlen(init_cmds);
+//       char cmd_sep = ':';
+// 
+//       printf( "Chain #%d: Enter one-time initialization: INIT='%s'.\n", card, mr->init );
+// 
+//       while( *curr_cmd_begin != '\0' )
+//       {
+//         /* Look for the end of the current command. */
+//         curr_cmd_end = curr_cmd_begin + 1;
+//         while( ! ( *curr_cmd_end == cmd_sep || *curr_cmd_end == '\0' ) )
+//         {
+//           curr_cmd_end++;
+//         }
+// 
+//         char cmd[80];
+//         strncpy( cmd, curr_cmd_begin, curr_cmd_end - curr_cmd_begin );
+//         cmd[curr_cmd_end - curr_cmd_begin] = '\0';
+// 
+//         printf( "Chain #%d: Send cmd '%s'.\n", signal, cmd );
+//         send_mess( card, cmd, MDrivePlus_axis[signal] );
+// 
+//         curr_cmd_begin = curr_cmd_end;
+//         if( *curr_cmd_begin == cmd_sep )
+//         {
+//           curr_cmd_begin++;
+//         }
+//       }
+//     }
+
+    while(1)
     {
-    cntrl->status = NORMAL;
-    status.Bits.CNTRL_COMM_ERR = 0;
-    }
-    else
-    {
-    if (cntrl->status == NORMAL)
-    {
-        cntrl->status = RETRY;
-        rtn_state = OK;
-        goto exit;
-    }
-    else
-    {
-        cntrl->status = COMM_ERR;
-        status.Bits.CNTRL_COMM_ERR = 1;
-        status.Bits.RA_PROBLEM     = 1;
-        rtn_state = 1;
-        goto exit;
-    }
+        send_mess(card, "PR MV", MDrivePlus_axis[signal]);
+        rtn_state = recv_mess(card, buff, 1);
+        if (rtn_state > 0)
+        {
+            cntrl->status = NORMAL;
+            status.Bits.CNTRL_COMM_ERR = 0;
+        }
+        else
+        {
+            epicsThreadSleep(2.0);
+            recv_mess(card, buff, FLUSH);
+            Debug(0, "set_status(): MDrivePlus no response for MV, flush.\n");
+
+            if (cntrl->status == NORMAL)
+            {
+                cntrl->status = RETRY;
+                rtn_state = OK;
+                goto exit;
+            }
+            else
+            {
+                cntrl->status = COMM_ERR;
+                status.Bits.CNTRL_COMM_ERR = 1;
+                status.Bits.RA_PROBLEM     = 1;
+                rtn_state = 1;
+                goto exit;
+            }
+        }
+
+        rtnval = atoi(buff);
+
+        if(rtnval == 1 || rtnval == 0)
+        {
+            status.Bits.RA_DONE = (rtnval != 0) ? 0 : 1;
+            break;
+        }
+        else
+        {
+            epicsThreadSleep(2.0);
+            /* suspicious response */
+            recv_mess(card, buff, FLUSH);
+            Debug(0, "set_status(): MDrivePlus MV response seems out of sync, retrying...\n");
+            if(retry++ > 3) break;
+        }
     }
 
-    rtnval = atoi(buff);
+    /* check the power-cycle flag */
+    retry = 0;
+    while(1)
+    {
+        send_mess(card, "PR PU", MDrivePlus_axis[signal]);
+        rtn_state = recv_mess(card, buff, 1);
+        if (rtn_state > 0)
+            break;
+        else                                                   /* no response */
+        {
+            recv_mess(card, buff, FLUSH);
+            if (retry++ > 3)
+            {
+                Debug(0, "set_status(): MDrivePlus no response for PU for 3 tries, ERROR\n");
+                cntrl->status = COMM_ERR;
+                status.Bits.CNTRL_COMM_ERR = 1;
+                status.Bits.RA_PROBLEM     = 1;
+                rtn_state = 1;
+                goto exit;
+            }
 
-    status.Bits.RA_DONE = (rtnval != 0) ? 0 : 1;
+            Debug(0, "set_status(): MDrivePlus no response for PU, retrying ...\n");
+            epicsThreadSleep(2.0);
+        }
+    }
+
+    status.Bits.RA_POWERUP = atoi(buff);
 
     /*
      * Parse motor position
@@ -221,75 +313,230 @@ static int set_status(int card, int signal)
      * Skip to substring for this motor, convert to double
      */
 
-    send_mess(card, "PR P", MDrivePlus_axis[signal]);
-    recv_mess(card, buff, 1);
+    /* epicsThreadSleep(0.1); Sheng Peng */
+    retry = 0;
+    while(1)
+    {
+        send_mess(card, "PR P", MDrivePlus_axis[signal]);
+        rtn_state = recv_mess(card, buff, 1);
+        if (rtn_state > 0)
+            break;
+        else                                                   /* no response */
+        {
+            recv_mess(card, buff, FLUSH);
+            if (retry++ > 3)
+            {
+                Debug(0, "set_status(): MDrivePlus no response for P for 3 tries, ERROR\n");
+                cntrl->status = COMM_ERR;
+                status.Bits.CNTRL_COMM_ERR = 1;
+                status.Bits.RA_PROBLEM     = 1;
+                rtn_state = 1;
+                goto exit;
+            }
+
+            Debug(0, "set_status(): MDrivePlus no response for P, retrying ...\n");
+            epicsThreadSleep(2.0);
+        }
+    }
 
     motorData = atof(buff);
 
     if (motorData == motor_info->position)
     {
-    if (nodeptr != 0)   /* Increment counter only if motor is moving. */
+        if (nodeptr != 0)   /* Increment counter only if motor is moving. */
         motor_info->no_motion_count++;
     }
     else
     {
-    epicsInt32 newposition;
+        epicsInt32 newposition;
 
-    newposition = NINT(motorData);
-    status.Bits.RA_DIRECTION = (newposition >= motor_info->position) ? 1 : 0;
-    motor_info->position = newposition;
-    motor_info->no_motion_count = 0;
+        newposition = NINT(motorData);
+        status.Bits.RA_DIRECTION = (newposition >= motor_info->position) ? 1 : 0;
+        motor_info->position = newposition;
+        motor_info->no_motion_count = 0;
     }
 
     plusdir = (status.Bits.RA_DIRECTION) ? true : false;
 
-    if (confptr->plusLS == 0 || confptr->minusLS == 0)
+    /*
+     * Check limit switch
+     */
+    if(!status.Bits.RA_DONE)/* Still moving, don't check Limit switch since motor record could think motion done if LS active */
     {
-    status.Bits.RA_PLUS_LS  = 0;
-    status.Bits.RA_MINUS_LS = 0;
-    }
-    else
-    {
-    sprintf(buff, "PR I%d", confptr->plusLS);
-    send_mess(card, buff, MDrivePlus_axis[signal]);
-    recv_mess(card, buff, 1);
-    Lswitch = atoi(buff);
-
-    /* Set limit Lswitch error indicators. */
-    if (Lswitch != 0)
-    {
-        status.Bits.RA_PLUS_LS = 1;
-        if (plusdir == true)
-        ls_active = true;
-    }
-    else
-        status.Bits.RA_PLUS_LS = 0;
-
-    sprintf(buff, "PR I%d", confptr->minusLS);
-    send_mess(card, buff, MDrivePlus_axis[signal]);
-    recv_mess(card, buff, 1);
-    Lswitch = atoi(buff);
-
-    if (Lswitch != 0)
-    {
-        status.Bits.RA_MINUS_LS = 1;
-        if (plusdir == false)
-        ls_active = true;
-    }
-    else
+        status.Bits.RA_PLUS_LS  = 0;
         status.Bits.RA_MINUS_LS = 0;
+        status.Bits.RA_HOME = 0;
+        ls_active = false;
     }
-
-    if (confptr->homeLS == 0)
-    status.Bits.RA_HOME = 0;
     else
     {
-    sprintf(buff, "PR I%d", confptr->homeLS);
-    send_mess(card, buff, MDrivePlus_axis[signal]);
-    recv_mess(card, buff, 1);
-    Lswitch = atoi(buff);
-    status.Bits.RA_HOME = (Lswitch) ? 1 : 0;
-    }
+        if (confptr->plusLS == 0 || confptr->minusLS == 0)
+        {
+            status.Bits.RA_PLUS_LS  = 0;
+            status.Bits.RA_MINUS_LS = 0;
+        }
+        else
+        {
+            retry = 0;
+            while(1)
+            {
+                sprintf(buff, "PR I%d", confptr->plusLS);
+                send_mess(card, buff, MDrivePlus_axis[signal]);
+                rtn_state = recv_mess(card, buff, 1);
+
+                if (rtn_state <= 0)
+                {
+                    epicsThreadSleep(2.0);
+                    recv_mess(card, buff, FLUSH);
+                    Debug(0, "set_status(): MDrivePlus no response for plusLS, flush.\n");
+
+                    if (cntrl->status == NORMAL)
+                    {
+                        cntrl->status = RETRY;
+                        rtn_state = OK;
+                        goto exit;
+                    }
+                    else
+                    {
+                        cntrl->status = COMM_ERR;
+                        status.Bits.CNTRL_COMM_ERR = 1;
+                        status.Bits.RA_PROBLEM     = 1;
+                        rtn_state = 1;
+                        goto exit;
+                    }
+                }
+
+                Lswitch = atoi(buff);
+
+                if(Lswitch == 1 || Lswitch == 0)
+                {/* Set limit Lswitch error indicators. */
+                    if (Lswitch != 0)
+                    {
+                        status.Bits.RA_PLUS_LS = 1;
+                        if (plusdir == true) ls_active = true;
+                    }
+                    else
+                    {
+                        status.Bits.RA_PLUS_LS = 0;
+                    }
+                    break;
+                }
+                else
+                {
+                    epicsThreadSleep(2.0);
+                    /* suspicious response */
+                    recv_mess(card, buff, FLUSH);
+                    Debug(0, "set_status(): MDrivePlus plusLS response seems out of sync, retrying...\n");
+                    if(retry++ > 3) break;
+                }
+            }
+
+            retry = 0;
+            while(1)
+            {
+                sprintf(buff, "PR I%d", confptr->minusLS);
+                send_mess(card, buff, MDrivePlus_axis[signal]);
+                rtn_state = recv_mess(card, buff, 1);
+
+                if (rtn_state <= 0)
+                {
+                    epicsThreadSleep(2.0);
+                    recv_mess(card, buff, FLUSH);
+                    Debug(0, "set_status(): MDrivePlus no response for minusLS, flush.\n");
+
+                    if (cntrl->status == NORMAL)
+                    {
+                        cntrl->status = RETRY;
+                        rtn_state = OK;
+                        goto exit;
+                    }
+                    else
+                    {
+                        cntrl->status = COMM_ERR;
+                        status.Bits.CNTRL_COMM_ERR = 1;
+                        status.Bits.RA_PROBLEM     = 1;
+                        rtn_state = 1;
+                        goto exit;
+                    }
+                }
+
+                Lswitch = atoi(buff);
+
+                if(Lswitch == 1 || Lswitch == 0)
+                {/* Set limit Lswitch error indicators. */
+                    if (Lswitch != 0)
+                    {
+                        status.Bits.RA_MINUS_LS = 1;
+                        if (plusdir == false) ls_active = true;
+                    }
+                    else
+                    {
+                        status.Bits.RA_MINUS_LS = 0;
+                    }
+                    break;
+                }
+                else
+                {
+                    epicsThreadSleep(2.0);
+                    /* suspicious response */
+                    recv_mess(card, buff, FLUSH);
+                    Debug(0, "set_status(): MDrivePlus minusLS response seems out of sync, retrying...\n");
+                    if(retry++ > 3) break;
+                }
+            }
+        }
+
+        if (confptr->homeLS == 0)
+            status.Bits.RA_HOME = 0;
+        else
+        {
+            retry = 0;
+            while(1)
+            {
+                sprintf(buff, "PR I%d", confptr->homeLS);
+                send_mess(card, buff, MDrivePlus_axis[signal]);
+                rtn_state = recv_mess(card, buff, 1);
+
+                if (rtn_state <= 0)
+                {
+                    epicsThreadSleep(2.0);
+                    recv_mess(card, buff, FLUSH);
+                    Debug(0, "set_status(): MDrivePlus no response for homeLS, flush.\n");
+
+                    if (cntrl->status == NORMAL)
+                    {
+                        cntrl->status = RETRY;
+                        rtn_state = OK;
+                        goto exit;
+                    }
+                    else
+                    {
+                        cntrl->status = COMM_ERR;
+                        status.Bits.CNTRL_COMM_ERR = 1;
+                        status.Bits.RA_PROBLEM     = 1;
+                        rtn_state = 1;
+                        goto exit;
+                    }
+                }
+
+                Lswitch = atoi(buff);
+
+                if(Lswitch == 1 || Lswitch == 0)
+                {/* Set limit Lswitch error indicators. */
+                    status.Bits.RA_HOME = (Lswitch) ? 1 : 0;
+                    break;
+                }
+                else
+                {
+                    epicsThreadSleep(2.0);
+                    /* suspicious response */
+                    recv_mess(card, buff, FLUSH);
+                    Debug(0, "set_status(): MDrivePlus homeLS response seems out of sync, retrying...\n");
+                    if(retry++ > 3) break;
+                }
+            }
+        }
+    }/* Sheng Peng */
 
     /* !!! Assume no closed-looped control!!!*/
     status.Bits.EA_POSITION = 0;
@@ -391,7 +638,7 @@ static RTN_STATUS send_mess(int card, char const *com, char *name)
 static int recv_mess(int card, char *com, int flag)
 {
     struct IM483controller *cntrl;
-    const double timeout = 1.0;
+    const double timeout = 3.0;
     size_t nread = 0;
     asynStatus status = asynError;
     int eomReason;
@@ -474,6 +721,9 @@ MDrivePlusConfig(int card,        /* chain being configured */
     cntrl = (struct IM483controller *) motor_state[card]->DevicePrivate;
 
     strcpy(cntrl->asyn_port, name);
+    // strncpy(cntrl->initCmds, initCmds, 80);
+    // printf( "\ninitCmds='%s'\n", cntrl->initCmds );
+    // cntrl->init_was_written = 0;
     return(OK);
 }
 
@@ -481,7 +731,7 @@ MDrivePlusConfig(int card,        /* chain being configured */
 /*****************************************************/
 /* initialize all software and hardware              */
 /* This is called from the initialization routine in */
-/* device support.                                   */
+/* device support, MDrivePlus_init.                  */
 /* motor_init()                                      */
 /*****************************************************/
 static int motor_init()
@@ -527,7 +777,7 @@ static int motor_init()
         /* flush any junk at input port - should not be any data available */
         pasynOctetSyncIO->flush(cntrl->pasynUser);
 
-        for (total_axis = 0; total_axis < MAX_AXES; total_axis++)
+        for (total_axis = 0; total_axis < 1 /*MAX_AXES*/; total_axis++)
         {
         int retry = 0;
 

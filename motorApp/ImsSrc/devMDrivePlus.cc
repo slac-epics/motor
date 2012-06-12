@@ -24,7 +24,14 @@ STATIC RTN_STATUS MDrivePlus_end_trans(struct motorRecord *);
 
 struct motor_dset devMDrivePlus =
 {
+    // struct dset from base, devSup.
+    // 8: number - Total number of routines (function pointers).
+    // NULL: report - No 'print report' routine provided.
+    // MDrivePlus_init: init - 'init support layer'.
+    // MDrivePlus_init_record: init_record - 'init device for particular record'
+    // NULL: get_ioint_info - No 'get io interrupt information' routine provided.
     {8, NULL, (DEVSUPFUN) MDrivePlus_init, (DEVSUPFUN) MDrivePlus_init_record, NULL},
+    // The rest are from motor_dset in motor.h
     motor_update_values,
     MDrivePlus_start_trans,
     MDrivePlus_build_trans,
@@ -60,7 +67,11 @@ static msg_types MDrivePlus_table[] = {
     IMMEDIATE,    /* PRIMITIVE */
     IMMEDIATE,    /* SET_HIGH_LIMIT */
     IMMEDIATE,    /* SET_LOW_LIMIT */
-    VELOCITY    /* JOG_VELOCITY */
+    VELOCITY,   /* JOG_VELOCITY */
+    IMMEDIATE,    /* SET_RESOLUTION */
+    IMMEDIATE,    /* CLEAR_MCODE */
+    IMMEDIATE,    /* LOAD_MCODE */
+    IMMEDIATE     /* SAVE_TO_NVM */
 };
 
 
@@ -73,11 +84,14 @@ static struct board_stat **MDrivePlus_cards;
 STATIC long MDrivePlus_init(void *arg)
 {
     long rtnval;
-    long after = (long) arg;
+    int after = (arg == 0) ? 0 : 1;
+
+    printf( "** devMDrivePlus is @ 0x%p.\n", &devMDrivePlus );
 
     if (after == 0)
     {
     drvtabptr = &MDrivePlus_access;
+    // Call the driver's initialization routine.
     (drvtabptr->init)();
     }
 
@@ -86,11 +100,21 @@ STATIC long MDrivePlus_init(void *arg)
 }
 
 
+// extern "C" {
+// extern int init_motor( struct motorRecord* arg );
+// }
+
 /* initialize a record instance */
 STATIC long MDrivePlus_init_record(void *arg)
 {
+  long ret;
     struct motorRecord *mr = (struct motorRecord *) arg;
-    return(motor_init_record_com(mr, *drvtabptr->cardcnt_ptr, drvtabptr, MDrivePlus_cards));
+    // init_motor( mr );
+    ret = motor_init_record_com(mr,
+				*drvtabptr->cardcnt_ptr,
+				drvtabptr,
+				MDrivePlus_cards);
+    return( ret );
 }
 
 
@@ -116,7 +140,7 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
     struct controller *brdptr;
     struct IM483controller *cntrl;
     char buff[110];
-    int axis, card, intval;
+    int axis, card, intval=0;
     unsigned int size;
     RTN_STATUS rtnval;
     bool send;
@@ -127,7 +151,7 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
     buff[0] = '\0';
 
     /* Protect against NULL pointer with WRTITE_MSG(GO/STOP_AXIS/GET_INFO, NULL). */
-    intval = (parms == NULL) ? 0 : NINT(parms[0]);
+    if ( command != LOAD_MCODE ) intval = (parms == NULL) ? 0 : NINT(parms[0]);
 
     msta.All = mr->msta;
 
@@ -150,8 +174,9 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
 
     if (command == PRIMITIVE && mr->init != NULL && strlen(mr->init) != 0)
     {
-    strcat(motor_call->message, " ");
-    strcat(motor_call->message, mr->init);
+    // strcat(motor_call->message, " ");
+    // strcat(motor_call->message, mr->init);
+    // printf( "Card #%d: Setting init: '%s'.\n", card, mr->init );
     }
 
     switch (command)
@@ -268,20 +293,34 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
         send = false;
         break;
     
+    case CLEAR_MCODE:
+        sprintf(buff, "CP");
+        break;
+    
+    case LOAD_MCODE:
+        sprintf(buff, "%s", (char *)parms);
+        break;
+    
+    case SAVE_TO_NVM:
+        sprintf(buff, "S");
+        break;
+    
     default:
         send = false;
         rtnval = ERROR;
     }
 
-    size = strlen(buff);
-    if (send == false)
-    return(rtnval);
-    else if (size > sizeof(buff) || (strlen(motor_call->message) + size) > MAX_MSG_SIZE)
-    errlogMessage("MDrivePlus_build_trans(): buffer overflow.\n");
-    else
+    if ( send == true )
     {
-    strcat(motor_call->message, buff);
-    motor_end_trans_com(mr, drvtabptr);
+        if ( (strlen(motor_call->message) + strlen(buff)) > MAX_MSG_SIZE )
+        {
+            errlogMessage( "MDrivePlus_build_trans(): buffer overflow.\n" );
+            return( ERROR );
+        }
+
+        strcat( motor_call->message, buff );
+        motor_end_trans_com(mr, drvtabptr);
     }
+
     return(rtnval);
 }
