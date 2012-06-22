@@ -166,6 +166,9 @@ struct mess_info
     int pid_present;		/* PID control indicator for VME58 (YES/NO). */
     double high_limit;		/* MM4000 only; Controller's high travel limit. */
     double low_limit;		/* MM4000 only; Controller's low travel limit. */
+    unsigned long p_time;	/* time when position was last checked */
+    short         RA_DONE;	/* previous value of RA_DONE */
+    unsigned long MCHB;		/* previous value of the MCode heart-beat */
 };
 
 struct controller	/* Controller board information. */

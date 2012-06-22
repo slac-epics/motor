@@ -69,9 +69,7 @@ static msg_types MDrivePlus_table[] = {
     IMMEDIATE,    /* SET_LOW_LIMIT */
     VELOCITY,   /* JOG_VELOCITY */
     IMMEDIATE,    /* SET_RESOLUTION */
-    IMMEDIATE,    /* CLEAR_MCODE */
-    IMMEDIATE,    /* LOAD_MCODE */
-    IMMEDIATE     /* SAVE_TO_NVM */
+    IMMEDIATE     /* LOAD_MCODE */
 };
 
 
@@ -137,6 +135,7 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
 {
     struct motor_trans *trans = (struct motor_trans *) mr->dpvt;
     struct mess_node *motor_call;
+    register struct mess_info *motor_info;
     struct controller *brdptr;
     struct IM483controller *cntrl;
     char buff[110];
@@ -165,6 +164,7 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
     return(rtnval = ERROR);
 
     cntrl = (struct IM483controller *) brdptr->DevicePrivate;
+    motor_info = &(brdptr->motor_info[motor_call->signal]);
     
     if (MDrivePlus_table[command] > motor_call->type)
     motor_call->type = MDrivePlus_table[command];
@@ -203,6 +203,9 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
     switch (command)
     {
     case MOVE_ABS:
+        motor_info->p_time  = time(NULL);
+        motor_info->RA_DONE = 0;
+
         sprintf(buff, "MA %d", intval);
         break;
     
@@ -293,16 +296,8 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
         send = false;
         break;
     
-    case CLEAR_MCODE:
-        sprintf(buff, "CP");
-        break;
-    
     case LOAD_MCODE:
         sprintf(buff, "%s", (char *)parms);
-        break;
-    
-    case SAVE_TO_NVM:
-        sprintf(buff, "S");
         break;
     
     default:

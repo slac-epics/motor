@@ -541,16 +541,25 @@ static long init_record(dbCommon* arg, int pass)
 
     if ( pmr->ims == 1 )
     {
-        INIT_MSG();
-        WRITE_MSG(CLEAR_MCODE, NULL);
-        SEND_MSG();
-
-        sleep( 2 );
-
         /* load the MCode program to the controller */
         if ( ( pmr->menv != "" ) || ( pmr->mpgm != "" ) )
         {
             char line[256];
+
+            strcpy( line, "E\r\n" );
+            INIT_MSG();
+            WRITE_MSG(LOAD_MCODE, (double *)line);
+            SEND_MSG();
+
+            sleep( 1 );
+
+            strcpy( line, "CP\r\n" );
+            INIT_MSG();
+            WRITE_MSG(LOAD_MCODE, (double *)line);
+            SEND_MSG();
+
+            sleep( 1 );
+
             if ( pmr->menv != "" ) strcpy( line, getenv(pmr->menv) );
             strcat( line, pmr->mpgm );
 
@@ -566,14 +575,37 @@ static long init_record(dbCommon* arg, int pass)
                 SEND_MSG();
 
                 Debug(3, "%s", line);
+
+                epicsThreadSleep(0.1);
             }
 
             fclose(fp);
             sleep( 2 );
+
+            strcpy( line, "EX=1\r\n" );
+            INIT_MSG();
+            WRITE_MSG(LOAD_MCODE, (double *)line);
+            SEND_MSG();
+
+            sleep( 1 );
+
+            strcpy( line, "PU=0\r\n" );
+            INIT_MSG();
+            WRITE_MSG(LOAD_MCODE, (double *)line);
+            SEND_MSG();
+
+            sleep( 1 );
+
+            strcpy( line, "S\r\n" );
+            INIT_MSG();
+            WRITE_MSG(LOAD_MCODE, (double *)line);
+            SEND_MSG();
+
+            sleep( 1 );
         }
     }
 
-    if ( ( pmr->ims == 1 ) || ( pmr->urip == motorUEIP_Yes ) ) pmr->msec = 0;
+    if ( pmr->urip == motorUEIP_Yes ) pmr->msec = 0;
 
     /*
      * .dol (Desired Output Location) is a struct containing either a link to
@@ -967,7 +999,7 @@ static void maybeRetry(motorRecord * pmr)
             }
             else
             {
-                Debug(1, "set dmov to 0, location 5\n");
+                Debug(1, "set dmov to 0, location 2\n");
                 pmr->dmov = FALSE;
                 MARK(M_DMOV);
                 pmr->mip = MIP_RETRY;
@@ -997,16 +1029,12 @@ static void maybeRetry(motorRecord * pmr)
         }
 
         Debug(0, "\"%s\" reached %f\n", pmr->name, pmr->rbv);
-        if ( ( pmr->ims == 1 )                                       ||
-             ( ( pmr->urip == motorUEIP_Yes ) &&
-               ( pmr->spmg == motorSPMG_Go  ) && ( pmr->ttry < 3 ) )    )
+        if ( ( pmr->urip == motorUEIP_Yes ) &&
+             ( pmr->spmg == motorSPMG_Go  ) && ( pmr->ttry < 9 ) )
         {
             pmr->msec = time(NULL);
             MARK_AUX(M_MSEC);
         }
-
-        if ( ( pmr->urip == motorUEIP_Yes ) && ( pmr->ttry == 0 ) )
-            pmr->vtgt = pmr->val;
     }
 }
 
@@ -1292,7 +1320,8 @@ static long process(dbCommon *arg)
             }
 
             /* Are we "close enough" to desired position? */
-            if (pmr->dmov && !(pmr->rhls || pmr->rlls))
+            if ((pmr->mip & MIP_MOVE || pmr->mip & MIP_RETRY) &&
+                pmr->dmov && !(pmr->rhls || pmr->rlls))
             {
                 mmap_bits.All = pmr->mmap; /* Initialize for MARKED. */
 
@@ -1369,23 +1398,8 @@ enter_do_work:
         status = do_work(pmr, process_reason);
     }
 
-    if ( (pmr->ims  == 1) && (process_reason != CALLBACK_DATA) &&
-         (pmr->proc == 1) && (pmr->sdlt > 0) && (pmr->msec > 0) )
-    {
-        unsigned long nsec = time(NULL);
-        if ( (nsec - pmr->msec) > pmr->sdlt )               /* save the state */
-        {
-            INIT_MSG();
-            WRITE_MSG(SAVE_TO_NVM, NULL);
-            SEND_MSG();
-
-            pmr->msec = 0;
-            MARK_AUX(M_MSEC);
-            Debug(0, "\"%s\" saved the state\n", pmr->name);
-        }
-    }
-    else if ( (pmr->urip == motorUEIP_Yes) && (pmr->dmov == TRUE) &&
-              (pmr->sdlt > 0) && (pmr->msec > 0) )
+    if ( (pmr->urip == motorUEIP_Yes) && (pmr->dmov == TRUE) &&
+         (pmr->sdlt > 0) && (pmr->msec > 0) )
     {
         unsigned long nsec = time(NULL);
         if ( (nsec - pmr->msec) > pmr->sdlt )   /* time to check for trimming */
@@ -1397,14 +1411,14 @@ enter_do_work:
             rstat = dbGetLink( &(pmr->rdbl), DBR_DOUBLE, &epos, 0, 0 );
             if ( RTN_SUCCESS(rstat) )
             {
-                if ( pmr->ttry == 3 )       /* enough tries, no more trimming */
+                if ( pmr->ttry == 9 )       /* enough tries, no more trimming */
                 {
-                    Debug(0, "\"%s\" reached %f after 3 trims\n", pmr->name, epos);
+                    Debug(0, "\"%s\" reached %f after 9 trims\n", pmr->name, epos);
                     pmr->ttry = 0;
                 }
                 else
                 {
-                    if ( fabs(pmr->vtgt - epos) < pmr->rdbd )
+                    if ( fabs(pmr->val - epos) < pmr->pdbd )
                     {
                         if ( pmr->ttry == 0 )
                         {
@@ -1419,10 +1433,13 @@ enter_do_work:
                     }
                     else
                     {
-                        Debug(0, "\"%s\" did not reach %f, trimming ...\n", pmr->name, pmr->vtgt);
                         pmr->ttry++;
-                        pmr->val += pmr->vtgt - epos;
-                        db_post_events(pmr, &pmr->twf, DBE_VAL_LOG);
+                        Debug(0, "\"%s\" reached %f, trim %d ...\n", pmr->name, epos, pmr->ttry);
+                        pmr->off += epos - pmr->val;
+                        /* db_post_events(pmr, &pmr->twf, DBE_VAL_LOG); */
+                        pmr->dmov = FALSE;
+                        pmr->mip  = MIP_RETRY;
+                        db_post_events(pmr, &pmr->dmov, DBE_VAL_LOG);
                     }
                 }
             }
@@ -2142,7 +2159,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
     * Now we either act directly on the .val change and return, or we
     * propagate it into a .dval change.
     */
-    if (pmr->val != pmr->lval)
+    if ( (pmr->val != pmr->lval) || (pmr->ttry > 0) )
     {
         MARK(M_VAL);
         if (set && !pmr->foff)
@@ -2340,7 +2357,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 /* v1.96 Don't post dmov if special already did. */
                 if (pmr->dmov)
                 {
-                    Debug(1, "set dmov to 0, location 18\n");
+                    Debug(1, "set dmov to 0, location 1\n");
                     pmr->dmov = FALSE;
                     MARK(M_DMOV);
                 }
@@ -2399,6 +2416,13 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                         position = bpos;
                     pmr->pp = TRUE;              /* do backlash from posprocess(). */
                 }
+
+                short old_movn = pmr->movn;
+
+                Debug(1, "set movn to 1, location 1\n");
+                pmr->movn = 1;
+
+                if (pmr->movn != old_movn) MARK(M_MOVN);
 
                 pmr->cdir = (pmr->rdif < 0.0) ? 0 : 1;
                 WRITE_MSG(SET_VEL_BASE, &vbase);
@@ -3275,9 +3299,9 @@ static void alarm_sub(motorRecord * pmr)
     msta.All  = pmr->msta;
 
     /* disable all dbPutFields during trimming or when problems */
-    if ( pmr->ttry > 0 )
+    /* if ( pmr->ttry > 0 )
         pmr->disp = 1;
-    else
+    else */
         pmr->disp = msta.Bits.RA_PROBLEM | msta.Bits.CNTRL_COMM_ERR | msta.Bits.RA_POWERUP;
 
     if (pmr->udf == TRUE)
@@ -3290,9 +3314,15 @@ static void alarm_sub(motorRecord * pmr)
         status = recGblSetSevr((dbCommon *) pmr, COMM_ALARM,  INVALID_ALARM);
         return;
     }
-    else if ((msta.Bits.RA_POWERUP != 0) || (msta.Bits.EA_SLIP_STALL  != 0))
+    else if ((msta.Bits.MCHB       != 0) ||
+             (msta.Bits.RA_POWERUP != 0) || (msta.Bits.EA_SLIP_STALL  != 0))
     {
         status = recGblSetSevr((dbCommon *) pmr, STATE_ALARM, MAJOR_ALARM  );
+        return;
+    }
+    else if (msta.Bits.ERRNO != 0)
+    {
+        status = recGblSetSevr((dbCommon *) pmr, STATE_ALARM, MINOR_ALARM  );
         return;
     }
 
@@ -3577,15 +3607,10 @@ static void
     /* Get motor-now-moving indicator. */
     if (ls_active == true || msta.Bits.RA_DONE || msta.Bits.RA_PROBLEM)
     {
-        Debug(1, "set movn to 0, location a\n");
+        Debug(1, "set movn to 0, location 2\n");
         pmr->movn = 0;
         if (ls_active == true)
             clear_buttons(pmr);
-    }
-    else
-    {
-        Debug(1, "set movn to 1, location b\n");
-        pmr->movn = 1;
     }
     if (pmr->movn != old_movn)
         MARK(M_MOVN);

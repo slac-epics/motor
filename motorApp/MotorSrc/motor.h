@@ -107,9 +107,7 @@ typedef enum  {
 	SET_LOW_LIMIT,	/* Set Low Travel Limit. */
 	JOG_VELOCITY,	/* Change Jog velocity. */
 	SET_RESOLUTION,	/* Set resolution */
-	CLEAR_MCODE,   	/* Clear MCode */
-	LOAD_MCODE,   	/* Load MCode */
-	SAVE_TO_NVM   	/* Save to NVM */
+	LOAD_MCODE    	/* Load MCode */
 } motor_cmnd;
 
 
@@ -147,8 +145,10 @@ typedef union
     struct
     {
 #ifdef MSB_First
-	unsigned int na		    :16;/* N/A bits  */
-	unsigned int RA_POWERUP     :1; /* Power-cycled bit */
+	unsigned int ERRNO          :8; /* Error number */
+	unsigned int NA             :7; /* N/A bits */
+	unsigned int MCHB           :1; /* Missing MCode heart-beat */
+	unsigned int RA_POWERUP     :1; /* Power-cycled */
         unsigned int RA_HOMED       :1; /* Axis has been homed.*/
 	unsigned int RA_MINUS_LS    :1;	/* minus limit switch has been hit */
 	unsigned int CNTRL_COMM_ERR :1;	/* Controller communication error. */
@@ -180,8 +180,10 @@ typedef union
 	unsigned int CNTRL_COMM_ERR :1;	/* Controller communication error. */
 	unsigned int RA_MINUS_LS    :1;	/* minus limit switch has been hit */
         unsigned int RA_HOMED       :1; /* Axis has been homed.*/
-	unsigned int RA_POWERUP     :1; /* Power-cycled bit */
-	unsigned int na		    :16;/* N/A bits  */
+	unsigned int RA_POWERUP     :1; /* Power-cycled */
+	unsigned int MCHB           :1; /* Missing MCode heart-beat */
+	unsigned int NA             :7; /* N/A bits */
+	unsigned int ERRNO          :8; /* error number */
 #endif
     } Bits;                                
 } msta_field;

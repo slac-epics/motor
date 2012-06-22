@@ -181,6 +181,8 @@ static int set_status(int card, int signal)
     bool plusdir, ls_active = false;
     msta_field status;
 
+    unsigned long utcSeconds, mchb;
+
     int retry=0; /* Sheng Peng, add sanity check to maks sure command/resposne is in sync */
 
     cntrl = (struct IM483controller *) motor_state[card]->DevicePrivate;
@@ -279,96 +281,74 @@ static int set_status(int card, int signal)
         }
     }
 
-    /* check the power-cycle flag */
-    retry = 0;
-    while(1)
-    {
-        send_mess(card, "PR PU", MDrivePlus_axis[signal]);
-        rtn_state = recv_mess(card, buff, 1);
-        if (rtn_state > 0)
-            break;
-        else                                                   /* no response */
-        {
-            recv_mess(card, buff, FLUSH);
-            if (retry++ > 3)
-            {
-                Debug(0, "set_status(): MDrivePlus no response for PU for 3 tries, ERROR\n");
-                cntrl->status = COMM_ERR;
-                status.Bits.CNTRL_COMM_ERR = 1;
-                status.Bits.RA_PROBLEM     = 1;
-                rtn_state = 1;
-                goto exit;
-            }
-
-            Debug(0, "set_status(): MDrivePlus no response for PU, retrying ...\n");
-            epicsThreadSleep(2.0);
-        }
-    }
-
-    status.Bits.RA_POWERUP = atoi(buff);
+    utcSeconds = time(NULL);
 
     /*
-     * Parse motor position
+     * Check motor position
      * Position string format: 1TP5.012,2TP1.123,3TP-100.567,...
      * Skip to substring for this motor, convert to double
      */
-
-    /* epicsThreadSleep(0.1); Sheng Peng */
-    retry = 0;
-    while(1)
+    if( status.Bits.RA_DONE || utcSeconds > motor_info->p_time+1 )
     {
-        send_mess(card, "PR P", MDrivePlus_axis[signal]);
-        rtn_state = recv_mess(card, buff, 1);
-        if (rtn_state > 0)
-            break;
-        else                                                   /* no response */
+        motor_info->p_time = utcSeconds;
+
+        /* epicsThreadSleep(0.1); Sheng Peng */
+        retry = 0;
+        while(1)
         {
-            recv_mess(card, buff, FLUSH);
-            if (retry++ > 3)
+            send_mess(card, "PR P", MDrivePlus_axis[signal]);
+            rtn_state = recv_mess(card, buff, 1);
+            if (rtn_state > 0)
+                break;
+            else                                               /* no response */
             {
-                Debug(0, "set_status(): MDrivePlus no response for P for 3 tries, ERROR\n");
-                cntrl->status = COMM_ERR;
-                status.Bits.CNTRL_COMM_ERR = 1;
-                status.Bits.RA_PROBLEM     = 1;
-                rtn_state = 1;
-                goto exit;
+                recv_mess(card, buff, FLUSH);
+                if (retry++ > 3)
+                {
+                    Debug(0, "set_status(): MDrivePlus no response for P for 3 tries, ERROR\n");
+                    cntrl->status = COMM_ERR;
+                    status.Bits.CNTRL_COMM_ERR = 1;
+                    status.Bits.RA_PROBLEM     = 1;
+                    rtn_state = 1;
+                    goto exit;
+                }
+
+                Debug(0, "set_status(): MDrivePlus no response for P, retrying ...\n");
+                epicsThreadSleep(2.0);
             }
-
-            Debug(0, "set_status(): MDrivePlus no response for P, retrying ...\n");
-            epicsThreadSleep(2.0);
         }
+
+        motorData = atof(buff);
+
+        if (motorData == motor_info->position)
+        {
+            if (nodeptr != 0)   /* Increment counter only if motor is moving. */
+            motor_info->no_motion_count++;
+        }
+        else
+        {
+            epicsInt32 newposition;
+
+            newposition = NINT(motorData);
+            status.Bits.RA_DIRECTION = (newposition >= motor_info->position) ? 1 : 0;
+            motor_info->position = newposition;
+            motor_info->no_motion_count = 0;
+        }
+
+        plusdir = (status.Bits.RA_DIRECTION) ? true : false;
     }
-
-    motorData = atof(buff);
-
-    if (motorData == motor_info->position)
-    {
-        if (nodeptr != 0)   /* Increment counter only if motor is moving. */
-        motor_info->no_motion_count++;
-    }
-    else
-    {
-        epicsInt32 newposition;
-
-        newposition = NINT(motorData);
-        status.Bits.RA_DIRECTION = (newposition >= motor_info->position) ? 1 : 0;
-        motor_info->position = newposition;
-        motor_info->no_motion_count = 0;
-    }
-
-    plusdir = (status.Bits.RA_DIRECTION) ? true : false;
 
     /*
-     * Check limit switch
+     * Check limit switches, power-up flag, MCode heart-beat and error number
      */
-    if(!status.Bits.RA_DONE)/* Still moving, don't check Limit switch since motor record could think motion done if LS active */
+    if (!status.Bits.RA_DONE) /* Still moving, don't check Limit switch since motor record could think motion done if LS active */
     {
         status.Bits.RA_PLUS_LS  = 0;
         status.Bits.RA_MINUS_LS = 0;
         status.Bits.RA_HOME = 0;
         ls_active = false;
     }
-    else
+    else if (motor_info->RA_DONE == 1)
     {
         if (confptr->plusLS == 0 || confptr->minusLS == 0)
         {
@@ -536,7 +516,100 @@ static int set_status(int card, int signal)
                 }
             }
         }
+
+        /* check the power-cycle flag */
+        retry = 0;
+        while(1)
+        {
+            send_mess(card, "PR PU", MDrivePlus_axis[signal]);
+            rtn_state = recv_mess(card, buff, 1);
+            if (rtn_state > 0)
+                break;
+            else                                               /* no response */
+            {
+                recv_mess(card, buff, FLUSH);
+                if (retry++ > 3)
+                {
+                    Debug(0, "set_status(): MDrivePlus no response for PU for 3 tries, ERROR\n");
+                    cntrl->status = COMM_ERR;
+                    status.Bits.CNTRL_COMM_ERR = 1;
+                    status.Bits.RA_PROBLEM     = 1;
+                    rtn_state = 1;
+                    goto exit;
+                }
+
+                Debug(0, "set_status(): MDrivePlus no response for PU, retrying ...\n");
+                epicsThreadSleep(2.0);
+            }
+        }
+
+        status.Bits.RA_POWERUP = atoi(buff);
+
+        /* check the MCode heart-beat */
+        retry = 0;
+        while(1)
+        {
+            send_mess(card, "PR HB", MDrivePlus_axis[signal]);
+            rtn_state = recv_mess(card, buff, 1);
+            if (rtn_state > 0)
+                break;
+            else                                               /* no response */
+            {
+                recv_mess(card, buff, FLUSH);
+                if (retry++ > 3)
+                {
+                    Debug(0, "set_status(): MDrivePlus no response for HB for 3 tries, ERROR\n");
+                    cntrl->status = COMM_ERR;
+                    status.Bits.CNTRL_COMM_ERR = 1;
+                    status.Bits.RA_PROBLEM     = 1;
+                    rtn_state = 1;
+                    goto exit;
+                }
+
+                Debug(0, "set_status(): MDrivePlus no response for HB, retrying ...\n");
+                epicsThreadSleep(2.0);
+            }
+        }
+
+        mchb = strtoul(buff, 0, 10);
+        if (mchb <= motor_info->MCHB)
+            status.Bits.MCHB = 1;
+        else
+        {
+            status.Bits.MCHB = 0;
+            motor_info->MCHB = mchb;
+        }
+
+        /* check the error code */
+        retry = 0;
+        while(1)
+        {
+            send_mess(card, "PR ER", MDrivePlus_axis[signal]);
+            rtn_state = recv_mess(card, buff, 1);
+            if (rtn_state > 0)
+                break;
+            else                                               /* no response */
+            {
+                recv_mess(card, buff, FLUSH);
+                if (retry++ > 3)
+                {
+                    Debug(0, "set_status(): MDrivePlus no response for ER for 3 tries, ERROR\n");
+                    cntrl->status = COMM_ERR;
+                    status.Bits.CNTRL_COMM_ERR = 1;
+                    status.Bits.RA_PROBLEM     = 1;
+                    rtn_state = 1;
+                    goto exit;
+                }
+
+                Debug(0, "set_status(): MDrivePlus no response for ER, retrying ...\n");
+                epicsThreadSleep(2.0);
+            }
+        }
+
+        status.Bits.ERRNO = atoi(buff) & 0xFF;
     }/* Sheng Peng */
+
+    motor_info->RA_DONE = status.Bits.RA_DONE;
 
     /* !!! Assume no closed-looped control!!!*/
     status.Bits.EA_POSITION = 0;

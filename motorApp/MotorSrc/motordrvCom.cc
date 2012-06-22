@@ -270,9 +270,12 @@ static double query_axis(int card, struct driver_table *tabptr, epicsTime tick,
                 {
                     (*tabptr->query_done) (card, index, motor_motion);
                     brdptr->motor_in_motion--;
-                    motor_free(motor_motion, tabptr);
-                    motor_motion = (struct mess_node *) NULL;
-                    motor_info->motor_motion = (struct mess_node *) NULL;
+                    if ( brdptr->motor_in_motion == 0 )
+                    {
+                        motor_free(motor_motion, tabptr);
+                        motor_motion = (struct mess_node *) NULL;
+                        motor_info->motor_motion = (struct mess_node *) NULL;
+                    }
                 }
 
                 callbackRequest(&mess_ret->callback);
@@ -343,7 +346,7 @@ static void process_messages(struct driver_table *tabptr, epicsTime tick,
                  */
 
                 if (!motor_motion)      /* if NULL */
-                    (*tabptr->card_array)[card]->motor_in_motion++;
+                    (*tabptr->card_array)[card]->motor_in_motion = 2;
                 else
                     motor_free(motor_motion, tabptr);
 
@@ -359,7 +362,7 @@ static void process_messages(struct driver_table *tabptr, epicsTime tick,
 
                 /* this is tricky - see velocity comment */
                 if (!motor_motion)      /* if NULL */
-                    (*tabptr->card_array)[card]->motor_in_motion++;
+                    (*tabptr->card_array)[card]->motor_in_motion = 2;
                 else
                     motor_free(motor_motion, tabptr);
 

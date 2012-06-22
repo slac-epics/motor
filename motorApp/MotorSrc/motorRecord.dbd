@@ -803,10 +803,6 @@ recordtype(motor) {
 		prompt("Position Tolerance")
 		interest(1)
 	}
-	field(VTGT,DBF_DOUBLE) {
-		prompt("Target Position")
-		special(SPC_NOMOD)
-	}
 	field(TTRY,DBF_SHORT) {
 		initial("0")
 		prompt("Trimming Counter")

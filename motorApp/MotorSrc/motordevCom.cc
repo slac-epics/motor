@@ -195,6 +195,7 @@ motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_table *t
     struct motor_trans *ptrans;
     MOTOR_AXIS_QUERY axis_query;
     struct mess_node *motor_call;
+    struct mess_info *motor_info;
     double ep_mp[2];            /* encoder pulses, motor pulses */
     int rtnStat;
     msta_field msta;
@@ -384,6 +385,13 @@ motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_table *t
     mr->rmp = axis_query.position;      /* raw motor pulse count */
     mr->rep = axis_query.encoder_position;      /* raw encoder pulse count */
     mr->msta = axis_query.status.All;   /* status info */
+
+    /* Dehong Zhang: initialize for limit switch and power cycle checking */
+    motor_info = &((*tabptr->card_array)[card]->motor_info[signal]);
+    motor_info->p_time   = 0;
+    motor_info->RA_DONE  = 1;
+    motor_info->MCHB     = 0;
+
     return(OK);
 }
 
