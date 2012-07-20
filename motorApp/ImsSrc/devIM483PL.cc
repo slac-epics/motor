@@ -3,9 +3,9 @@ FILENAME...	devIM483PL.cc
 USAGE...	Motor record device level support for Intelligent Motion
 		Systems, Inc. IM483(I/IE).
 
-Version:	1.6
-Modified By:	sluiter
-Last Modified:	2008/03/14 20:10:01
+Version:	$Revision: 1.6 $
+Modified By:	$Author: sluiter $
+Last Modified:	$Date: 2008-03-14 20:10:01 $
 */
 
 /*

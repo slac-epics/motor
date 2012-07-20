@@ -1,8 +1,9 @@
 # FILENAME...   motorRecord.dbd
 
-# Version:              1.19
-# Modified By:          sluiter
-# Last Modified:        2008/11/19 21:07:10
+# Version:       $Revision: 10799 $
+# Modified By:   $Author: sluiter $
+# Last Modified: $Date: 2010-04-21 13:24:59 -0500 (Wed, 21 Apr 2010) $
+# HeadURL:       $URL $
 
 # Experimental Physics and Industrial Control System (EPICS)
 
@@ -275,11 +276,6 @@ recordtype(motor) {
         field(RRES,DBF_DOUBLE) {
                 prompt("Readback Step Size (EGU")
                 promptgroup(GUI_COMMON)
-                interest(1)
-        }
-        field(RES,DBF_DOUBLE) {
-                prompt("Step Size (EGU)")
-                special(SPC_NOMOD)
                 interest(1)
         }
         field(UEIP,DBF_MENU) {
@@ -672,6 +668,7 @@ recordtype(motor) {
                 prompt("Enable control")
                 promptgroup(GUI_COMMON)
                 special(SPC_MOD)
+                pp(TRUE)
                 menu(motorTORQ)
         }
         field(INIT,DBF_STRING) {
@@ -765,6 +762,31 @@ recordtype(motor) {
                 prompt("Retry Mode")
                 interest(1)
                 menu(motorRMOD)
+        }
+        field(ADEL,DBF_DOUBLE) {
+                prompt("Archive Deadband")
+                promptgroup(GUI_COMMON)
+                interest(1)
+        }
+        field(MDEL,DBF_DOUBLE) {
+                prompt("Monitor Deadband")
+                promptgroup(GUI_COMMON)
+                interest(1)
+        }
+        field(ALST,DBF_DOUBLE) {
+                prompt("Last Value Archived")
+                special(SPC_NOMOD)
+                interest(3)
+        }
+        field(MLST,DBF_DOUBLE) {
+                prompt("Last Val Monitored")
+                special(SPC_NOMOD)
+                interest(3)
+        }
+        field(SYNC,DBF_SHORT) {
+                prompt("Sync position")
+                pp(TRUE)
+                interest(1)
         }
         field(IMS,DBF_USHORT) {
                 initial("0")

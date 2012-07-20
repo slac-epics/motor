@@ -3,9 +3,9 @@ FILENAME... drvIM483PL.cc
 USAGE...    Motor record driver level support for Intelligent Motion
         Systems, Inc. IM483(I/IE).
 
-Version:    1.17
-Modified By:    sluiter
-Last Modified:  2006/01/31 22:09:15
+Version:    $Revision: 1.17 $
+Modified By:    $Author: sluiter $
+Last Modified:  $Date: 2006-01-31 22:09:15 $
 */
 
 /*****************************************************************

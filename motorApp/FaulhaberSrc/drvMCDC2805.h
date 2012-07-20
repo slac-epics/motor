@@ -2,9 +2,9 @@
 FILENAME...	drvMCDC2805.h
 USAGE... This file contains driver "include" information for the Faulhaber MCDC 2805 controller.
 
-Version:	1.2
-Modified By:	rivers
-Last Modified:	2005/11/04 23:05:35
+Version:	$Revision: 1.2 $
+Modified By:	$Author: rivers $
+Last Modified:	$Date: 2005-11-04 23:05:35 $
 */
 
 /*

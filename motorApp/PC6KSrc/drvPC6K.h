@@ -3,9 +3,9 @@ FILENAME...	drvPC6K.h
 USAGE...    This file contains Parker Compumotor driver "include"
 	    information that is specific to the 6K series serial controller
 
-Version:	1.2
-Modified By:	sullivan
-Last Modified:	2006/08/31 15:42:31
+Version:	$Revision: 1.2 $
+Modified By:	$Author: sullivan $
+Last Modified:	$Date: 2006-08-31 15:42:31 $
 */
 
 /*

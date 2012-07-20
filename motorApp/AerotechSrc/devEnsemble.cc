@@ -2,9 +2,10 @@
  * FILENAME... devEnsemble.cc
  * USAGE... Motor record device level support for Aerotech Ensemble.
  *
- * Version:        1.4.2.3
- * Modified By:    sluiter
- * Last Modified:  2009/06/22 17:53:29
+ * Version:        $Revision$
+ * Modified By:    $Author$
+ * Last Modified:  $Date$
+ * HeadURL:        $URL$
  */
 
 /*
@@ -43,6 +44,8 @@
  *                      firmware 2.5.2.
  * .04  05-01-09 rls  - Fix for jog velocity not adjusted by
  *                      cntrl->drive_resolution.
+ * .05  03-02-10 rls  - removed setting controller's soft limits; see README
+ *                    - Depreciated version; use the asyn motor version.
  */
 
 
@@ -236,22 +239,7 @@ static RTN_STATUS Ensemble_build_trans (motor_cmnd command, double *parms,
 
     case HOME_FOR:
     case HOME_REV:
-        {
-            epicsUInt32 hparam = cntrl->home_dparam[axis];
-            if (command == HOME_FOR)
-                hparam |= 0x00000001;
-            else
-                hparam &= 0xFFFFFFFE;
-            cntrl->home_dparam[axis] = hparam;
-
-            sprintf(buff, "SETPARM @%d, 106, %d", axis, hparam);
-            strcpy(motor_call->message, buff);
-            rtnval = motor_end_trans_com(mr, drvtabptr);
-
-            rtnval = (RTN_STATUS) motor_start_trans_com(mr, Ensemble_cards);
-            sprintf(buff, "HOME @%d", axis);
-            motor_call->type = Ensemble_table[command];
-        }
+        send = false; // Commenting out until Home search can be stopped from EPICS
         break;
 
     case LOAD_POS:
@@ -341,29 +329,8 @@ static RTN_STATUS Ensemble_build_trans (motor_cmnd command, double *parms,
         break;
 
     case SET_HIGH_LIMIT:
-        sprintf(buff, "SETPARM(@%d, 48, %.*f)", axis, maxdigits, cntrl_units); //ThresholdSoftCW
-        //motor_info = &(*trans->tabptr->card_array)[card]->motor_info[axis];
-        //trans->state = IDLE_STATE;	// No command sent to the controller.
-
-        //if(cntrl_units > motor_info->high_limit)
-        //{
-        //	mr->dhlm = motor_info->high_limit;
-        //	rtnval = ERROR;
-        //}
-        //send = false;
-        break;
-
     case SET_LOW_LIMIT:
-        sprintf(buff, "SETPARM(@%d, 47, %.*f)", axis, maxdigits, cntrl_units); //ThresholdSoftCCW
-        //motor_info = &(*trans->tabptr->card_array)[card]->motor_info[axis];
-        //trans->state = IDLE_STATE;	// No command sent to the controller.
-
-        //if(cntrl_units < motor_info->low_limit)
-        //{
-        //	mr->dllm = motor_info->low_limit;
-        //	rtnval = ERROR;
-        //}
-        //send = false;
+        send = false;
         break;
 
     case SET_RESOLUTION:

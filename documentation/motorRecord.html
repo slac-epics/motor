@@ -37,9 +37,9 @@
 </ul>
 <a name="Overview"></a>
 
-<h2>Overview</h2> This documentation describes version R6-4 of the EPICS motor
+<h2>Overview</h2> This documentation describes version R6-5 of the EPICS motor
 record, and related EPICS software required to build and use it.&nbsp; Version
-R6-4 of the motor record is compatible with EPICS base R3.14.9 and above.
+R6-5 of the motor record is compatible with EPICS base R3.14.10 and above.
 <p>
 The motor record is intended to support motors of all kinds, but currently 
 supports only the following variety of motor controllers (in addition to Soft 
@@ -54,7 +54,7 @@ Channel support):
     Highland Technologies model V540.
   </li>
   <li>
-    Newport models MM3000, MM4000/5/6, PM500, ESP300/100 and XPSC8.
+    Newport models MM3000, MM4000/5/6, PM500, ESP300/301/100 and XPSC8.
   </li>
   <li>
     Intelligent Motion Systems, Inc. (IMS) models IM483 and MDrive.
@@ -101,7 +101,7 @@ Channel support):
     piezosystem jena GmbH EDS data interface module.
   </li>
   <li>
-    Kohzu SC-800 stepper motor controller.
+    Kohzu SC-200, SC-400, SC-800 stepper motor controllers.
   </li>
   <li>
     attocube systems AG ANC150 Piezo Step Controller.
@@ -230,6 +230,20 @@ below.
     <td>Seconds to Velocity</td>
     <td>DOUBLE</td>
     <td>acceleration time</td>
+  </tr>
+  <tr>
+    <td><a href="#Fields_status">ADEL</a></td>
+    <td>R/W</td>
+    <td>Archive Deadband</td>
+    <td>DOUBLE</td>
+    <td>Deadband on RBV archive monitor</td>
+  </tr>
+  <tr>
+    <td><a href="#Fields_status">ALST</a></td>
+    <td>R</td>
+    <td>Last Valve Archived</td>
+    <td>DOUBLE</td>
+    <td>Last RBV value to be archived</td>
   </tr>
   <tr>
     <td><a href="#Fields_status">ATHM</a></td>
@@ -658,6 +672,20 @@ below.
     </td>
   </tr>
   <tr>
+    <td><a href="#Fields_status">MDEL</a></td>
+    <td>R/W</td>
+    <td>Monitor Deadband</td>
+    <td>DOUBLE</td>
+    <td>Deadband on RBV valve monitor</td>
+  </tr>
+  <tr>
+    <td><a href="#Fields_status">MLST</a></td>
+    <td>R</td>
+    <td>Last Valve Monitored</td>
+    <td>DOUBLE</td>
+    <td>Last RBV value to be value monitored</td>
+  </tr>
+  <tr>
     <td><a href="#Fields_private">MIP</a></td>
     <td>R</td>
     <td>Motion In Progress</td>
@@ -1021,10 +1049,10 @@ below.
   </tr>
   <tr>
     <td><a href="#Fields_status">STUP</a></td>
-    <td>R</td>
+    <td>R/W*</td>
     <td>Status Update Request</td>
     <td>RECCHOICE</td>
-    <td>ON(1)<br>
+    <td>OFF(0), ON(1), BUSY(2)<br>
     </td>
   </tr>
   <tr>
@@ -1033,6 +1061,14 @@ below.
     <td>Set USE Mode</td>
     <td>SHORT</td>
     <td><br>
+    </td>
+  </tr>
+  <tr>
+    <td><a href="#Fields_drive">SYNC</a></td>
+    <td>R/W*</td>
+    <td>Sync positions</td>
+    <td>RECCHOICE</td>
+    <td>(0:"No", 1:"Yes")<br>
     </td>
   </tr>
   <tr>
@@ -1475,10 +1511,12 @@ below.
     <td>R/W*</td>
     <td>Use RDBL Link If Present</td>
     <td>RECCHOICE (0:"No", 1:"Yes")</td>
-    <td>Switch: nonzero value tells the record to get the motor position from the 
+    <TD>Switch: nonzero value tells the record to get the motor position from the 
     readback-location link (RDBL) (if it contains valid EPICS link information, and 
     if no error occurs in the attempt to read from the link) and to ignore values 
-    read back from the hardware's step-count and encoder registers.</td>
+    read back from the hardware's step-count and encoder registers.  If the RDBL 
+    link is invalid or a read attempt results in an error, the motor position 
+    becomes frozen.</TD>
   </tr>
   <tr>
     <td colspan="5">These switches also direct the record to calculate destinations 
@@ -2312,6 +2350,14 @@ below.
     will immediately be reset to 0, and the motor record will behave as though the 
     VAL field had been changed directly.&nbsp;</td>
   </tr>
+  <tr valign="top">
+    <td>SYNC</td>
+    <td>R/W*</td>
+    <td>Sync positions</td>
+    <td>RECCHOICE</td>
+    <td>When this field is set to Yes(1) the record sets the Drive fields (VAL/DVAL/RVAL) 
+    to their readback values (RBV/DRBV/RRBV) and sets the SYNC field back to No(0).&nbsp;</td>
+  </tr>
 
   </tbody>
 </table>
@@ -2554,6 +2600,38 @@ below.
       </P>
     </td>
   </tr>
+  <tr valign="top">
+    <td>ADEL</td>
+    <td>R/W</td>
+    <td>Archive Deadband</td>
+    <td>DOUBLE</td>
+    <td>An archive value is only posted if RBV moves out of the ADEL deadband when 
+        compared to the previous value archived. ie. if ((RBV-ALST)>ADEL). ADEL defaults to zero, 
+        which would mean that all changes to RBV are archived.</td>
+    </tr>
+    <tr valign="top">
+    <td>MDEL</td>
+    <td>R/W</td>
+    <td>Monitor Deadband</td>
+    <td>DOUBLE</td>
+    <td>An monitor value is only posted if RBV moves out of the MDEL deadband when 
+        compared to the previous value posted. ie. if ((RBV-MLST)>MDEL). MDEL defaults to zero, 
+        which would mean that all value changes to RBV are posted.</td>
+    </tr>
+    <tr valign="top">
+    <td>ALST</td>
+    <td>R</td>
+    <td>Last Value Archived</td>
+    <td>DOUBLE</td>
+    <td>Holds the last RBV to be archived. Used to determine if the current RBV is within an ADEL deadband.</td>
+    </tr>
+    <tr valign="top">
+    <td>MLST</td>
+    <td>R</td>
+    <td>Last Value Monitored</td>
+    <td>DOUBLE</td>
+    <td>Holds the last RBV to be posted. Used to determine if the current RBV is within a MDEL deadband.</td>
+    </tr>
 
   </tbody>
 </table>

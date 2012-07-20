@@ -2,9 +2,9 @@
 FILENAME... drvSmartMotor.cc
 USAGE...    Motor record driver level support for Animatics Corporation SmartMotors.
 
-Version:        1.3
-Modified By:    rivers
-Last Modified:  2007/09/13 16:36:38
+Version:        $Revision: 1.3 $
+Modified By:    $Author: rivers $
+Last Modified:  $Date: 2007-09-13 16:36:38 $
 */
 
 /*

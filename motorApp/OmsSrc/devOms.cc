@@ -2,9 +2,9 @@
 FILENAME...	devOms.cc
 USAGE... Device level support for OMS VME8 and VME44 models.
 
-Version:	1.8
-Modified By:	sluiter
-Last Modified:	2008/03/14 20:19:06
+Version:	$Revision: 1.8 $
+Modified By:	$Author: sluiter $
+Last Modified:	$Date: 2008-03-14 20:19:06 $
 */
 
 /*

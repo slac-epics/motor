@@ -3,9 +3,10 @@ FILENAME...	drvSPiiPlus.cc
 USAGE...	Motor record driver level support for ACS Tech80 
                 SPiiPlus
 
-Version:	1.3
-Modified By:	sullivan
-Last Modified:	2008/05/21 21:18:53
+Version:        $Revision$
+Modified By:    $Author$
+Last Modified:  $Date$
+HeadURL:        $URL$
 
 */
 
@@ -38,6 +39,8 @@ Last Modified:	2008/05/21 21:18:53
  * Modification Log:
  * -----------------
  * .01 04-08-05 jps initialized from drvSPiiPlus.cc
+ * .02 09-29-10 rls Added req'd initialization of motor_info->motor_motion to
+ *                  NULL in motor_init().
  */
 
 
@@ -140,16 +143,11 @@ struct driver_table SPiiPlus_access =
     NULL
 };
 
-struct
+struct drvSPiiPlus_drvet
 {
     long number;
-#ifdef __cplusplus
     long (*report) (int);
     long (*init) (void);
-#else
-    DRVSUPFUN report;
-    DRVSUPFUN init;
-#endif
 } drvSPiiPlus = {2, report, init};
 
 extern "C" {epicsExportAddress(drvet, drvSPiiPlus);}
@@ -624,7 +622,7 @@ SPiiPlusConfig(int card,		/* card being configured */
 
     // Set controller command interface mode - BUFFER is the default 
     // Assure upper case argument - only check first 3 letters 
-    modeCas[0]=NULL;
+    modeCas[0]= (char) NULL;
     if (modeStr != NULL) {
       for (modeIdx=0; modeIdx < 3; modeIdx++)
 	modeCas[modeIdx] = toupper(modeStr[modeIdx]);
@@ -731,6 +729,7 @@ static int motor_init()
 		motor_info->no_motion_count = 0;
 		motor_info->encoder_position = 0;
 		motor_info->position = 0;
+		motor_info->motor_motion = NULL;
 
 		/* Encoder Enable */
                 motor_info->encoder_present = YES;

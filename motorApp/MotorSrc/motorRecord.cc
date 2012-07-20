@@ -2,9 +2,10 @@
 FILENAME...     motorRecord.cc
 USAGE...        Motor Record Support.
 
-Version:        1.50.2.5
-Modified By:    sluiter
-Last Modified:  2009/06/22 18:06:37
+Version:        $Revision: 11726 $
+Modified By:    $Author: sluiter $
+Last Modified:  $Date: 2010-10-06 14:19:58 -0500 (Wed, 06 Oct 2010) $
+HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-5-2/motorApp/MotorSrc/motorRecord.cc $
 */
 
 /*
@@ -124,9 +125,26 @@ Last Modified:  2009/06/22 18:06:37
  * .51 06-11-09 rls - Error since R5-3; PACT cleared early when MIP_DELAY_REQ
  *                    set.
  *                  - Prevent redundant DMOV postings when using DLY field.
- */                                                        
+ * .52 10-19-09 rls - Bug fix for homing in the wrong direction when MRES<0.
+ * .53 10-20-09 rls - Pre-R3.14.10 compatibility for scanOnce() deceleration
+ *                    change in dbScan.h
+ * .54 10-27-09 rls - reverse which limit switch is used in do_work() home
+ *                    search error check based on DIR field.
+ * .55 02-18-10 rls - Fix for backlash not done when MRES<0 and DIR="Neg".
+ * .56 03-18-10 rls - MSTA wrong at boot-up; force posting from init_record().
+ * .57 03-24-10 rls - removed monitor()'s subroutine; post_MARKed_fields().
+ *                  - removed unused and under used MMAP and NMAP indicators;
+ *                    added MMAP indicator for STOP field.
+ *                  - removed depreciated RES field.
+ *                  - changed MDEL/ADEL support for RBV so that record behaves
+ *                    the same as before when MDEL and ADEL are zero.
+ * .58 04-15-10 rls - Added SYNC field to synchronize VAL/DVAL/RVAL with
+ *                    RBV/DRBV/RRBV
+ * .59 09-08-10 rls - clean-up RCNT change value posting in do_work().
+ *
+ */
 
-#define VERSION 6.44
+#define VERSION 6.52
 
 #include    <stdlib.h>
 #include    <string.h>
@@ -169,7 +187,6 @@ extern "C" {epicsExportAddress(int, motorRecordDebug);}
 static RTN_STATUS do_work(motorRecord *, CALLBACK_VALUE);
 static void alarm_sub(motorRecord *);
 static void monitor(motorRecord *);
-static void post_MARKed_fields(motorRecord *, unsigned short);
 static void process_motor_info(motorRecord *, bool);
 static void load_pos(motorRecord *);
 static void check_speed_and_resolution(motorRecord *);
@@ -256,8 +273,8 @@ when you mean...
 
         db_post_events(pmr, &pmr->xxxx, monitor_mask);
 
-Before leaving, you have to call post_MARKed_fields() to actually post the
-field to all listeners.  monitor() does this.
+Before leaving, you have to call monitor() to actually post the
+field to all listeners.
 
         --- NOTE WELL ---
         The macros below assume that the variable "pmr" exists and points to a
@@ -281,7 +298,7 @@ typedef union
         unsigned int M_MRES     :1;
         unsigned int M_ERES     :1;
         unsigned int M_UEIP     :1;
-        unsigned int M_URIP     :1;
+        unsigned int M_STOP     :1;
         unsigned int M_LVIO     :1;
         unsigned int M_RVAL     :1;
         unsigned int M_RLV      :1;
@@ -290,7 +307,6 @@ typedef union
         unsigned int M_DHLM     :1;
         unsigned int M_DLLM     :1;
         unsigned int M_DRBV     :1;
-        unsigned int M_RDBD     :1;
         unsigned int M_MOVN     :1;
         unsigned int M_HLS      :1;
         unsigned int M_LLS      :1;
@@ -312,17 +328,12 @@ typedef union
     epicsUInt32 All;
     struct
     {
-        unsigned int M_S        :1;
         unsigned int M_SBAS     :1;
-        unsigned int M_SBAK     :1;
         unsigned int M_SREV     :1;
         unsigned int M_UREV     :1;
         unsigned int M_VELO     :1;
         unsigned int M_VBAS     :1;
-        unsigned int M_BVEL     :1;
         unsigned int M_MISS     :1;
-        unsigned int M_ACCL     :1;
-        unsigned int M_BACC     :1;
         unsigned int M_STUP     :1;
         unsigned int M_JOGF     :1;
         unsigned int M_JOGR     :1;
@@ -412,7 +423,11 @@ static void callbackFunc(struct callback *pcb)
     {
         pmr->mip &= ~MIP_DELAY_REQ;     /* Turn off REQ. */
         pmr->mip |= MIP_DELAY_ACK;      /* Turn on ACK. */
-        scanOnce((struct dbCommon *) pmr);
+#if LT_EPICSBASE(3,14,10)
+	scanOnce(pmr);
+#else
+	scanOnce((struct dbCommon *) pmr);
+#endif
     }
 }
 
@@ -595,7 +610,6 @@ static long init_record(dbCommon* arg, int pass)
      */
     (*pdset->update_values) (pmr);
 
-    pmr->res = pmr->mres;       /* After R4.5, RES is always = MRES. */
     if (pmr->eres == 0.0)
     {
         pmr->eres = pmr->mres;
@@ -649,6 +663,8 @@ static long init_record(dbCommon* arg, int pass)
         MARK(M_LVIO);
     }
 
+    MARK(M_MSTA);   /* MSTA incorrect at boot-up; force posting. */
+
     monitor(pmr);
 
     return(OK);
@@ -686,6 +702,12 @@ LOGIC:
         ...
     ELSE IF done stopping after jog, OR, done with move.
         IF |backlash distance| > |motor resolution|.
+            IF Retry enabled, AND, [(encoder present, AND, use encoder true),
+                    OR, use readback link true]
+                Set relative positioning indicator true.
+            ELSE
+                Set relative positioning indicator false.
+            ENDIF
             Do backlasth correction.
         ELSE
             Set MIP to DONE.
@@ -695,6 +717,15 @@ LOGIC:
         ENDIF
         ...
         ...
+    ELSE IF done with 1st phase take out backlash after jog.
+        Calculate backlash velocity, base velocity, backlash accel. and backlash position.
+        IF Retry enabled, AND, [(encoder present, AND, use encoder true),
+                OR, use readback link true]
+            Set relative positioning indicator true.
+        ELSE
+            Set relative positioning indicator false.
+        ENDIF
+        
     ELSE IF done with jog or move backlash.
         Clear MIP.
         IF (JOGF field true, AND, Hard High limit false), OR,
@@ -752,6 +783,7 @@ static long postProcess(motorRecord * pmr)
             double vbase = pmr->vbas / fabs(pmr->mres);
             double hpos = 0;
             double hvel =  pmr->hvel / fabs(pmr->mres);
+            motor_cmnd command;
 
             pmr->mip &= ~MIP_STOP;
             Debug(1, "set dmov to 0, location 2\n");
@@ -762,9 +794,17 @@ static long postProcess(motorRecord * pmr)
             INIT_MSG();
             WRITE_MSG(SET_VEL_BASE, &vbase);
             WRITE_MSG(SET_VELOCITY, &hvel);
-            WRITE_MSG((pmr->mip & MIP_HOMF) ? HOME_FOR : HOME_REV, &hpos);
+            
+            if (((pmr->mip & MIP_HOMF) && (pmr->mres > 0.0)) ||
+                ((pmr->mip & MIP_HOMR) && (pmr->mres < 0.0)))
+                command = HOME_FOR;
+            else
+                command = HOME_REV;
+            
+            WRITE_MSG(command, &hpos);
             WRITE_MSG(GO, NULL);
             SEND_MSG();
+
             pmr->pp = TRUE;
             pmr->cdir = (pmr->mip & MIP_HOMF) ? 1 : 0;
             if (pmr->mres < 0.0)
@@ -789,7 +829,7 @@ static long postProcess(motorRecord * pmr)
     }
     else if (pmr->mip & MIP_JOG_STOP || pmr->mip & MIP_MOVE)
     {
-        if (fabs(pmr->bdst) >  fabs(pmr->mres))
+        if (fabs(pmr->bdst) >=  fabs(pmr->mres))
         {
             msta_field msta;
 
@@ -800,7 +840,12 @@ static long postProcess(motorRecord * pmr)
 
             /* Use if encoder or ReadbackLink is in use. */
             msta.All = pmr->msta;
+#if 1
+			/* Per Dehong rev 6958 */
             bool use_rel = (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip));
+#else
+            bool use_rel = (pmr->rtry != 0 && ((msta.Bits.EA_PRESENT && pmr->ueip) || pmr->urip));
+#endif
             double relpos = pmr->diff / pmr->mres;
             double relbpos = ((pmr->dval - pmr->bdst) - pmr->drbv) / pmr->mres;
 
@@ -839,7 +884,7 @@ static long postProcess(motorRecord * pmr)
                     WRITE_MSG(SET_ACCEL, &bacc);
                 if (use_rel == true)
                 {
-                    relpos = (relpos - relbpos) * pmr->frac;
+                    relpos = relpos * pmr->frac;
                     WRITE_MSG(MOVE_REL, &relpos);
                 }
                 else
@@ -877,7 +922,12 @@ static long postProcess(motorRecord * pmr)
 
         /* Use if encoder or ReadbackLink is in use. */
         msta.All = pmr->msta;
+#if 1
+			/* Per Dehong rev 6958 */
         bool use_rel = (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip));
+#else
+        bool use_rel = (pmr->rtry != 0 && ((msta.Bits.EA_PRESENT && pmr->ueip) || pmr->urip));
+#endif
         double relpos = pmr->diff / pmr->mres;
         double relbpos = ((pmr->dval - pmr->bdst) - pmr->drbv) / pmr->mres;
 
@@ -937,18 +987,15 @@ that it will happen when we return.
 ******************************************************************************/
 static void maybeRetry(motorRecord * pmr)
 {
-    if ((fabs(pmr->diff) > pmr->rdbd) && !pmr->hls && !pmr->lls)
+    if ((fabs(pmr->diff) >= pmr->rdbd) && !pmr->hls && !pmr->lls)
     {
         /* No, we're not close enough.  Try again. */
         Debug(1, "maybeRetry: not close enough; diff = %f\n", pmr->diff);
 
         /* If max retry count is zero, retry is disabled */
         if (pmr->rtry == 0)
-        {
-            pmr->mip &= MIP_JOG_REQ;/* Clear everything, except jog request; for
-                                        jog reactivation in postProcess(). */
-            MARK(M_MIP);
-        }
+            pmr->mip &= MIP_JOG_REQ; /* Clear everything, except jog request;
+                                      * for jog reactivation in postProcess(). */
         else
         {
             if (++(pmr->rcnt) > pmr->rtry)
@@ -956,7 +1003,6 @@ static void maybeRetry(motorRecord * pmr)
                 /* Too many retries. */
                 /* pmr->spmg = motorSPMG_Pause; MARK(M_SPMG); */
                 pmr->mip = MIP_DONE;
-                MARK(M_MIP);
                 pmr->lval = pmr->val;
                 pmr->ldvl = pmr->dval;
                 pmr->lrvl = pmr->rval;
@@ -971,7 +1017,6 @@ static void maybeRetry(motorRecord * pmr)
                 pmr->dmov = FALSE;
                 MARK(M_DMOV);
                 pmr->mip = MIP_RETRY;
-                MARK(M_MIP);
             }
             MARK(M_RCNT);
         }
@@ -981,8 +1026,7 @@ static void maybeRetry(motorRecord * pmr)
         /* Yes, we're close enough to the desired value. */
         Debug(1, "maybeRetry: close enough; diff = %f\n", pmr->diff);
         pmr->mip &= MIP_JOG_REQ;/* Clear everything, except jog request; for
-                                    jog reactivation in postProcess(). */
-        MARK(M_MIP);
+                                 * jog reactivation in postProcess(). */
         if (pmr->miss)
         {
             pmr->miss = 0;
@@ -1008,6 +1052,7 @@ static void maybeRetry(motorRecord * pmr)
         if ( ( pmr->urip == motorUEIP_Yes ) && ( pmr->ttry == 0 ) )
             pmr->vtgt = pmr->val;
     }
+    MARK(M_MIP);
 }
 
 
@@ -1358,6 +1403,7 @@ enter_do_work:
         if (pmr->lvio && !pmr->set)
         {
             pmr->stop = 1;
+            MARK(M_STOP);
             clear_buttons(pmr);
         }
     }
@@ -1647,11 +1693,11 @@ LOGIC:
         ELSE
             Calculate....
             
-            IF (UEIP set to YES, AND, MSTA indicates an encoder is present),
-                        OR, ReadbackLink is in use (URIP).
-                Set "use relative move" indicator (use_rel) to true.
+            IF Retry enabled, AND, [(encoder present, AND, use encoder true),
+                    OR, use readback link true]
+                Set relative positioning indicator true.
             ELSE
-                Set "use relative move" indicator (use_rel) to false.
+                Set relative positioning indicator false.
             ENDIF
             
             Set VAL and RVAL based on DVAL; mark VAL and RVAL for posting.
@@ -1697,7 +1743,7 @@ LOGIC:
                 Update last DVAL/VAL/RVAL.
                 Initialize comm. transaction.
                 IF backlash disabled, OR, no need for separate backlash move
-                    since move is in preferred direction (preferred_dir==ON),
+                    since move is in preferred direction (preferred_dir==True),
                     AND, backlash acceleration and velocity are the same as
                     slew values (BVEL == VELO, AND, BACC == ACCL).
                     Initialize local velocity and acceleration variables to
@@ -1707,7 +1753,8 @@ LOGIC:
                     ELSE
                         Set local position variable based on absolute position.
                     ENDIF
-                ELSE IF current position is within backlash or retry range.
+                ELSE IF move is in preferred direction (preferred_dir==True),
+                        AND, |DVAL - LDVL| <= |BDST + MRES|.
                     Initialize local velocity and acceleration variables to
                     backlash values.
                     IF use relative positioning indicator is TRUE.
@@ -1793,7 +1840,10 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
         if (pmr->spmg != pmr->lspg)
             pmr->lspg = pmr->spmg;
         else
+        {
             pmr->stop = 0;
+            MARK(M_STOP);
+        }
 
         if (stop_or_pause == true || stop == true)
         {
@@ -1878,9 +1928,6 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
         long m;
         msta_field msta;
 
-        if (MARKED(M_MRES))
-            pmr->res = pmr->mres;       /* After R4.5, RES is always = MRES. */
-
         /* Set the encoder ratio.  Note this is blatantly device dependent. */
         msta.All = pmr->msta;
         if (msta.Bits.EA_PRESENT && pmr->ueip)
@@ -1950,8 +1997,8 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 
         /* Send motor to home switch in forward direction. */
         if (!pmr->lvio &&
-            ((pmr->homf && !(pmr->mip & MIP_HOMF) && !pmr->hls) ||
-             (pmr->homr && !(pmr->mip & MIP_HOMR) && !pmr->lls)))
+            ((pmr->homf && !(pmr->mip & MIP_HOMF) && !((pmr->dir == motorDIR_Pos) ? pmr->hls : pmr->lls)) ||
+             (pmr->homr && !(pmr->mip & MIP_HOMR) && !((pmr->dir == motorDIR_Pos) ? pmr->lls : pmr->hls))))
         {
             if (stop_or_pause == true)
             {
@@ -1994,6 +2041,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             else
             {
                 double vbase, hvel, hpos;
+                motor_cmnd command;
 
                 /* defend against divide by zero */
                 if (pmr->eres == 0.0)
@@ -2009,13 +2057,18 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 INIT_MSG();
                 WRITE_MSG(SET_VEL_BASE, &vbase);
                 WRITE_MSG(SET_VELOCITY, &hvel);
-                WRITE_MSG((pmr->mip & MIP_HOMF) ? HOME_FOR : HOME_REV, &hpos);
-                /*
-                 * WRITE_MSG(SET_VELOCITY, &hvel); WRITE_MSG(MOVE_ABS, &hpos);
-                 */
+
+                if (((pmr->mip & MIP_HOMF) && (pmr->mres > 0.0)) ||
+                    ((pmr->mip & MIP_HOMR) && (pmr->mres < 0.0)))
+                    command = HOME_FOR;
+                else
+                    command = HOME_REV;
+
+                WRITE_MSG(command, &hpos);
                 WRITE_MSG(GO, NULL);
                 SEND_MSG();
                 Debug(1, "set dmov to 0, location 13\n");
+
                 pmr->dmov = FALSE;
                 MARK(M_DMOV);
                 pmr->rcnt = 0;
@@ -2241,13 +2294,19 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             bool use_rel, preferred_dir;
             double relpos = pmr->diff / pmr->mres;
             double relbpos = ((pmr->dval - pmr->bdst) - pmr->drbv) / pmr->mres;
+            double rbdst1 = 1.0 + (fabs(pmr->bdst) / fabs(pmr->mres));
             long rdbdpos = NINT(pmr->rdbd / fabs(pmr->mres)); /* retry deadband steps */
             long rpos, npos;
             msta_field msta;
             msta.All = pmr->msta;
 
-            /*** Use if encoder or ReadbackLink is in use. ***/
+#if 1
+			/* Per Dehong rev 6958 */
             if (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip))
+#else
+            /*** Use if encoder or ReadbackLink is in use. ***/
+            if (pmr->rtry != 0 && ((msta.Bits.EA_PRESENT && pmr->ueip) || pmr->urip))
+#endif
                 use_rel = true;
             else
                 use_rel = false;
@@ -2292,8 +2351,9 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             /* reset retry counter if this is not a retry */
             if ((pmr->mip & MIP_RETRY) == 0)
             {
+                if (pmr->rcnt != 0)
+                    MARK(M_RCNT);
                 pmr->rcnt = 0;
-                MARK(M_RCNT);
             }
             else if (pmr->rmod == motorRMOD_A) /* Do arthmetic sequence retries. */
             {
@@ -2347,7 +2407,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 pmr->ldvl = pmr->dval;
                 pmr->lval = pmr->val;
                 pmr->lrvl = pmr->rval;
-    
+
                 INIT_MSG();
 
                 /* Backlash disabled, OR, no need for seperate backlash move
@@ -2365,11 +2425,12 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                     else
                         position = currpos + pmr->frac * (newpos - currpos);
                 }
-                /* Is current position within backlash or retry range? */
-                else if ((fabs(pmr->diff) < pmr->rdbd) ||
-                         (use_rel == true  && ((relbpos < 0) == (relpos > 0))) ||
-                         (use_rel == false && (((currpos + pmr->rdbd) > bpos) ==
-                                               (newpos > currpos))))
+                /* IF move is in preferred direction, AND, current position is within backlash range. */
+                else if ((preferred_dir == true) &&
+                         ((use_rel == true  && relbpos <= 1.0) ||
+                          (use_rel == false && (fabs(newpos - currpos) <= rbdst1))
+                         )
+                        )
                 {
 /******************************************************************************
  * Backlash correction imposes a much larger penalty on overshoot than on
@@ -2432,6 +2493,18 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
         else
             SEND_MSG();
     }
+    else if (pmr->sync != 0 && pmr->mip == MIP_DONE)
+    {
+        /* Sync target positions with readbacks. */
+        pmr->val  = pmr->lval = pmr->rbv;
+        MARK(M_VAL);
+        pmr->dval = pmr->ldvl = pmr->drbv;
+        MARK(M_DVAL);
+        pmr->rval = pmr->lrvl = NINT(pmr->dval / pmr->mres);
+        MARK(M_RVAL);
+        pmr->sync = 0;
+    }
+
     return(OK);
 }
 
@@ -2821,7 +2894,7 @@ velcheckB:
         if (pmr->bvel != (temp_dbl = fabs_urev * pmr->sbak))
         {
             pmr->bvel = temp_dbl;
-            MARK_AUX(M_BVEL);
+            db_post_events(pmr, &pmr->bvel, DBE_VAL_LOG);
         }
         if (pmr->vmax != (temp_dbl = fabs_urev * pmr->smax))
         {
@@ -2856,10 +2929,6 @@ velcheckB:
         MARK(M_UEIP);
         /* Ideally, we should be recalculating speeds, but at the moment */
         /* we don't know whether hardware even has an encoder. */
-        break;
-
-        /* new urip flag */
-    case motorRecordURIP:
         break;
 
         /* Set to SET mode  */
@@ -3315,78 +3384,146 @@ static void alarm_sub(motorRecord * pmr)
 
 /******************************************************************************
         monitor()
+
+LOGIC:
+    Initalize local variables for MARKED and UNMARKED macros.
+    Set monitor_mask from recGblResetAlarms() return value.
+    IF both Monitor (MDEL) and Archive (ADEL) Deadbands are zero.
+        Set local_mask <- monitor_mask.
+        IF RBV marked for value change
+            bitwiseOR both DBE_VALUE and DBE_LOG into local_mask.
+            dbpost RBV.
+            Clear RBV marked for value change.
+        ENDIF
+    ELSE IF RBV marked for value change.
+        Clear RBV marked for value change.
+        Set local_mask <- monitor_mask.
+        IF Monitor Deadband (MDEL) is zero.
+            bitwiseOR DBE_VALUE into local_mask.
+        ELSE
+            IF |MLST - RBV| > MDEL
+                bitwiseOR DBE_VALUE into local_mask.
+                Update Last Value Monitored (MLST).
+            ENDIF
+        ENDIF
+        IF Archive Deadband (ADEL) is zero.
+            bitwiseOR DBE_LOG into local_mask.
+        ELSE
+            IF |ALST - RBV| > ADEL
+                bitwiseOR DBE_LOG into local_mask.
+                Update Last Value Archived (MLST).
+            ENDIF            
+        ENIDIF
+        IF local_mask is nonzero.
+            dbpost RBV.
+        ENDIF            
+    ENDIF
+
+    dbpost frequently changing PV's.
+    IF no PV's marked for value change.
+        EXIT.
+    ENDIF
+    
+    dbpost remaining PV's.
+    Clear all PF's marked for value change.
+    EXIT
+
 *******************************************************************************/
 static void monitor(motorRecord * pmr)
 {
-    unsigned short monitor_mask;
+    unsigned short monitor_mask, local_mask;
+    double delta = 0.0;
+    mmap_field mmap_bits;
+    nmap_field nmap_bits;
+
+    mmap_bits.All = pmr->mmap; /* Initialize for MARKED. */
+    nmap_bits.All = pmr->nmap; /* Initialize for MARKED_AUX. */
 
     monitor_mask = recGblResetAlarms(pmr);
 
-    /* Catch all previous 'calls' to MARK(). */
-    post_MARKed_fields(pmr, monitor_mask);
-    return;
-}
-
-
-/******************************************************************************
-        post_MARKed_fields()
-*******************************************************************************/
-static void post_MARKed_fields(motorRecord * pmr, unsigned short mask)
-{
-    unsigned short local_mask;
-    mmap_field mmap_bits;
-    nmap_field nmap_bits;
-    msta_field msta;
-    
-    mmap_bits.All = pmr->mmap; /* Initialize for MARKED. */
-    nmap_bits.All = pmr->nmap; /* Initialize for MARKED_AUX. */
-    
-    msta.All = pmr->msta;
-
-    if ((local_mask = mask | (MARKED(M_RBV) ? DBE_VAL_LOG : 0)))
+    if (pmr->mdel == 0.0 && pmr->adel == 0.0)
     {
-        db_post_events(pmr, &pmr->rbv, local_mask);
+        if ((local_mask = monitor_mask | (MARKED(M_RBV) ? DBE_VAL_LOG : 0)))
+        {
+            db_post_events(pmr, &pmr->rbv, local_mask);
+            UNMARK(M_RBV);
+        }
+    }
+    else if (MARKED(M_RBV))
+    {
         UNMARK(M_RBV);
+        local_mask = monitor_mask;
+
+        if (pmr->mdel == 0.0) /* check for value change */
+            local_mask |= DBE_VALUE;
+        else
+        {
+            delta = fabs(pmr->mlst - pmr->rbv);
+            if (delta > pmr->mdel)
+            {
+                local_mask |= DBE_VALUE;
+                pmr->mlst = pmr->rbv; /* update last value monitored */
+            }
+        }
+
+        if (pmr->adel == 0.0) /* check for archive change */
+            local_mask |= DBE_LOG;
+        else
+        {
+            delta = fabs(pmr->alst - pmr->rbv);
+            if (delta > pmr->adel)
+            {
+                local_mask |= DBE_LOG;
+                pmr->alst = pmr->rbv; /* update last archive value monitored */
+            }
+        }
+
+        if (local_mask)
+            db_post_events(pmr, &pmr->rbv, local_mask);
     }
     
-    if ((local_mask = mask | (MARKED(M_RRBV) ? DBE_VAL_LOG : 0)))
+
+    if ((local_mask = monitor_mask | (MARKED(M_RRBV) ? DBE_VAL_LOG : 0)))
     {
         db_post_events(pmr, &pmr->rrbv, local_mask);
         UNMARK(M_RRBV);
     }
     
-    if ((local_mask = mask | (MARKED(M_DRBV) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_DRBV) ? DBE_VAL_LOG : 0)))
     {
         db_post_events(pmr, &pmr->drbv, local_mask);
         UNMARK(M_DRBV);
     }
     
-    if ((local_mask = mask | (MARKED(M_RMP) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_RMP) ? DBE_VAL_LOG : 0)))
     {
         db_post_events(pmr, &pmr->rmp, local_mask);
         UNMARK(M_RMP);
     }
     
-    if ((local_mask = mask | (MARKED(M_REP) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_REP) ? DBE_VAL_LOG : 0)))
     {
         db_post_events(pmr, &pmr->rep, local_mask);
         UNMARK(M_REP);
     }
     
-    if ((local_mask = mask | (MARKED(M_DIFF) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_DIFF) ? DBE_VAL_LOG : 0)))
     {
         db_post_events(pmr, &pmr->diff, local_mask);
         UNMARK(M_DIFF);
     }
     
-    if ((local_mask = mask | (MARKED(M_RDIF) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_RDIF) ? DBE_VAL_LOG : 0)))
     {
         db_post_events(pmr, &pmr->rdif, local_mask);
         UNMARK(M_RDIF);
     }
     
-    if ((local_mask = mask | (MARKED(M_MSTA) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_MSTA) ? DBE_VAL_LOG : 0)))
     {
+        msta_field msta;
+        
+        msta.All = pmr->msta;
         db_post_events(pmr, &pmr->msta, local_mask);
         UNMARK(M_MSTA);
         if (msta.Bits.GAIN_SUPPORT)
@@ -3407,33 +3544,33 @@ static void post_MARKed_fields(motorRecord * pmr, unsigned short mask)
     mmap_bits.All = pmr->mmap; /* Initialize for MARKED. */
     nmap_bits.All = pmr->nmap; /* Initialize for MARKED_AUX. */
 
-    if ((local_mask = mask | (MARKED(M_VAL) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_VAL) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->val, local_mask);
-    if ((local_mask = mask | (MARKED(M_DVAL) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_DVAL) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->dval, local_mask);
-    if ((local_mask = mask | (MARKED(M_RVAL) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_RVAL) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->rval, local_mask);
-    if ((local_mask = mask | (MARKED(M_TDIR) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_TDIR) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->tdir, local_mask);
-    if ((local_mask = mask | (MARKED(M_MIP) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_MIP) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->mip, local_mask);
-    if ((local_mask = mask | (MARKED(M_HLM) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_HLM) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->hlm, local_mask);
-    if ((local_mask = mask | (MARKED(M_LLM) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_LLM) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->llm, local_mask);
-    if ((local_mask = mask | (MARKED(M_SPMG) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_SPMG) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->spmg, local_mask);
-    if ((local_mask = mask | (MARKED(M_RCNT) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_RCNT) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->rcnt, local_mask);
-    if ((local_mask = mask | (MARKED(M_RLV) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_RLV) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->rlv, local_mask);
-    if ((local_mask = mask | (MARKED(M_OFF) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_OFF) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->off, local_mask);
-    if ((local_mask = mask | (MARKED(M_DHLM) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_DHLM) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->dhlm, local_mask);
-    if ((local_mask = mask | (MARKED(M_DLLM) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_DLLM) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->dllm, local_mask);
-    if ((local_mask = mask | (MARKED(M_HLS) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_HLS) ? DBE_VAL_LOG : 0)))
     {
         db_post_events(pmr, &pmr->hls, local_mask);
         if ((pmr->dir == motorDIR_Pos) == (pmr->mres >= 0))
@@ -3441,7 +3578,7 @@ static void post_MARKed_fields(motorRecord * pmr, unsigned short mask)
         else
             db_post_events(pmr, &pmr->rlls, local_mask);
     }
-    if ((local_mask = mask | (MARKED(M_LLS) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_LLS) ? DBE_VAL_LOG : 0)))
     {
         db_post_events(pmr, &pmr->lls, local_mask);
         if ((pmr->dir == motorDIR_Pos) == (pmr->mres >= 0))
@@ -3449,59 +3586,47 @@ static void post_MARKed_fields(motorRecord * pmr, unsigned short mask)
         else
             db_post_events(pmr, &pmr->rhls, local_mask);
     }
-    if ((local_mask = mask | (MARKED(M_ATHM) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_ATHM) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->athm, local_mask);
-    if ((local_mask = mask | (MARKED(M_MRES) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_MRES) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->mres, local_mask);
-    if ((local_mask = mask | (MARKED(M_ERES) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_ERES) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->eres, local_mask);
-    if ((local_mask = mask | (MARKED(M_UEIP) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_UEIP) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->ueip, local_mask);
-    if ((local_mask = mask | (MARKED(M_URIP) ? DBE_VAL_LOG : 0)))
-        db_post_events(pmr, &pmr->urip, local_mask);
-    if ((local_mask = mask | (MARKED(M_LVIO) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_LVIO) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->lvio, local_mask);
-    if ((local_mask = mask | (MARKED(M_RDBD) ? DBE_VAL_LOG : 0)))
-        db_post_events(pmr, &pmr->rdbd, local_mask);
+    if ((local_mask = monitor_mask | (MARKED(M_STOP) ? DBE_VAL_LOG : 0)))
+        db_post_events(pmr, &pmr->stop, local_mask);
 
-    if ((local_mask = mask | (MARKED_AUX(M_S) ? DBE_VAL_LOG : 0)))
-        db_post_events(pmr, &pmr->s, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_SBAS) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED_AUX(M_SBAS) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->sbas, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_SBAK) ? DBE_VAL_LOG : 0)))
-        db_post_events(pmr, &pmr->sbak, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_SREV) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED_AUX(M_SREV) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->srev, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_UREV) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED_AUX(M_UREV) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->urev, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_VELO) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED_AUX(M_VELO) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->velo, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_VBAS) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED_AUX(M_VBAS) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->vbas, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_BVEL) ? DBE_VAL_LOG : 0)))
-        db_post_events(pmr, &pmr->bvel, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_MISS) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED_AUX(M_MISS) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->miss, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_ACCL) ? DBE_VAL_LOG : 0)))
-        db_post_events(pmr, &pmr->accl, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_BACC) ? DBE_VAL_LOG : 0)))
-        db_post_events(pmr, &pmr->bacc, local_mask);
-    if ((local_mask = mask | (MARKED(M_MOVN) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_MOVN) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->movn, local_mask);
-    if ((local_mask = mask | (MARKED(M_DMOV) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED(M_DMOV) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->dmov, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_STUP) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED_AUX(M_STUP) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->stup, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_JOGF) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED_AUX(M_JOGF) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->jogf, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_JOGR) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED_AUX(M_JOGR) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->jogr, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_HOMF) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED_AUX(M_HOMF) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->homf, local_mask);
-    if ((local_mask = mask | (MARKED_AUX(M_HOMR) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED_AUX(M_HOMR) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->homr, local_mask);
 
-    if ((local_mask = mask | (MARKED_AUX(M_MSEC) ? DBE_VAL_LOG : 0)))
+    if ((local_mask = monitor_mask | (MARKED_AUX(M_MSEC) ? DBE_VAL_LOG : 0)))
         db_post_events(pmr, &pmr->msec, local_mask);
 
     UNMARK_ALL;
@@ -3809,12 +3934,12 @@ static void check_speed_and_resolution(motorRecord * pmr)
     if (pmr->accl == 0.0)
     {
         pmr->accl = 0.1;
-        MARK_AUX(M_ACCL);
+        db_post_events(pmr, &pmr->accl, DBE_VAL_LOG);
     }
     if (pmr->bacc == 0.0)
     {
         pmr->bacc = 0.1;
-        MARK_AUX(M_BACC);
+        db_post_events(pmr, &pmr->bacc, DBE_VAL_LOG);
     }
     /* Sanity check on jog velocity and acceleration rate. */
     if (pmr->jvel == 0.0)

@@ -3,9 +3,9 @@ FILENAME...	drvPIC848.cc
 USAGE...	Motor record driver level support for Physik Instrumente (PI)
 	GmbH & Co. C-848 motor controller.
 
-Version:	1.3
-Modified By:	sluiter
-Last Modified:	2007/10/17 19:55:42
+Version:	$Revision: 1.3 $
+Modified By:	$Author: sluiter $
+Last Modified:	$Date: 2007-10-17 19:55:42 $
 */
 
 /*

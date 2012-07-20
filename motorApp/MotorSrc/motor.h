@@ -3,9 +3,9 @@ FILENAME...	motor.h
 USAGE...	Definitions and structures common to all levels of motorRecord
 		support (i.e., record, device and driver).
 
-Version:	1.20.2.1
-Modified By:	sluiter
-Last Modified:	2009/06/22 17:59:32
+Version:	$Revision: 1.21 $
+Modified By:	$Author: sluiter $
+Last Modified:	$Date: 2009-04-27 14:28:42 $
 */
 
 /*
@@ -45,6 +45,8 @@ Last Modified:	2009/06/22 17:59:32
  *		      to support MS Visual C.
  * .06 01-27-06 rls - Added LT_EPICSBASE macro for test EPICS base versions.
  * .07 11-19-08 rls - More extensive bit field tests.
+ * .08 00-09-10 rls - GNU preprocessor assertions are deprecated with VxWorks
+ *                    6.x.  Added test for CPU macros.
  */
 
 #ifndef	INCmotorh
@@ -133,6 +135,8 @@ typedef enum  {
 #elif #cpu(i386)
     #define LSB_First (TRUE)  /* LSB is packed first. */    
 #elif #cpu(sparc) || #cpu(m68k) || #cpu(powerpc)
+    #define MSB_First (TRUE)  /* MSB is packed first. */
+#elif (CPU == PPC604) || (CPU == PPC603) || (CPU==PPC85XX)
     #define MSB_First (TRUE)  /* MSB is packed first. */
 #else
     Error: unknown bit order!

@@ -2,9 +2,9 @@
 FILENAME...	devSPiiPlus.cc
 USAGE...	Motor record device level support for ACS Tech80 SPiiPlus
 
-Version:	1.3
-Modified By:	sullivan
-Last Modified:	2008/05/21 21:18:52
+Version:	$Revision: 1.3 $
+Modified By:	$Author: sullivan $
+Last Modified:	$Date: 2008-05-21 21:18:52 $
 */
 
 /*
