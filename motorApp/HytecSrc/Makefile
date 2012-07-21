@@ -6,7 +6,7 @@ include $(TOP)/configure/CONFIG
 # Build HytecMotor Module Library
 # -------------------------------
 
-LIBRARY_IOC += HytecMotor
+LIBRARY_IOC_RTEMS += HytecMotor
 
 DBD += HytecMotorDriver.dbd
 
