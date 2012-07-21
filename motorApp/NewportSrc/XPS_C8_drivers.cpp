@@ -1,6 +1,6 @@
-////////////////////////////////////////////////////////////////////
-// Created source file XPS_C8_drivers.cpp for API description 
-// 
+/*
+ * Created source file xps_c8_drivers.cpp for API description 
+ */
 
 
 #include <stdio.h> 
@@ -10,12 +10,8 @@
 #include "Socket.h" 
 
 #ifdef _WIN32
-        #ifdef _DLL  /* _DLL is defined by EPICS if we are being compiled to call DLLs */
-	    #define DLL _declspec(dllexport)
-        #else
-            #define DLL
-        #endif
-        #include "strtok_r.h"
+	#define DLL _declspec(dllexport)
+	#include "strtok_r.h"
 #else
 #ifdef __rtems__
 extern "C" char* strtok_r(char *, const char *, char **);
@@ -23,28 +19,24 @@ extern "C" char* strtok_r(char *, const char *, char **);
 	#define DLL 
 #endif
 
-
 #include "XPS_C8_drivers.h" 
 
-
-
-#define SIZE_SMALL 256
-#define SIZE_NOMINAL 512
+#define SIZE_SMALL 1024
+#define SIZE_NOMINAL 1024
 #define SIZE_BIG 2048
-#define SIZE_HUGE 32768
+#define SIZE_HUGE 65536
 
 #define SIZE_EXECUTE_METHOD 1024
 
 #define SIZE_NAME    100
-
-
 #ifdef __cplusplus
 extern "C"
 {
+#else
+#typedef int bool;  /* C does not know bool, only C++ */
 #endif
 
-
-#define DLL_VERSION "Library version for XPS-C8 Firmware V2.1.0"
+#define DLL_VERSION "Library version for XPS-C8 Firmware V2.6.x"
 
 /***********************************************************************/
 int __stdcall TCP_ConnectToServer(char *Ip_Address, int Ip_Port, double TimeOut)
@@ -73,6 +65,150 @@ char * __stdcall GetLibraryVersion(void)
 }
 
 /*********************************************************************** 
+ * ControllerMotionKernelTimeLoadGet :  Get controller motion kernel time load
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            double *CPUTotalLoadRatio
+ *            double *CPUCorrectorLoadRatio
+ *            double *CPUProfilerLoadRatio
+ *            double *CPUServitudesLoadRatio
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall ControllerMotionKernelTimeLoadGet (int SocketIndex, double * CPUTotalLoadRatio, double * CPUCorrectorLoadRatio, double * CPUProfilerLoadRatio, double * CPUServitudesLoadRatio) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "ControllerMotionKernelTimeLoadGet (double *,double *,double *,double *)");
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", CPUTotalLoadRatio);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", CPUCorrectorLoadRatio);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", CPUProfilerLoadRatio);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", CPUServitudesLoadRatio);
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * ControllerStatusGet :  Read controller current status
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            int *ControllerStatus
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall ControllerStatusGet (int SocketIndex, int * ControllerStatus) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "ControllerStatusGet (int *)");
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%d", ControllerStatus);
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * ControllerStatusStringGet :  Return the controller status string corresponding to the controller status code
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            int ControllerStatusCode
+ *            char *ControllerStatusString
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall ControllerStatusStringGet (int SocketIndex, int ControllerStatusCode, char * ControllerStatusString) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "ControllerStatusStringGet (%d,char *)", ControllerStatusCode);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) strcpy (ControllerStatusString, pt);
+		ptNext = strchr (ControllerStatusString, ',');
+		if (ptNext != NULL) *ptNext = '\0';
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
  * ElapsedTimeGet :  Return elapsed time from controller power on
  *
  *     - Parameters :
@@ -95,7 +231,7 @@ int __stdcall ElapsedTimeGet (int SocketIndex, double * ElapsedTime)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -139,7 +275,7 @@ int __stdcall ErrorStringGet (int SocketIndex, int ErrorCode, char * ErrorString
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -184,7 +320,7 @@ int __stdcall FirmwareVersionGet (int SocketIndex, char * Version)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -231,7 +367,7 @@ int __stdcall TCLScriptExecute (int SocketIndex, char * TCLFileName, char * Task
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -266,7 +402,7 @@ int __stdcall TCLScriptExecuteAndWait (int SocketIndex, char * TCLFileName, char
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -282,6 +418,41 @@ int __stdcall TCLScriptExecuteAndWait (int SocketIndex, char * TCLFileName, char
 		ptNext = strchr (OutputParametersList, ',');
 		if (ptNext != NULL) *ptNext = '\0';
 	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * TCLScriptExecuteWithPriority :  Execute a TCL script with defined priority
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *TCLFileName
+ *            char *TaskName
+ *            char *TaskPriorityLevel
+ *            char *ParametersList
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall TCLScriptExecuteWithPriority (int SocketIndex, char * TCLFileName, char * TaskName, char * TaskPriorityLevel, char * ParametersList) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "TCLScriptExecuteWithPriority (%s,%s,%s,%s)", TCLFileName, TaskName, TaskPriorityLevel, ParametersList);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
 		free (ReturnedValue);
 
@@ -311,7 +482,7 @@ int __stdcall TCLScriptKill (int SocketIndex, char * TaskName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -344,7 +515,7 @@ int __stdcall TimerGet (int SocketIndex, char * TimerName, int * FrequencyTicks)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -388,7 +559,7 @@ int __stdcall TimerSet (int SocketIndex, char * TimerName, int FrequencyTicks)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -419,7 +590,7 @@ int __stdcall Reboot (int SocketIndex)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -452,7 +623,7 @@ int __stdcall Login (int SocketIndex, char * Name, char * Password)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -483,7 +654,84 @@ int __stdcall CloseAllOtherSockets (int SocketIndex)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * HardwareDateAndTimeGet :  Return hardware date and time
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *DateAndTime
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall HardwareDateAndTimeGet (int SocketIndex, char * DateAndTime) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "HardwareDateAndTimeGet (char *)");
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) strcpy (DateAndTime, pt);
+		ptNext = strchr (DateAndTime, ',');
+		if (ptNext != NULL) *ptNext = '\0';
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * HardwareDateAndTimeSet :  Set hardware date and time
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *DateAndTime
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall HardwareDateAndTimeSet (int SocketIndex, char * DateAndTime) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "HardwareDateAndTimeSet (%s)", DateAndTime);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -521,7 +769,7 @@ int __stdcall EventAdd (int SocketIndex, char * PositionerName, char * EventName
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -554,7 +802,7 @@ int __stdcall EventGet (int SocketIndex, char * PositionerName, char * EventsAnd
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -601,7 +849,7 @@ int __stdcall EventRemove (int SocketIndex, char * PositionerName, char * EventN
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -635,7 +883,7 @@ int __stdcall EventWait (int SocketIndex, char * PositionerName, char * EventNam
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -675,65 +923,65 @@ int __stdcall EventExtendedConfigurationTriggerSet (int SocketIndex, int NbEleme
 
 	char (*stringArray0)[SIZE_NAME];
 	stringArray0 = new char [NbElements][SIZE_NAME];
-	memset(stringArray0,'\0', SIZE_NAME*NbElements);	
 	indice = 0;
 	strncpyWithEOS(list, ExtendedEventNameList, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray0[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray0[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
 	}
 	char (*stringArray1)[SIZE_NAME];
 	stringArray1 = new char [NbElements][SIZE_NAME];
-	memset(stringArray1,'\0', SIZE_NAME*NbElements);		
 	indice = 0;
 	strncpyWithEOS(list, EventParameter1List, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray1[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray1[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
 	}
 	char (*stringArray2)[SIZE_NAME];
 	stringArray2 = new char [NbElements][SIZE_NAME];
-	memset(stringArray2,'\0', SIZE_NAME*NbElements);		
 	indice = 0;
 	strncpyWithEOS(list, EventParameter2List, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray2[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray2[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
 	}
 	char (*stringArray3)[SIZE_NAME];
 	stringArray3 = new char [NbElements][SIZE_NAME];
-	memset(stringArray3,'\0', SIZE_NAME*NbElements);		
 	indice = 0;
 	strncpyWithEOS(list, EventParameter3List, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray3[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray3[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
 	}
 	char (*stringArray4)[SIZE_NAME];
 	stringArray4 = new char [NbElements][SIZE_NAME];
-	memset(stringArray4,'\0', SIZE_NAME*NbElements);		
 	indice = 0;
 	strncpyWithEOS(list, EventParameter4List, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray4[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray4[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
@@ -763,7 +1011,7 @@ int __stdcall EventExtendedConfigurationTriggerSet (int SocketIndex, int NbEleme
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -795,7 +1043,7 @@ int __stdcall EventExtendedConfigurationTriggerGet (int SocketIndex, char * Even
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -848,65 +1096,65 @@ int __stdcall EventExtendedConfigurationActionSet (int SocketIndex, int NbElemen
 
 	char (*stringArray0)[SIZE_NAME];
 	stringArray0 = new char [NbElements][SIZE_NAME];
-	memset(stringArray0,'\0', SIZE_NAME*NbElements);
 	indice = 0;
 	strncpyWithEOS(list, ExtendedActionNameList, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray0[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray0[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
 	}
 	char (*stringArray1)[SIZE_NAME];
 	stringArray1 = new char [NbElements][SIZE_NAME];
-	memset(stringArray1,'\0', SIZE_NAME*NbElements);
 	indice = 0;
 	strncpyWithEOS(list, ActionParameter1List, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray1[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray1[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
 	}
 	char (*stringArray2)[SIZE_NAME];
 	stringArray2 = new char [NbElements][SIZE_NAME];
-	memset(stringArray2,'\0', SIZE_NAME*NbElements);	
 	indice = 0;
 	strncpyWithEOS(list, ActionParameter2List, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray2[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray2[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
 	}
 	char (*stringArray3)[SIZE_NAME];
 	stringArray3 = new char [NbElements][SIZE_NAME];
-	memset(stringArray3,'\0', SIZE_NAME*NbElements);	
 	indice = 0;
 	strncpyWithEOS(list, ActionParameter3List, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray3[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray3[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
 	}
 	char (*stringArray4)[SIZE_NAME];
 	stringArray4 = new char [NbElements][SIZE_NAME];
-	memset(stringArray4,'\0', SIZE_NAME*NbElements);	
 	indice = 0;
 	strncpyWithEOS(list, ActionParameter4List, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray4[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray4[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
@@ -936,7 +1184,7 @@ int __stdcall EventExtendedConfigurationActionSet (int SocketIndex, int NbElemen
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -968,7 +1216,7 @@ int __stdcall EventExtendedConfigurationActionGet (int SocketIndex, char * Actio
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -1013,7 +1261,7 @@ int __stdcall EventExtendedStart (int SocketIndex, int * ID)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -1056,7 +1304,7 @@ int __stdcall EventExtendedAllGet (int SocketIndex, char * EventActionConfigurat
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_NOMINAL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -1103,7 +1351,7 @@ int __stdcall EventExtendedGet (int SocketIndex, int ID, char * EventTriggerConf
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -1153,7 +1401,7 @@ int __stdcall EventExtendedRemove (int SocketIndex, int ID)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -1184,7 +1432,7 @@ int __stdcall EventExtendedWait (int SocketIndex)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -1216,7 +1464,7 @@ int __stdcall GatheringConfigurationGet (int SocketIndex, char * Type)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_HUGE); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -1265,13 +1513,13 @@ int __stdcall GatheringConfigurationSet (int SocketIndex, int NbElements, char *
 
 	char (*stringArray0)[SIZE_NAME];
 	stringArray0 = new char [NbElements][SIZE_NAME];
-	memset(stringArray0,'\0', SIZE_NAME*NbElements);
 	indice = 0;
 	strncpyWithEOS(list, TypeList, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray0[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray0[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
@@ -1297,7 +1545,7 @@ int __stdcall GatheringConfigurationSet (int SocketIndex, int NbElements, char *
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -1330,7 +1578,7 @@ int __stdcall GatheringCurrentNumberGet (int SocketIndex, int * CurrentNumber, i
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -1375,7 +1623,7 @@ int __stdcall GatheringStopAndSave (int SocketIndex)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -1406,7 +1654,7 @@ int __stdcall GatheringDataAcquire (int SocketIndex)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -1439,7 +1687,7 @@ int __stdcall GatheringDataGet (int SocketIndex, int IndexPoint, char * DataBuff
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_NOMINAL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -1455,6 +1703,53 @@ int __stdcall GatheringDataGet (int SocketIndex, int IndexPoint, char * DataBuff
 		ptNext = strchr (DataBufferLine, ',');
 		if (ptNext != NULL) *ptNext = '\0';
 	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * GatheringDataMultipleLinesGet :  Get multiple data lines from gathering buffer
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            int IndexPoint
+ *            int NumberOfLines
+ *            char *DataBufferLine
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall GatheringDataMultipleLinesGet (int SocketIndex, int IndexPoint, int NumberOfLines, char * DataBufferLine) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_HUGE); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "GatheringDataMultipleLinesGet (%d,%d,char *)", IndexPoint, NumberOfLines);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_HUGE); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) strcpy (DataBufferLine, pt);
+		ptNext = strchr (DataBufferLine, ',');
+		if (ptNext != NULL) *ptNext = '\0';
+	}
 	if (NULL != ReturnedValue)
 		free (ReturnedValue);
 
@@ -1483,7 +1778,102 @@ int __stdcall GatheringReset (int SocketIndex)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * GatheringRun :  Start a new gathering
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            int DataNumber
+ *            int Divisor
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall GatheringRun (int SocketIndex, int DataNumber, int Divisor) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "GatheringRun (%d,%d)", DataNumber, Divisor);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * GatheringRunAppend :  Re-start the stopped gathering to add new data
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall GatheringRunAppend (int SocketIndex) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "GatheringRunAppend ()");
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * GatheringStop :  Stop the data gathering (without saving to file)
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall GatheringStop (int SocketIndex) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "GatheringStop ()");
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -1519,13 +1909,13 @@ int __stdcall GatheringExternalConfigurationSet (int SocketIndex, int NbElements
 
 	char (*stringArray0)[SIZE_NAME];
 	stringArray0 = new char [NbElements][SIZE_NAME];
-	memset(stringArray0,'\0', SIZE_NAME*NbElements);
 	indice = 0;
 	strncpyWithEOS(list, TypeList, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray0[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray0[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
@@ -1551,7 +1941,7 @@ int __stdcall GatheringExternalConfigurationSet (int SocketIndex, int NbElements
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -1583,7 +1973,7 @@ int __stdcall GatheringExternalConfigurationGet (int SocketIndex, char * Type)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_HUGE); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -1629,7 +2019,7 @@ int __stdcall GatheringExternalCurrentNumberGet (int SocketIndex, int * CurrentN
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -1645,6 +2035,52 @@ int __stdcall GatheringExternalCurrentNumberGet (int SocketIndex, int * CurrentN
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
 		if (pt != NULL) sscanf (pt, "%d", MaximumSamplesNumber);
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * GatheringExternalDataGet :  Get a data line from external gathering buffer
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            int IndexPoint
+ *            char *DataBufferLine
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall GatheringExternalDataGet (int SocketIndex, int IndexPoint, char * DataBufferLine) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "GatheringExternalDataGet (%d,char *)", IndexPoint);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) strcpy (DataBufferLine, pt);
+		ptNext = strchr (DataBufferLine, ',');
+		if (ptNext != NULL) *ptNext = '\0';
 	} 
 	if (NULL != ReturnedValue)
 		free (ReturnedValue);
@@ -1674,7 +2110,7 @@ int __stdcall GatheringExternalStopAndSave (int SocketIndex)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -1707,7 +2143,7 @@ int __stdcall GlobalArrayGet (int SocketIndex, int Number, char * ValueString)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -1753,7 +2189,84 @@ int __stdcall GlobalArraySet (int SocketIndex, int Number, char * ValueString)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * DoubleGlobalArrayGet :  Get double global array value
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            int Number
+ *            double *DoubleValue
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall DoubleGlobalArrayGet (int SocketIndex, int Number, double * DoubleValue) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "DoubleGlobalArrayGet (%d,double *)", Number);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", DoubleValue);
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * DoubleGlobalArraySet :  Set double global array value
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            int Number
+ *            double DoubleValue
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall DoubleGlobalArraySet (int SocketIndex, int Number, double DoubleValue) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "DoubleGlobalArraySet (%d,%.13g)", Number, DoubleValue);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -1790,13 +2303,13 @@ int __stdcall GPIOAnalogGet (int SocketIndex, int NbElements, char * GPIONameLis
 
 	char (*stringArray0)[SIZE_NAME];
 	stringArray0 = new char [NbElements][SIZE_NAME];
-	memset(stringArray0,'\0', SIZE_NAME*NbElements);
 	indice = 0;
 	strncpyWithEOS(list, GPIONameList, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray0[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray0[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
@@ -1822,7 +2335,7 @@ int __stdcall GPIOAnalogGet (int SocketIndex, int NbElements, char * GPIONameLis
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -1874,13 +2387,13 @@ int __stdcall GPIOAnalogSet (int SocketIndex, int NbElements, char * GPIONameLis
 
 	char (*stringArray0)[SIZE_NAME];
 	stringArray0 = new char [NbElements][SIZE_NAME];
-	memset(stringArray0,'\0', SIZE_NAME*NbElements);
 	indice = 0;
 	strncpyWithEOS(list, GPIONameList, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray0[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray0[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
@@ -1906,7 +2419,7 @@ int __stdcall GPIOAnalogSet (int SocketIndex, int NbElements, char * GPIONameLis
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -1943,13 +2456,13 @@ int __stdcall GPIOAnalogGainGet (int SocketIndex, int NbElements, char * GPIONam
 
 	char (*stringArray0)[SIZE_NAME];
 	stringArray0 = new char [NbElements][SIZE_NAME];
-	memset(stringArray0,'\0', SIZE_NAME*NbElements);
 	indice = 0;
 	strncpyWithEOS(list, GPIONameList, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray0[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray0[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
@@ -1975,7 +2488,7 @@ int __stdcall GPIOAnalogGainGet (int SocketIndex, int NbElements, char * GPIONam
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -2027,13 +2540,13 @@ int __stdcall GPIOAnalogGainSet (int SocketIndex, int NbElements, char * GPIONam
 
 	char (*stringArray0)[SIZE_NAME];
 	stringArray0 = new char [NbElements][SIZE_NAME];
-	memset(stringArray0,'\0', SIZE_NAME*NbElements);
 	indice = 0;
 	strncpyWithEOS(list, GPIONameList, SIZE_NOMINAL, SIZE_NOMINAL);
 	list_r = NULL;
 	token = strtok_r (list, seps, &list_r);
 	while ((NULL != token) && (indice < NbElements))
 	{
+		memset(stringArray0[indice],'\0', SIZE_NAME);
 		strncpyWithEOS(stringArray0[indice], token, SIZE_NAME, SIZE_NAME);
 		token = strtok_r (NULL, seps, &list_r);
 		indice++;
@@ -2059,7 +2572,7 @@ int __stdcall GPIOAnalogGainSet (int SocketIndex, int NbElements, char * GPIONam
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2092,7 +2605,7 @@ int __stdcall GPIODigitalGet (int SocketIndex, char * GPIOName, unsigned short *
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -2137,9 +2650,69 @@ int __stdcall GPIODigitalSet (int SocketIndex, char * GPIOName, unsigned short M
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * GroupAccelerationSetpointGet :  Return setpoint accelerations
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *GroupName
+ *            int nbElement
+ *            double *SetpointAcceleration
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall GroupAccelerationSetpointGet (int SocketIndex, char * GroupName, int NbElements, double SetpointAcceleration[]) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+	char temp[SIZE_NOMINAL];
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "GroupAccelerationSetpointGet (%s,", GroupName);
+	for (int i = 0; i < NbElements; i++)
+	{
+		sprintf (temp, "double *");
+		strncat (ExecuteMethod, temp, SIZE_SMALL);
+		if ((i + 1) < NbElements) 
+		{
+			strncat (ExecuteMethod, ",", SIZE_SMALL);
+		}
+	}
+	strcat (ExecuteMethod, ")");
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+
+		for (int i = 0; i < NbElements; i++)
+		{
+			if (pt != NULL) pt = strchr (pt, ',');
+			if (pt != NULL) pt++;
+			if (pt != NULL) sscanf (pt, "%lf", &SetpointAcceleration[i]);
+		}
+	} 
 	if (NULL != ReturnedValue)
 		free (ReturnedValue);
 
@@ -2170,7 +2743,7 @@ int __stdcall GroupAnalogTrackingModeEnable (int SocketIndex, char * GroupName, 
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2202,7 +2775,7 @@ int __stdcall GroupAnalogTrackingModeDisable (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2247,7 +2820,7 @@ int __stdcall GroupCorrectorOutputGet (int SocketIndex, char * GroupName, int Nb
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -2263,6 +2836,66 @@ int __stdcall GroupCorrectorOutputGet (int SocketIndex, char * GroupName, int Nb
 			if (pt != NULL) pt = strchr (pt, ',');
 			if (pt != NULL) pt++;
 			if (pt != NULL) sscanf (pt, "%lf", &CorrectorOutput[i]);
+		}
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * GroupCurrentFollowingErrorGet :  Return current following errors
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *GroupName
+ *            int nbElement
+ *            double *CurrentFollowingError
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall GroupCurrentFollowingErrorGet (int SocketIndex, char * GroupName, int NbElements, double CurrentFollowingError[]) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+	char temp[SIZE_NOMINAL];
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "GroupCurrentFollowingErrorGet (%s,", GroupName);
+	for (int i = 0; i < NbElements; i++)
+	{
+		sprintf (temp, "double *");
+		strncat (ExecuteMethod, temp, SIZE_SMALL);
+		if ((i + 1) < NbElements) 
+		{
+			strncat (ExecuteMethod, ",", SIZE_SMALL);
+		}
+	}
+	strcat (ExecuteMethod, ")");
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+
+		for (int i = 0; i < NbElements; i++)
+		{
+			if (pt != NULL) pt = strchr (pt, ',');
+			if (pt != NULL) pt++;
+			if (pt != NULL) sscanf (pt, "%lf", &CurrentFollowingError[i]);
 		}
 	} 
 	if (NULL != ReturnedValue)
@@ -2294,7 +2927,7 @@ int __stdcall GroupHomeSearch (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2338,7 +2971,7 @@ int __stdcall GroupHomeSearchAndRelativeMove (int SocketIndex, char * GroupName,
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2370,7 +3003,7 @@ int __stdcall GroupInitialize (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2402,7 +3035,7 @@ int __stdcall GroupInitializeWithEncoderCalibration (int SocketIndex, char * Gro
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2447,7 +3080,7 @@ int __stdcall GroupJogParametersSet (int SocketIndex, char * GroupName, int NbEl
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2493,7 +3126,7 @@ int __stdcall GroupJogParametersGet (int SocketIndex, char * GroupName, int NbEl
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -2557,7 +3190,7 @@ int __stdcall GroupJogCurrentGet (int SocketIndex, char * GroupName, int NbEleme
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -2607,7 +3240,7 @@ int __stdcall GroupJogModeEnable (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2639,7 +3272,7 @@ int __stdcall GroupJogModeDisable (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2671,7 +3304,7 @@ int __stdcall GroupKill (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2703,7 +3336,7 @@ int __stdcall GroupMoveAbort (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2747,7 +3380,7 @@ int __stdcall GroupMoveAbsolute (int SocketIndex, char * GroupName, int NbElemen
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2791,7 +3424,7 @@ int __stdcall GroupMoveRelative (int SocketIndex, char * GroupName, int NbElemen
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2823,7 +3456,7 @@ int __stdcall GroupMotionDisable (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -2855,9 +3488,59 @@ int __stdcall GroupMotionEnable (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * GroupPositionCorrectedProfilerGet :  Return corrected profiler positions
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *GroupName
+ *            double PositionX
+ *            double PositionY
+ *            double *CorrectedProfilerPositionX
+ *            double *CorrectedProfilerPositionY
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall GroupPositionCorrectedProfilerGet (int SocketIndex, char * GroupName, double PositionX, double PositionY, double * CorrectedProfilerPositionX, double * CorrectedProfilerPositionY) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "GroupPositionCorrectedProfilerGet (%s,%.13g,%.13g,double *,double *)", GroupName, PositionX, PositionY);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", CorrectedProfilerPositionX);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", CorrectedProfilerPositionY);
+	} 
 	if (NULL != ReturnedValue)
 		free (ReturnedValue);
 
@@ -2900,7 +3583,7 @@ int __stdcall GroupPositionCurrentGet (int SocketIndex, char * GroupName, int Nb
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -2917,6 +3600,56 @@ int __stdcall GroupPositionCurrentGet (int SocketIndex, char * GroupName, int Nb
 			if (pt != NULL) pt++;
 			if (pt != NULL) sscanf (pt, "%lf", &CurrentEncoderPosition[i]);
 		}
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * GroupPositionPCORawEncoderGet :  Return PCO raw encoder positions
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *GroupName
+ *            double PositionX
+ *            double PositionY
+ *            double *PCORawPositionX
+ *            double *PCORawPositionY
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall GroupPositionPCORawEncoderGet (int SocketIndex, char * GroupName, double PositionX, double PositionY, double * PCORawPositionX, double * PCORawPositionY) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "GroupPositionPCORawEncoderGet (%s,%.13g,%.13g,double *,double *)", GroupName, PositionX, PositionY);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", PCORawPositionX);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", PCORawPositionY);
 	} 
 	if (NULL != ReturnedValue)
 		free (ReturnedValue);
@@ -2960,7 +3693,7 @@ int __stdcall GroupPositionSetpointGet (int SocketIndex, char * GroupName, int N
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -3020,7 +3753,7 @@ int __stdcall GroupPositionTargetGet (int SocketIndex, char * GroupName, int NbE
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -3070,7 +3803,7 @@ int __stdcall GroupReferencingActionExecute (int SocketIndex, char * PositionerN
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -3102,7 +3835,7 @@ int __stdcall GroupReferencingStart (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -3134,7 +3867,7 @@ int __stdcall GroupReferencingStop (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -3167,7 +3900,7 @@ int __stdcall GroupStatusGet (int SocketIndex, char * GroupName, int * Status)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -3211,7 +3944,7 @@ int __stdcall GroupStatusStringGet (int SocketIndex, int GroupStatusCode, char *
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_NOMINAL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -3269,7 +4002,7 @@ int __stdcall GroupVelocityCurrentGet (int SocketIndex, char * GroupName, int Nb
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -3315,7 +4048,7 @@ int __stdcall KillAll (int SocketIndex)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -3352,7 +4085,7 @@ int __stdcall PositionerAnalogTrackingPositionParametersGet (int SocketIndex, ch
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -3414,7 +4147,7 @@ int __stdcall PositionerAnalogTrackingPositionParametersSet (int SocketIndex, ch
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -3453,7 +4186,7 @@ int __stdcall PositionerAnalogTrackingVelocityParametersGet (int SocketIndex, ch
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -3523,7 +4256,7 @@ int __stdcall PositionerAnalogTrackingVelocityParametersSet (int SocketIndex, ch
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -3557,7 +4290,7 @@ int __stdcall PositionerBacklashGet (int SocketIndex, char * PositionerName, dou
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -3606,7 +4339,7 @@ int __stdcall PositionerBacklashSet (int SocketIndex, char * PositionerName, dou
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -3638,7 +4371,7 @@ int __stdcall PositionerBacklashEnable (int SocketIndex, char * PositionerName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -3670,7 +4403,7 @@ int __stdcall PositionerBacklashDisable (int SocketIndex, char * PositionerName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -3708,7 +4441,7 @@ int __stdcall PositionerCorrectorNotchFiltersSet (int SocketIndex, char * Positi
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -3746,7 +4479,7 @@ int __stdcall PositionerCorrectorNotchFiltersGet (int SocketIndex, char * Positi
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -3816,7 +4549,7 @@ int __stdcall PositionerCorrectorPIDFFAccelerationSet (int SocketIndex, char * P
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -3850,9 +4583,9 @@ int __stdcall PositionerCorrectorPIDFFAccelerationSet (int SocketIndex, char * P
 int __stdcall PositionerCorrectorPIDFFAccelerationGet (int SocketIndex, char * PositionerName, bool * ClosedLoopStatus, double * KP, double * KI, double * KD, double * KS, double * IntegrationTime, double * DerivativeFilterCutOffFrequency, double * GKP, double * GKI, double * GKD, double * KForm, double * FeedForwardGainAcceleration) 
 { 
 	int ret = -1; 
-	char ExecuteMethod[SIZE_EXECUTE_METHOD];
-        int temp;
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
 	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+	int boolScanTmp;
 
 	/* Convert to string */ 
 	sprintf (ExecuteMethod, "PositionerCorrectorPIDFFAccelerationGet (%s,bool *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *)", PositionerName);
@@ -3861,7 +4594,7 @@ int __stdcall PositionerCorrectorPIDFFAccelerationGet (int SocketIndex, char * P
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -3873,8 +4606,8 @@ int __stdcall PositionerCorrectorPIDFFAccelerationGet (int SocketIndex, char * P
 		ptNext = NULL;
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
-		if (pt != NULL) sscanf (pt, "%d", &temp);
-                *ClosedLoopStatus = bool(temp);
+		if (pt != NULL) sscanf (pt, "%d", &boolScanTmp);
+		*ClosedLoopStatus = (bool) boolScanTmp;
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
 		if (pt != NULL) sscanf (pt, "%lf", KP);
@@ -3950,7 +4683,7 @@ int __stdcall PositionerCorrectorPIDFFVelocitySet (int SocketIndex, char * Posit
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -3984,9 +4717,9 @@ int __stdcall PositionerCorrectorPIDFFVelocitySet (int SocketIndex, char * Posit
 int __stdcall PositionerCorrectorPIDFFVelocityGet (int SocketIndex, char * PositionerName, bool * ClosedLoopStatus, double * KP, double * KI, double * KD, double * KS, double * IntegrationTime, double * DerivativeFilterCutOffFrequency, double * GKP, double * GKI, double * GKD, double * KForm, double * FeedForwardGainVelocity) 
 { 
 	int ret = -1; 
-        int temp;
 	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
 	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+	int boolScanTmp;
 
 	/* Convert to string */ 
 	sprintf (ExecuteMethod, "PositionerCorrectorPIDFFVelocityGet (%s,bool *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *)", PositionerName);
@@ -3995,7 +4728,7 @@ int __stdcall PositionerCorrectorPIDFFVelocityGet (int SocketIndex, char * Posit
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4007,8 +4740,8 @@ int __stdcall PositionerCorrectorPIDFFVelocityGet (int SocketIndex, char * Posit
 		ptNext = NULL;
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
-		if (pt != NULL) sscanf (pt, "%d", &temp);
-                *ClosedLoopStatus = bool(temp);
+		if (pt != NULL) sscanf (pt, "%d", &boolScanTmp);
+		*ClosedLoopStatus = (bool) boolScanTmp;
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
 		if (pt != NULL) sscanf (pt, "%lf", KP);
@@ -4086,7 +4819,7 @@ int __stdcall PositionerCorrectorPIDDualFFVoltageSet (int SocketIndex, char * Po
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -4122,9 +4855,9 @@ int __stdcall PositionerCorrectorPIDDualFFVoltageSet (int SocketIndex, char * Po
 int __stdcall PositionerCorrectorPIDDualFFVoltageGet (int SocketIndex, char * PositionerName, bool * ClosedLoopStatus, double * KP, double * KI, double * KD, double * KS, double * IntegrationTime, double * DerivativeFilterCutOffFrequency, double * GKP, double * GKI, double * GKD, double * KForm, double * FeedForwardGainVelocity, double * FeedForwardGainAcceleration, double * Friction) 
 { 
 	int ret = -1; 
-        int temp;
 	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
 	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+	int boolScanTmp;
 
 	/* Convert to string */ 
 	sprintf (ExecuteMethod, "PositionerCorrectorPIDDualFFVoltageGet (%s,bool *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *,double *)", PositionerName);
@@ -4133,7 +4866,7 @@ int __stdcall PositionerCorrectorPIDDualFFVoltageGet (int SocketIndex, char * Po
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4145,8 +4878,8 @@ int __stdcall PositionerCorrectorPIDDualFFVoltageGet (int SocketIndex, char * Po
 		ptNext = NULL;
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
-		if (pt != NULL) sscanf (pt, "%d", &temp);
-                *ClosedLoopStatus = bool(temp);
+		if (pt != NULL) sscanf (pt, "%d", &boolScanTmp);
+		*ClosedLoopStatus = (bool) boolScanTmp;
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
 		if (pt != NULL) sscanf (pt, "%lf", KP);
@@ -4220,7 +4953,7 @@ int __stdcall PositionerCorrectorPIPositionSet (int SocketIndex, char * Position
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -4246,9 +4979,9 @@ int __stdcall PositionerCorrectorPIPositionSet (int SocketIndex, char * Position
 int __stdcall PositionerCorrectorPIPositionGet (int SocketIndex, char * PositionerName, bool * ClosedLoopStatus, double * KP, double * KI, double * IntegrationTime) 
 { 
 	int ret = -1; 
-        int temp;
 	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
 	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+	int boolScanTmp;
 
 	/* Convert to string */ 
 	sprintf (ExecuteMethod, "PositionerCorrectorPIPositionGet (%s,bool *,double *,double *,double *)", PositionerName);
@@ -4257,7 +4990,7 @@ int __stdcall PositionerCorrectorPIPositionGet (int SocketIndex, char * Position
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4269,8 +5002,8 @@ int __stdcall PositionerCorrectorPIPositionGet (int SocketIndex, char * Position
 		ptNext = NULL;
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
-		if (pt != NULL) sscanf (pt, "%d", &temp);
-                *ClosedLoopStatus = bool(temp);
+		if (pt != NULL) sscanf (pt, "%d", &boolScanTmp);
+		*ClosedLoopStatus = (bool) boolScanTmp;
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
 		if (pt != NULL) sscanf (pt, "%lf", KP);
@@ -4311,7 +5044,7 @@ int __stdcall PositionerCorrectorTypeGet (int SocketIndex, char * PositionerName
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4335,41 +5068,7 @@ int __stdcall PositionerCorrectorTypeGet (int SocketIndex, char * PositionerName
 
 
 /*********************************************************************** 
- * PositionerCurrentVelocityAccelerationFiltersSet :  Set current velocity and acceleration cut off frequencies
- *
- *     - Parameters :
- *            int SocketIndex
- *            char *PositionerName
- *            double CurrentVelocityCutOffFrequency
- *            double CurrentAccelerationCutOffFrequency
- *     - Return :
- *            int errorCode
- ***********************************************************************/ 
-int __stdcall PositionerCurrentVelocityAccelerationFiltersSet (int SocketIndex, char * PositionerName, double CurrentVelocityCutOffFrequency, double CurrentAccelerationCutOffFrequency) 
-{ 
-	int ret = -1; 
-	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
-	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
-
-	/* Convert to string */ 
-	sprintf (ExecuteMethod, "PositionerCurrentVelocityAccelerationFiltersSet (%s,%.13g,%.13g)", PositionerName, CurrentVelocityCutOffFrequency, CurrentAccelerationCutOffFrequency);
-
-	/* Send this string and wait return function from controller */ 
-	/* return function : ==0 -> OK ; < 0 -> NOK */ 
-	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
-	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
-
-	/* Get the returned values in the out parameters */ 
-	if (NULL != ReturnedValue)
-		free (ReturnedValue);
-
-	return (ret); 
-}
-
-
-/*********************************************************************** 
- * PositionerCurrentVelocityAccelerationFiltersGet :  Get current velocity and acceleration cut off frequencies
+ * PositionerCurrentVelocityAccelerationFiltersGet :  Get current velocity and acceleration cutoff frequencies
  *
  *     - Parameters :
  *            int SocketIndex
@@ -4392,7 +5091,7 @@ int __stdcall PositionerCurrentVelocityAccelerationFiltersGet (int SocketIndex, 
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4408,6 +5107,185 @@ int __stdcall PositionerCurrentVelocityAccelerationFiltersGet (int SocketIndex, 
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
 		if (pt != NULL) sscanf (pt, "%lf", CurrentAccelerationCutOffFrequency);
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerCurrentVelocityAccelerationFiltersSet :  Set current velocity and acceleration cutoff frequencies
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            double CurrentVelocityCutOffFrequency
+ *            double CurrentAccelerationCutOffFrequency
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerCurrentVelocityAccelerationFiltersSet (int SocketIndex, char * PositionerName, double CurrentVelocityCutOffFrequency, double CurrentAccelerationCutOffFrequency) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerCurrentVelocityAccelerationFiltersSet (%s,%.13g,%.13g)", PositionerName, CurrentVelocityCutOffFrequency, CurrentAccelerationCutOffFrequency);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerDriverFiltersGet :  Get driver filters parameters
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            double *KI
+ *            double *NotchFrequency
+ *            double *NotchBandwidth
+ *            double *NotchGain
+ *            double *LowpassFrequency
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerDriverFiltersGet (int SocketIndex, char * PositionerName, double * KI, double * NotchFrequency, double * NotchBandwidth, double * NotchGain, double * LowpassFrequency) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerDriverFiltersGet (%s,double *,double *,double *,double *,double *)", PositionerName);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", KI);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", NotchFrequency);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", NotchBandwidth);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", NotchGain);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", LowpassFrequency);
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerDriverFiltersSet :  Set driver filters parameters
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            double KI
+ *            double NotchFrequency
+ *            double NotchBandwidth
+ *            double NotchGain
+ *            double LowpassFrequency
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerDriverFiltersSet (int SocketIndex, char * PositionerName, double KI, double NotchFrequency, double NotchBandwidth, double NotchGain, double LowpassFrequency) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerDriverFiltersSet (%s,%.13g,%.13g,%.13g,%.13g,%.13g)", PositionerName, KI, NotchFrequency, NotchBandwidth, NotchGain, LowpassFrequency);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerDriverPositionOffsetsGet :  Get driver stage and gage position offset
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            double *StagePositionOffset
+ *            double *GagePositionOffset
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerDriverPositionOffsetsGet (int SocketIndex, char * PositionerName, double * StagePositionOffset, double * GagePositionOffset) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerDriverPositionOffsetsGet (%s,double *,double *)", PositionerName);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", StagePositionOffset);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", GagePositionOffset);
 	} 
 	if (NULL != ReturnedValue)
 		free (ReturnedValue);
@@ -4439,7 +5317,7 @@ int __stdcall PositionerDriverStatusGet (int SocketIndex, char * PositionerName,
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4483,7 +5361,7 @@ int __stdcall PositionerDriverStatusStringGet (int SocketIndex, int PositionerDr
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_NOMINAL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4512,14 +5390,14 @@ int __stdcall PositionerDriverStatusStringGet (int SocketIndex, int PositionerDr
  *     - Parameters :
  *            int SocketIndex
  *            char *PositionerName
- *            double *MaxSinusAmplitude
+ *            double *CalibrationSinusAmplitude
  *            double *CurrentSinusAmplitude
- *            double *MaxCosinusAmplitude
+ *            double *CalibrationCosinusAmplitude
  *            double *CurrentCosinusAmplitude
  *     - Return :
  *            int errorCode
  ***********************************************************************/ 
-int __stdcall PositionerEncoderAmplitudeValuesGet (int SocketIndex, char * PositionerName, double * MaxSinusAmplitude, double * CurrentSinusAmplitude, double * MaxCosinusAmplitude, double * CurrentCosinusAmplitude) 
+int __stdcall PositionerEncoderAmplitudeValuesGet (int SocketIndex, char * PositionerName, double * CalibrationSinusAmplitude, double * CurrentSinusAmplitude, double * CalibrationCosinusAmplitude, double * CurrentCosinusAmplitude) 
 { 
 	int ret = -1; 
 	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
@@ -4532,7 +5410,7 @@ int __stdcall PositionerEncoderAmplitudeValuesGet (int SocketIndex, char * Posit
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4544,13 +5422,13 @@ int __stdcall PositionerEncoderAmplitudeValuesGet (int SocketIndex, char * Posit
 		ptNext = NULL;
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
-		if (pt != NULL) sscanf (pt, "%lf", MaxSinusAmplitude);
+		if (pt != NULL) sscanf (pt, "%lf", CalibrationSinusAmplitude);
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
 		if (pt != NULL) sscanf (pt, "%lf", CurrentSinusAmplitude);
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
-		if (pt != NULL) sscanf (pt, "%lf", MaxCosinusAmplitude);
+		if (pt != NULL) sscanf (pt, "%lf", CalibrationCosinusAmplitude);
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
 		if (pt != NULL) sscanf (pt, "%lf", CurrentCosinusAmplitude);
@@ -4588,7 +5466,7 @@ int __stdcall PositionerEncoderCalibrationParametersGet (int SocketIndex, char *
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4641,7 +5519,7 @@ int __stdcall PositionerErrorGet (int SocketIndex, char * PositionerName, int * 
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4685,7 +5563,7 @@ int __stdcall PositionerErrorRead (int SocketIndex, char * PositionerName, int *
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4729,7 +5607,7 @@ int __stdcall PositionerErrorStringGet (int SocketIndex, int PositionerErrorCode
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_NOMINAL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4744,6 +5622,142 @@ int __stdcall PositionerErrorStringGet (int SocketIndex, int PositionerErrorCode
 		if (pt != NULL) strcpy (PositionerErrorString, pt);
 		ptNext = strchr (PositionerErrorString, ',');
 		if (ptNext != NULL) *ptNext = '\0';
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerExcitationSignalGet :  Read disturbing signal parameters
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            int *Mode
+ *            double *Frequency
+ *            double *Amplitude
+ *            double *Time
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerExcitationSignalGet (int SocketIndex, char * PositionerName, int * Mode, double * Frequency, double * Amplitude, double * Time) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerExcitationSignalGet (%s,int *,double *,double *,double *)", PositionerName);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%d", Mode);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", Frequency);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", Amplitude);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", Time);
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerExcitationSignalSet :  Update disturbing signal parameters
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            int Mode
+ *            double Frequency
+ *            double Amplitude
+ *            double Time
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerExcitationSignalSet (int SocketIndex, char * PositionerName, int Mode, double Frequency, double Amplitude, double Time) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerExcitationSignalSet (%s,%d,%.13g,%.13g,%.13g)", PositionerName, Mode, Frequency, Amplitude, Time);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerExternalLatchPositionGet :  Read external latch position
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            double *Position
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerExternalLatchPositionGet (int SocketIndex, char * PositionerName, double * Position) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerExternalLatchPositionGet (%s,double *)", PositionerName);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", Position);
 	} 
 	if (NULL != ReturnedValue)
 		free (ReturnedValue);
@@ -4775,7 +5789,7 @@ int __stdcall PositionerHardwareStatusGet (int SocketIndex, char * PositionerNam
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4819,7 +5833,7 @@ int __stdcall PositionerHardwareStatusStringGet (int SocketIndex, int Positioner
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_NOMINAL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4865,7 +5879,7 @@ int __stdcall PositionerHardInterpolatorFactorGet (int SocketIndex, char * Posit
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4909,7 +5923,7 @@ int __stdcall PositionerHardInterpolatorFactorSet (int SocketIndex, char * Posit
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -4943,7 +5957,7 @@ int __stdcall PositionerMaximumVelocityAndAccelerationGet (int SocketIndex, char
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -4994,7 +6008,7 @@ int __stdcall PositionerMotionDoneGet (int SocketIndex, char * PositionerName, d
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -5054,7 +6068,127 @@ int __stdcall PositionerMotionDoneSet (int SocketIndex, char * PositionerName, d
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerPositionCompareAquadBAlwaysEnable :  Enable AquadB signal in always mode
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerPositionCompareAquadBAlwaysEnable (int SocketIndex, char * PositionerName) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerPositionCompareAquadBAlwaysEnable (%s)", PositionerName);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerPositionCompareAquadBWindowedGet :  Read position compare AquadB windowed parameters
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            double *MinimumPosition
+ *            double *MaximumPosition
+ *            bool *EnableState
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerPositionCompareAquadBWindowedGet (int SocketIndex, char * PositionerName, double * MinimumPosition, double * MaximumPosition, bool * EnableState) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+	int boolScanTmp;
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerPositionCompareAquadBWindowedGet (%s,double *,double *,bool *)", PositionerName);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", MinimumPosition);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", MaximumPosition);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%d", &boolScanTmp);
+		*EnableState = (bool) boolScanTmp;
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerPositionCompareAquadBWindowedSet :  Set position compare AquadB windowed parameters
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            double MinimumPosition
+ *            double MaximumPosition
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerPositionCompareAquadBWindowedSet (int SocketIndex, char * PositionerName, double MinimumPosition, double MaximumPosition) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerPositionCompareAquadBWindowedSet (%s,%.13g,%.13g)", PositionerName, MinimumPosition, MaximumPosition);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -5080,9 +6214,9 @@ int __stdcall PositionerMotionDoneSet (int SocketIndex, char * PositionerName, d
 int __stdcall PositionerPositionCompareGet (int SocketIndex, char * PositionerName, double * MinimumPosition, double * MaximumPosition, double * PositionStep, bool * EnableState) 
 { 
 	int ret = -1; 
-        int temp;
 	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
 	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+	int boolScanTmp;
 
 	/* Convert to string */ 
 	sprintf (ExecuteMethod, "PositionerPositionCompareGet (%s,double *,double *,double *,bool *)", PositionerName);
@@ -5091,7 +6225,7 @@ int __stdcall PositionerPositionCompareGet (int SocketIndex, char * PositionerNa
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -5112,8 +6246,8 @@ int __stdcall PositionerPositionCompareGet (int SocketIndex, char * PositionerNa
 		if (pt != NULL) sscanf (pt, "%lf", PositionStep);
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
-		if (pt != NULL) sscanf (pt, "%d", &temp);
-                *EnableState = bool(temp);
+		if (pt != NULL) sscanf (pt, "%d", &boolScanTmp);
+		*EnableState = (bool) boolScanTmp;
 	} 
 	if (NULL != ReturnedValue)
 		free (ReturnedValue);
@@ -5147,7 +6281,7 @@ int __stdcall PositionerPositionCompareSet (int SocketIndex, char * PositionerNa
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -5179,7 +6313,7 @@ int __stdcall PositionerPositionCompareEnable (int SocketIndex, char * Positione
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -5211,9 +6345,136 @@ int __stdcall PositionerPositionCompareDisable (int SocketIndex, char * Position
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerPositionComparePulseParametersGet :  Get position compare PCO pulse parameters
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            double *PCOPulseWidth
+ *            double *EncoderSettlingTime
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerPositionComparePulseParametersGet (int SocketIndex, char * PositionerName, double * PCOPulseWidth, double * EncoderSettlingTime) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerPositionComparePulseParametersGet (%s,double *,double *)", PositionerName);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", PCOPulseWidth);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", EncoderSettlingTime);
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerPositionComparePulseParametersSet :  Set position compare PCO pulse parameters
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            double PCOPulseWidth
+ *            double EncoderSettlingTime
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerPositionComparePulseParametersSet (int SocketIndex, char * PositionerName, double PCOPulseWidth, double EncoderSettlingTime) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerPositionComparePulseParametersSet (%s,%.13g,%.13g)", PositionerName, PCOPulseWidth, EncoderSettlingTime);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerRawEncoderPositionGet :  Get the raw encoder position
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            double UserEncoderPosition
+ *            double *RawEncoderPosition
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerRawEncoderPositionGet (int SocketIndex, char * PositionerName, double UserEncoderPosition, double * RawEncoderPosition) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerRawEncoderPositionGet (%s,%.13g,double *)", PositionerName, UserEncoderPosition);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", RawEncoderPosition);
+	} 
 	if (NULL != ReturnedValue)
 		free (ReturnedValue);
 
@@ -5244,7 +6505,7 @@ int __stdcall PositionersEncoderIndexDifferenceGet (int SocketIndex, char * Posi
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -5289,7 +6550,7 @@ int __stdcall PositionerSGammaExactVelocityAjustedDisplacementGet (int SocketInd
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -5336,7 +6597,7 @@ int __stdcall PositionerSGammaParametersGet (int SocketIndex, char * PositionerN
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -5392,7 +6653,7 @@ int __stdcall PositionerSGammaParametersSet (int SocketIndex, char * PositionerN
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -5426,7 +6687,7 @@ int __stdcall PositionerSGammaPreviousMotionTimesGet (int SocketIndex, char * Po
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -5474,7 +6735,7 @@ int __stdcall PositionerStageParameterGet (int SocketIndex, char * PositionerNam
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -5521,7 +6782,7 @@ int __stdcall PositionerStageParameterSet (int SocketIndex, char * PositionerNam
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -5547,9 +6808,9 @@ int __stdcall PositionerStageParameterSet (int SocketIndex, char * PositionerNam
 int __stdcall PositionerTimeFlasherGet (int SocketIndex, char * PositionerName, double * MinimumPosition, double * MaximumPosition, double * PositionStep, bool * EnableState) 
 { 
 	int ret = -1; 
-        int temp;
 	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
 	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+	int boolScanTmp;
 
 	/* Convert to string */ 
 	sprintf (ExecuteMethod, "PositionerTimeFlasherGet (%s,double *,double *,double *,bool *)", PositionerName);
@@ -5558,7 +6819,7 @@ int __stdcall PositionerTimeFlasherGet (int SocketIndex, char * PositionerName, 
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -5579,8 +6840,8 @@ int __stdcall PositionerTimeFlasherGet (int SocketIndex, char * PositionerName, 
 		if (pt != NULL) sscanf (pt, "%lf", PositionStep);
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
-		if (pt != NULL) sscanf (pt, "%d", &temp);
-                *EnableState = bool(temp);
+		if (pt != NULL) sscanf (pt, "%d", &boolScanTmp);
+		*EnableState = (bool) boolScanTmp;
 	} 
 	if (NULL != ReturnedValue)
 		free (ReturnedValue);
@@ -5614,7 +6875,7 @@ int __stdcall PositionerTimeFlasherSet (int SocketIndex, char * PositionerName, 
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -5646,7 +6907,7 @@ int __stdcall PositionerTimeFlasherEnable (int SocketIndex, char * PositionerNam
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -5678,7 +6939,7 @@ int __stdcall PositionerTimeFlasherDisable (int SocketIndex, char * PositionerNa
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -5712,7 +6973,7 @@ int __stdcall PositionerUserTravelLimitsGet (int SocketIndex, char * PositionerN
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -5760,7 +7021,181 @@ int __stdcall PositionerUserTravelLimitsSet (int SocketIndex, char * PositionerN
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerDACOffsetGet :  Get DAC offsets
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            short *DACOffset1
+ *            short *DACOffset2
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerDACOffsetGet (int SocketIndex, char * PositionerName, short * DACOffset1, short * DACOffset2) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerDACOffsetGet (%s,short *,short *)", PositionerName);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%hd", DACOffset1);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%hd", DACOffset2);
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerDACOffsetSet :  Set DAC offsets
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            short DACOffset1
+ *            short DACOffset2
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerDACOffsetSet (int SocketIndex, char * PositionerName, short DACOffset1, short DACOffset2) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerDACOffsetSet (%s,%d,%d)", PositionerName, DACOffset1, DACOffset2);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerDACOffsetDualGet :  Get dual DAC offsets
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            short *PrimaryDACOffset1
+ *            short *PrimaryDACOffset2
+ *            short *SecondaryDACOffset1
+ *            short *SecondaryDACOffset2
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerDACOffsetDualGet (int SocketIndex, char * PositionerName, short * PrimaryDACOffset1, short * PrimaryDACOffset2, short * SecondaryDACOffset1, short * SecondaryDACOffset2) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerDACOffsetDualGet (%s,short *,short *,short *,short *)", PositionerName);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%hd", PrimaryDACOffset1);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%hd", PrimaryDACOffset2);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%hd", SecondaryDACOffset1);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%hd", SecondaryDACOffset2);
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * PositionerDACOffsetDualSet :  Set dual DAC offsets
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *PositionerName
+ *            short PrimaryDACOffset1
+ *            short PrimaryDACOffset2
+ *            short SecondaryDACOffset1
+ *            short SecondaryDACOffset2
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall PositionerDACOffsetDualSet (int SocketIndex, char * PositionerName, short PrimaryDACOffset1, short PrimaryDACOffset2, short SecondaryDACOffset1, short SecondaryDACOffset2) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "PositionerDACOffsetDualSet (%s,%d,%d,%d,%d)", PositionerName, PrimaryDACOffset1, PrimaryDACOffset2, SecondaryDACOffset1, SecondaryDACOffset2);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -5796,7 +7231,7 @@ int __stdcall PositionerCorrectorAutoTuning (int SocketIndex, char * PositionerN
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -5846,7 +7281,7 @@ int __stdcall PositionerAccelerationAutoScaling (int SocketIndex, char * Positio
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -5890,7 +7325,7 @@ int __stdcall MultipleAxesPVTVerification (int SocketIndex, char * GroupName, ch
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -5927,7 +7362,7 @@ int __stdcall MultipleAxesPVTVerificationResultGet (int SocketIndex, char * Posi
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -5986,7 +7421,7 @@ int __stdcall MultipleAxesPVTExecution (int SocketIndex, char * GroupName, char 
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6020,7 +7455,7 @@ int __stdcall MultipleAxesPVTParametersGet (int SocketIndex, char * GroupName, c
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -6071,7 +7506,7 @@ int __stdcall MultipleAxesPVTPulseOutputSet (int SocketIndex, char * GroupName, 
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6106,7 +7541,7 @@ int __stdcall MultipleAxesPVTPulseOutputGet (int SocketIndex, char * GroupName, 
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -6155,7 +7590,7 @@ int __stdcall SingleAxisSlaveModeEnable (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6187,7 +7622,7 @@ int __stdcall SingleAxisSlaveModeDisable (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6221,7 +7656,7 @@ int __stdcall SingleAxisSlaveParametersSet (int SocketIndex, char * GroupName, c
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6255,7 +7690,7 @@ int __stdcall SingleAxisSlaveParametersGet (int SocketIndex, char * GroupName, c
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -6303,7 +7738,7 @@ int __stdcall SpindleSlaveModeEnable (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6335,7 +7770,7 @@ int __stdcall SpindleSlaveModeDisable (int SocketIndex, char * GroupName)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6369,7 +7804,7 @@ int __stdcall SpindleSlaveParametersSet (int SocketIndex, char * GroupName, char
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6403,7 +7838,7 @@ int __stdcall SpindleSlaveParametersGet (int SocketIndex, char * GroupName, char
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -6453,7 +7888,7 @@ int __stdcall GroupSpinParametersSet (int SocketIndex, char * GroupName, double 
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6487,7 +7922,7 @@ int __stdcall GroupSpinParametersGet (int SocketIndex, char * GroupName, double 
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -6535,7 +7970,7 @@ int __stdcall GroupSpinCurrentGet (int SocketIndex, char * GroupName, double * V
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -6582,7 +8017,7 @@ int __stdcall GroupSpinModeStop (int SocketIndex, char * GroupName, double Accel
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6615,7 +8050,7 @@ int __stdcall XYLineArcVerification (int SocketIndex, char * GroupName, char * T
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6652,7 +8087,7 @@ int __stdcall XYLineArcVerificationResultGet (int SocketIndex, char * Positioner
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -6713,7 +8148,7 @@ int __stdcall XYLineArcExecution (int SocketIndex, char * GroupName, char * Traj
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6749,7 +8184,7 @@ int __stdcall XYLineArcParametersGet (int SocketIndex, char * GroupName, char * 
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -6806,7 +8241,7 @@ int __stdcall XYLineArcPulseOutputSet (int SocketIndex, char * GroupName, double
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6841,7 +8276,7 @@ int __stdcall XYLineArcPulseOutputGet (int SocketIndex, char * GroupName, double
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -6860,6 +8295,61 @@ int __stdcall XYLineArcPulseOutputGet (int SocketIndex, char * GroupName, double
 		if (pt != NULL) pt = strchr (pt, ',');
 		if (pt != NULL) pt++;
 		if (pt != NULL) sscanf (pt, "%lf", PathLengthInterval);
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * XYZGroupPositionCorrectedProfilerGet :  Return corrected profiler positions
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *GroupName
+ *            double PositionX
+ *            double PositionY
+ *            double PositionZ
+ *            double *CorrectedProfilerPositionX
+ *            double *CorrectedProfilerPositionY
+ *            double *CorrectedProfilerPositionZ
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall XYZGroupPositionCorrectedProfilerGet (int SocketIndex, char * GroupName, double PositionX, double PositionY, double PositionZ, double * CorrectedProfilerPositionX, double * CorrectedProfilerPositionY, double * CorrectedProfilerPositionZ) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "XYZGroupPositionCorrectedProfilerGet (%s,%.13g,%.13g,%.13g,double *,double *,double *)", GroupName, PositionX, PositionY, PositionZ);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", CorrectedProfilerPositionX);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", CorrectedProfilerPositionY);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", CorrectedProfilerPositionZ);
 	} 
 	if (NULL != ReturnedValue)
 		free (ReturnedValue);
@@ -6891,7 +8381,7 @@ int __stdcall XYZSplineVerification (int SocketIndex, char * GroupName, char * T
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -6928,7 +8418,7 @@ int __stdcall XYZSplineVerificationResultGet (int SocketIndex, char * Positioner
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -6988,7 +8478,7 @@ int __stdcall XYZSplineExecution (int SocketIndex, char * GroupName, char * Traj
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -7024,7 +8514,7 @@ int __stdcall XYZSplineParametersGet (int SocketIndex, char * GroupName, char * 
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7057,7 +8547,72 @@ int __stdcall XYZSplineParametersGet (int SocketIndex, char * GroupName, char * 
 
 
 /*********************************************************************** 
- * EEPROMCIESet :  XYZ trajectory get parameters
+ * OptionalModuleExecute :  Execute an optional module
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *ModuleFileName
+ *            char *TaskName
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall OptionalModuleExecute (int SocketIndex, char * ModuleFileName, char * TaskName) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "OptionalModuleExecute (%s,%s)", ModuleFileName, TaskName);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * OptionalModuleKill :  Kill an optional module
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *TaskName
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall OptionalModuleKill (int SocketIndex, char * TaskName) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "OptionalModuleKill (%s)", TaskName);
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * EEPROMCIESet :  Set CIE EEPROM reference string
  *
  *     - Parameters :
  *            int SocketIndex
@@ -7079,7 +8634,7 @@ int __stdcall EEPROMCIESet (int SocketIndex, int CardNumber, char * ReferenceStr
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -7090,7 +8645,7 @@ int __stdcall EEPROMCIESet (int SocketIndex, int CardNumber, char * ReferenceStr
 
 
 /*********************************************************************** 
- * EEPROMDACOffsetCIESet :  XYZ trajectory get parameters
+ * EEPROMDACOffsetCIESet :  Set CIE DAC offsets
  *
  *     - Parameters :
  *            int SocketIndex
@@ -7113,7 +8668,7 @@ int __stdcall EEPROMDACOffsetCIESet (int SocketIndex, int PlugNumber, double DAC
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -7124,7 +8679,7 @@ int __stdcall EEPROMDACOffsetCIESet (int SocketIndex, int PlugNumber, double DAC
 
 
 /*********************************************************************** 
- * EEPROMDriverSet :  XYZ trajectory get parameters
+ * EEPROMDriverSet :  Set Driver EEPROM reference string
  *
  *     - Parameters :
  *            int SocketIndex
@@ -7146,7 +8701,7 @@ int __stdcall EEPROMDriverSet (int SocketIndex, int PlugNumber, char * Reference
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -7157,7 +8712,7 @@ int __stdcall EEPROMDriverSet (int SocketIndex, int PlugNumber, char * Reference
 
 
 /*********************************************************************** 
- * EEPROMINTSet :  XYZ trajectory get parameters
+ * EEPROMINTSet :  Set INT EEPROM reference string
  *
  *     - Parameters :
  *            int SocketIndex
@@ -7179,7 +8734,7 @@ int __stdcall EEPROMINTSet (int SocketIndex, int CardNumber, char * ReferenceStr
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (NULL != ReturnedValue)
@@ -7190,7 +8745,7 @@ int __stdcall EEPROMINTSet (int SocketIndex, int CardNumber, char * ReferenceStr
 
 
 /*********************************************************************** 
- * CPUCoreAndBoardSupplyVoltagesGet :  XYZ trajectory get parameters
+ * CPUCoreAndBoardSupplyVoltagesGet :  Get power informations
  *
  *     - Parameters :
  *            int SocketIndex
@@ -7218,7 +8773,7 @@ int __stdcall CPUCoreAndBoardSupplyVoltagesGet (int SocketIndex, double * Voltag
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7261,7 +8816,7 @@ int __stdcall CPUCoreAndBoardSupplyVoltagesGet (int SocketIndex, double * Voltag
 
 
 /*********************************************************************** 
- * CPUTemperatureAndFanSpeedGet :  XYZ trajectory get parameters
+ * CPUTemperatureAndFanSpeedGet :  Get CPU temperature and fan speed
  *
  *     - Parameters :
  *            int SocketIndex
@@ -7283,7 +8838,7 @@ int __stdcall CPUTemperatureAndFanSpeedGet (int SocketIndex, double * CPUTempera
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7329,7 +8884,7 @@ int __stdcall ActionListGet (int SocketIndex, char * ActionList)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7374,7 +8929,7 @@ int __stdcall ActionExtendedListGet (int SocketIndex, char * ActionList)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7419,7 +8974,7 @@ int __stdcall APIExtendedListGet (int SocketIndex, char * Method)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_HUGE); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7464,7 +9019,7 @@ int __stdcall APIListGet (int SocketIndex, char * Method)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_HUGE); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7478,6 +9033,51 @@ int __stdcall APIListGet (int SocketIndex, char * Method)
 		if (pt != NULL) pt++;
 		if (pt != NULL) strcpy (Method, pt);
 		ptNext = strchr (Method, ',');
+		if (ptNext != NULL) *ptNext = '\0';
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * ControllerStatusListGet :  Controller status list
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *ControllerStatusList
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall ControllerStatusListGet (int SocketIndex, char * ControllerStatusList) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "ControllerStatusListGet (char *)");
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) strcpy (ControllerStatusList, pt);
+		ptNext = strchr (ControllerStatusList, ',');
 		if (ptNext != NULL) *ptNext = '\0';
 	} 
 	if (NULL != ReturnedValue)
@@ -7509,7 +9109,7 @@ int __stdcall ErrorListGet (int SocketIndex, char * ErrorsList)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_HUGE); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7554,7 +9154,7 @@ int __stdcall EventListGet (int SocketIndex, char * EventList)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7599,7 +9199,7 @@ int __stdcall GatheringListGet (int SocketIndex, char * list)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7644,7 +9244,7 @@ int __stdcall GatheringExtendedListGet (int SocketIndex, char * list)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7689,7 +9289,7 @@ int __stdcall GatheringExternalListGet (int SocketIndex, char * list)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7734,7 +9334,7 @@ int __stdcall GroupStatusListGet (int SocketIndex, char * GroupStatusList)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_HUGE); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7779,7 +9379,7 @@ int __stdcall HardwareInternalListGet (int SocketIndex, char * InternalHardwareL
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_NOMINAL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7826,7 +9426,7 @@ int __stdcall HardwareDriverAndStageGet (int SocketIndex, int PlugNumber, char *
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_NOMINAL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7876,7 +9476,7 @@ int __stdcall ObjectsListGet (int SocketIndex, char * ObjectsList)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_HUGE); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7921,7 +9521,7 @@ int __stdcall PositionerErrorListGet (int SocketIndex, char * PositionerErrorLis
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -7966,7 +9566,7 @@ int __stdcall PositionerHardwareStatusListGet (int SocketIndex, char * Positione
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -8011,7 +9611,7 @@ int __stdcall PositionerDriverStatusListGet (int SocketIndex, char * PositionerD
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -8056,7 +9656,7 @@ int __stdcall ReferencingActionListGet (int SocketIndex, char * list)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -8101,7 +9701,7 @@ int __stdcall ReferencingSensorListGet (int SocketIndex, char * list)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_BIG); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -8125,7 +9725,7 @@ int __stdcall ReferencingSensorListGet (int SocketIndex, char * list)
 
 
 /*********************************************************************** 
- * GatheringUserDatasGet :  Return UserDatas values
+ * GatheringUserDatasGet :  Return user data values
  *
  *     - Parameters :
  *            int SocketIndex
@@ -8153,7 +9753,7 @@ int __stdcall GatheringUserDatasGet (int SocketIndex, double * UserData1, double
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
@@ -8196,6 +9796,145 @@ int __stdcall GatheringUserDatasGet (int SocketIndex, double * UserData1, double
 
 
 /*********************************************************************** 
+ * ControllerMotionKernelPeriodMinMaxGet :  Get controller motion kernel min/max periods
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            double *MinimumCorrectorPeriod
+ *            double *MaximumCorrectorPeriod
+ *            double *MinimumProfilerPeriod
+ *            double *MaximumProfilerPeriod
+ *            double *MinimumServitudesPeriod
+ *            double *MaximumServitudesPeriod
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall ControllerMotionKernelPeriodMinMaxGet (int SocketIndex, double * MinimumCorrectorPeriod, double * MaximumCorrectorPeriod, double * MinimumProfilerPeriod, double * MaximumProfilerPeriod, double * MinimumServitudesPeriod, double * MaximumServitudesPeriod) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "ControllerMotionKernelPeriodMinMaxGet (double *,double *,double *,double *,double *,double *)");
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", MinimumCorrectorPeriod);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", MaximumCorrectorPeriod);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", MinimumProfilerPeriod);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", MaximumProfilerPeriod);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", MinimumServitudesPeriod);
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) sscanf (pt, "%lf", MaximumServitudesPeriod);
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * ControllerMotionKernelPeriodMinMaxReset :  Reset controller motion kernel min/max periods
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall ControllerMotionKernelPeriodMinMaxReset (int SocketIndex) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "ControllerMotionKernelPeriodMinMaxReset ()");
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
+ * SocketsStatusGet :  Get sockets current status
+ *
+ *     - Parameters :
+ *            int SocketIndex
+ *            char *SocketsStatus
+ *     - Return :
+ *            int errorCode
+ ***********************************************************************/ 
+int __stdcall SocketsStatusGet (int SocketIndex, char * SocketsStatus) 
+{ 
+	int ret = -1; 
+	char ExecuteMethod[SIZE_EXECUTE_METHOD]; 
+	char *ReturnedValue = (char *) malloc (sizeof(char) * SIZE_SMALL); 
+
+	/* Convert to string */ 
+	sprintf (ExecuteMethod, "SocketsStatusGet (char *)");
+
+	/* Send this string and wait return function from controller */ 
+	/* return function : ==0 -> OK ; < 0 -> NOK */ 
+	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
+	if (strlen (ReturnedValue) > 0) 
+		sscanf (ReturnedValue, "%i", &ret); 
+
+	/* Get the returned values in the out parameters */ 
+	if (ret == 0) 
+	{ 
+		char * pt;
+		char * ptNext;
+
+		pt = ReturnedValue;
+		ptNext = NULL;
+		if (pt != NULL) pt = strchr (pt, ',');
+		if (pt != NULL) pt++;
+		if (pt != NULL) strcpy (SocketsStatus, pt);
+		ptNext = strchr (SocketsStatus, ',');
+		if (ptNext != NULL) *ptNext = '\0';
+	} 
+	if (NULL != ReturnedValue)
+		free (ReturnedValue);
+
+	return (ret); 
+}
+
+
+/*********************************************************************** 
  * TestTCP :  Test TCP/IP transfert
  *
  *     - Parameters :
@@ -8218,7 +9957,7 @@ int __stdcall TestTCP (int SocketIndex, char * InputString, char * ReturnString)
 	/* return function : ==0 -> OK ; < 0 -> NOK */ 
 	SendAndReceive (SocketIndex, ExecuteMethod, ReturnedValue, SIZE_SMALL); 
 	if (strlen (ReturnedValue) > 0) 
-		sscanf (ReturnedValue, "%d", &ret); 
+		sscanf (ReturnedValue, "%i", &ret); 
 
 	/* Get the returned values in the out parameters */ 
 	if (ret == 0) 
