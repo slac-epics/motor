@@ -607,8 +607,10 @@ static int set_status(int card, int signal)
         }
 
         ecode = atoi(buff) & 0xFF;
-        if ( ( ecode == 83 ) || ( ecode == 84 ) ) status.Bits.ERRNO = 0;
-        else                                      status.Bits.ERRNO = ecode;
+        if ( ( ecode == 83 ) || ( ecode == 84 ) || ( ecode == 86 ) )
+            status.Bits.ERRNO = 0;
+        else
+            status.Bits.ERRNO = ecode;
     }/* Sheng Peng */
 
     motor_info->RA_DONE = status.Bits.RA_DONE;
