@@ -175,7 +175,7 @@ static int set_status(int card, int signal)
     register struct mess_info *motor_info;
     /* Message parsing variables */
     char buff[BUFF_SIZE];
-    int rtnval, rtn_state;
+    int rtnval, rtn_state, ecode;
     double motorData;
     epicsUInt8 Lswitch;
     bool plusdir, ls_active = false;
@@ -606,7 +606,9 @@ static int set_status(int card, int signal)
             }
         }
 
-        status.Bits.ERRNO = atoi(buff) & 0xFF;
+        ecode = atoi(buff) & 0xFF;
+        if ( ( ecode == 83 ) || ( ecode == 84 ) ) status.Bits.ERRNO = 0;
+        else                                      status.Bits.ERRNO = ecode;
     }/* Sheng Peng */
 
     motor_info->RA_DONE = status.Bits.RA_DONE;
