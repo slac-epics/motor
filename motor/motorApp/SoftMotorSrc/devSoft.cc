@@ -2,10 +2,10 @@
 FILENAME...	devSoft.cc
 USAGE...	Motor record device level support for Soft channel.
 
-Version:        $Revision: 1.1.1.3 $
+Version:        $Revision: 1.1.1.4 $
 Modified By:    $Author: saa $
-Last Modified:  $Date: 2010/03/25 17:12:41 $
-HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-5-1/motorApp/SoftMotorSrc/devSoft.cc $
+Last Modified:  $Date: 2011/11/29 20:50:00 $
+HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-7-1/motorApp/SoftMotorSrc/devSoft.cc $
 */
 
 /*
@@ -66,18 +66,18 @@ NOTES...
 #include	"errlog.h"
 
 /*----------------debugging-----------------*/
-#ifdef __GNUG__
-  #ifdef	DEBUG
-    #define Debug(l, f, args...) {if (l <= devSoftdebug) \
-				    printf(f, ## args);}
-  #else
-    #define Debug(l, f, args...)
-  #endif
-#else
-  #define Debug
-#endif
 volatile int devSoftdebug = 0;
 extern "C" {epicsExportAddress(int, devSoftdebug);}
+static inline void Debug(int level, const char *format, ...) {
+  #ifdef DEBUG
+    if (level < devSoftdebug) {
+      va_list pVar;
+      va_start(pVar, format);
+      vprintf(format, pVar);
+      va_end(pVar);
+    }
+  #endif
+}
 
 static CALLBACK_VALUE update(struct motorRecord *);
 static long start(struct motorRecord *);
