@@ -3,10 +3,10 @@ FILENAME: motordevCom.cc
 USAGE... This file contains device functions that are common to all motor
     record device support modules.
 
-Version:        $Revision: 11146 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2010-06-09 13:34:44 -0500 (Wed, 09 Jun 2010) $
-HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-8/motorApp/MotorSrc/motordevCom.cc $
+Version:        $Revision: 1.1.1.5 $
+Modified By:    $Author: saa $
+Last Modified:  $Date: 2010/06/09 18:34:44 $
+HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-7-1/motorApp/MotorSrc/motordevCom.cc $
 */
 
 /*
@@ -91,6 +91,7 @@ epicsShareFunc long motor_init_com(int after, int brdcnt, struct driver_table *t
 {
     MOTOR_CARD_QUERY card_query;
     int card, motor;
+    memset(&card_query, 0 ,sizeof(card_query));
 
     if (after == 0)
     {

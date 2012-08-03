@@ -2,9 +2,9 @@
 FILENAME...     motorRecord.cc
 USAGE...        Motor Record Support.
 
-Version:        $Revision: 13840 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2011-10-20 16:02:14 -0500 (Thu, 20 Oct 2011) $
+Version:        $Revision: 1.1.1.6 $
+Modified By:    $Author: saa $
+Last Modified:  $Date: 2011/10/20 21:02:14 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-7-1/motorApp/MotorSrc/motorRecord.cc $
 */
 
@@ -180,6 +180,12 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-7
 volatile int motorRecordDebug = 0;
 extern "C" {epicsExportAddress(int, motorRecordDebug);}
 
+
+volatile int tillhack_enabled = 1;
+volatile int tillhack_count   = 0;
+
+volatile int tillhack_cb_cancelled = 0;
+
 /*----------------debugging-----------------*/
 
 static inline void Debug(int level, const char *format, ...) {
@@ -309,6 +315,7 @@ typedef union
         unsigned int M_MRES     :1;
         unsigned int M_ERES     :1;
         unsigned int M_UEIP     :1;
+        unsigned int M_URIP     :1;
         unsigned int M_STOP     :1;
         unsigned int M_LVIO     :1;
         unsigned int M_RVAL     :1;
@@ -438,6 +445,8 @@ static void callbackFunc(struct callback *pcb)
 #else
 	scanOnce((struct dbCommon *) pmr);
 #endif
+    } else {
+		tillhack_cb_cancelled++;
     }
 }
 
@@ -1735,8 +1744,23 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             /* Cancel any operations. */
             if (pmr->mip & MIP_HOME)
                 clear_buttons(pmr);
-            
-            pmr->mip = MIP_STOP;
+             
+		if ( (pmr->mip & MIP_DELAY_REQ) && tillhack_enabled ) {
+			/* If someone tries to STOP while we're waiting for
+			 * being processed by the callback DONT effectively
+			 * cancel the callback by clearing MIP_DELAY_REQ;
+			 * this would result in DMOV never being set!
+			 *
+			 * Instead, just raise MIP_STOP and wait for the callback
+			 * to do further work...
+			 *
+			 * T.S., 20080915.
+			 */
+			pmr->mip |= MIP_STOP;
+			tillhack_count++;
+		} else {
+	    	pmr->mip = MIP_STOP;
+		}
             MARK(M_MIP);
             INIT_MSG();
             WRITE_MSG(STOP_AXIS, NULL);
@@ -1766,9 +1790,9 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
         }
     }
 
-    /*** Handle changes in motor/encoder resolution, and in .ueip. ***/
+    /*** Handle changes in motor/encoder resolution, and in .ueip/urip. ***/
     mmap_bits.All = pmr->mmap; /* Initialize for MARKED. */
-    if (MARKED(M_MRES) || MARKED(M_ERES) || MARKED(M_UEIP))
+    if (MARKED(M_MRES) || MARKED(M_ERES) || MARKED(M_UEIP) || MARKED(M_URIP))
     {
         /* encoder pulses, motor pulses */
         double ep_mp[2];
@@ -2764,6 +2788,11 @@ velcheckB:
         /* Ideally, we should be recalculating speeds, but at the moment */
         /* we don't know whether hardware even has an encoder. */
         break;
+
+	/* new urip flag */
+    case motorRecordURIP:
+	MARK(M_URIP);
+	break;
 
         /* Set to SET mode  */
     case motorRecordSSET:

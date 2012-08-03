@@ -8,14 +8,15 @@
 #  CONFIG_SITE.Common.$(T_A)
 #  CONFIG_SITE.$(EPICS_HOST_ARCH).$(T_A)
 
-#ifeq ($(EPICS_HOST_ARCH),vl-linux-x86)
-#CROSS_COMPILER_TARGET_ARCHS = RTEMS-uC5282
-#endif
+ifeq ($(EPICS_HOST_ARCH),vl-linux-x86)
+CROSS_COMPILER_TARGET_ARCHS = RTEMS-uC5282
+endif
 
 # Set this when you only want to compile this application
 # for a subset of the cross-compiled target architectures
 # that Base is built for.
-#CROSS_COMPILER_TARGET_ARCHS = vxWorks-68040
+include $(TOP)/../../configure/CONFIG_SITE-master
+CROSS_COMPILER_TARGET_ARCHS =  $(CROSS_COMPILER_TARGET_VME)
 
 # Set this when your IOC and the host use different paths
 # to access the application. This will be needed to boot
@@ -28,3 +29,6 @@
 # define INSTALL_LOCATION here
 #INSTALL_LOCATION=<fullpathname>
 
+# uncomment for architectures where the
+# portable endian conversion header is available
+USR_CXXFLAGS += -DHAS_IOOPS_H
