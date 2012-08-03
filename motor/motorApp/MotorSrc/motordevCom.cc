@@ -3,10 +3,10 @@ FILENAME: motordevCom.cc
 USAGE... This file contains device functions that are common to all motor
     record device support modules.
 
-Version:        $Revision: 1.1.1.4 $
+Version:        $Revision: 1.1.1.5 $
 Modified By:    $Author: saa $
-Last Modified:  $Date: 2010/06/09 19:41:35 $
-HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-5-1/motorApp/MotorSrc/motordevCom.cc $
+Last Modified:  $Date: 2010/06/09 18:34:44 $
+HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-7-1/motorApp/MotorSrc/motordevCom.cc $
 */
 
 /*
