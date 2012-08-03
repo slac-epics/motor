@@ -71,7 +71,7 @@ endif
 XPSGatheringMain_LIBS += $(EPICS_BASE_IOC_LIBS)
 XPSGatheringMain_SYS_LIBS_solaris += socket nsl
 
-PROD_IOC += XPSGathering2
+#PROD_IOC += XPSGathering2
 XPSGathering2_SRCS += XPSGathering2.c
 XPSGathering2_LIBS += Newport motor asyn
 XPSGathering2_LIBS += $(EPICS_BASE_IOC_LIBS)
