@@ -1,6 +1,6 @@
 include motorRecord.dbd
 registrar(motorUtilRegister)
-#variable(motorRecordDebug)
+variable(motorRecordDebug)
 #variable(motordrvComdebug)
 #variable(motorUtil_debug)
 registrar(motorRegister)

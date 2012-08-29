@@ -70,6 +70,14 @@ menu(motorRMOD) {
 	choice(motorRMOD_A,"Arthmetic")
 	choice(motorRMOD_G,"Geometric")
 }
+menu(motorHMDR) {
+        choice(motorHMDR_Pos,"Pos")
+        choice(motorHMDR_Neg,"Neg")
+}
+menu(motorHMTP) {
+        choice(motorHMTP_Encoder,"Encoder")
+        choice(motorHMTP_Switch,"Switch")
+}
 
 include "menuOmsl.dbd"
 
@@ -808,4 +816,31 @@ recordtype(motor) {
 		prompt("Trimming Counter")
 		special(SPC_NOMOD)
 	}
+	field(HMDR,DBF_MENU) {
+		initial("Pos")
+		prompt("Home Direction")
+		promptgroup(GUI_COMMON)
+		special(SPC_MOD)
+		interest(1)
+		menu(motorHMDR)
+	}
+	field(HMTP,DBF_MENU) {
+		initial("Encoder")
+		prompt("Home Type")
+		promptgroup(GUI_COMMON)
+		special(SPC_NOMOD)
+		interest(1)
+		menu(motorHMTP)
+	}
+	field(MVER,DBF_USHORT) {
+		prompt("MCode Version")
+		special(SPC_NOMOD)
+		interest(1)
+	}
+	field(DVER,DBF_USHORT) {
+		prompt("Desired MCode Version")
+		special(SPC_NOMOD)
+		interest(1)
+	}
 }
+

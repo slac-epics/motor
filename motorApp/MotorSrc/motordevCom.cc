@@ -392,6 +392,8 @@ motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_table *t
     motor_info->RA_DONE  = 1;
     motor_info->MCHB     = 0;
 
+    mr->mver = motor_info->mcode_version;
+
     return(OK);
 }
 
@@ -425,7 +427,7 @@ epicsShareFunc CALLBACK_VALUE motor_update_values(struct motorRecord * mr)
             mr->rvel = ptrans->vel;
             db_post_events(mr, &mr->rvel, DBE_VAL_LOG);
         }
-        mr->msta = ptrans->status.All;
+        mr->msta = (mr->msta & 16384) | ptrans->status.All;
         ptrans->callback_changed = NO;
         rc = CALLBACK_DATA;
     }
