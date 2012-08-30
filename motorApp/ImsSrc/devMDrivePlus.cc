@@ -214,11 +214,37 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
         break;
     
     case HOME_FOR:
-        sprintf(buff, " F1000 0");
+        if (mr->hmtp == 1)
+        {
+            if      ((mr->dir == 0) && (mr->hmdr == 0)) sprintf(buff, "HM 4");
+            else if ((mr->dir == 0) && (mr->hmdr == 1)) sprintf(buff, "HM 3");
+            else if ((mr->dir == 1) && (mr->hmdr == 0)) sprintf(buff, "HM 2");
+            else if ((mr->dir == 1) && (mr->hmdr == 1)) sprintf(buff, "HM 1");
+        }
+        else
+        {
+            if      ((mr->dir == 0) && (mr->hmdr == 0)) sprintf(buff, "HI 4");
+            else if ((mr->dir == 0) && (mr->hmdr == 1)) sprintf(buff, "HI 3");
+            else if ((mr->dir == 1) && (mr->hmdr == 0)) sprintf(buff, "HI 2");
+            else if ((mr->dir == 1) && (mr->hmdr == 1)) sprintf(buff, "HI 1");
+        }
         break;
 
     case HOME_REV:
-        sprintf(buff, " F1000 1");
+        if (mr->hmtp == 1)
+        {
+            if      ((mr->dir == 0) && (mr->hmdr == 0)) sprintf(buff, "HM 1");
+            else if ((mr->dir == 0) && (mr->hmdr == 1)) sprintf(buff, "HM 2");
+            else if ((mr->dir == 1) && (mr->hmdr == 0)) sprintf(buff, "HM 3");
+            else if ((mr->dir == 1) && (mr->hmdr == 1)) sprintf(buff, "HM 4");
+        }
+        else
+        {
+            if      ((mr->dir == 0) && (mr->hmdr == 0)) sprintf(buff, "HI 1");
+            else if ((mr->dir == 0) && (mr->hmdr == 1)) sprintf(buff, "HI 2");
+            else if ((mr->dir == 1) && (mr->hmdr == 0)) sprintf(buff, "HI 3");
+            else if ((mr->dir == 1) && (mr->hmdr == 1)) sprintf(buff, "HI 4");
+        }
         break;
     
     case LOAD_POS:

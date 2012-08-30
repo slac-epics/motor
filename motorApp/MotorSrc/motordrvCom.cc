@@ -346,7 +346,7 @@ static void process_messages(struct driver_table *tabptr, epicsTime tick,
                  */
 
                 if (!motor_motion)      /* if NULL */
-                    (*tabptr->card_array)[card]->motor_in_motion = 2;
+                    (*tabptr->card_array)[card]->motor_in_motion++;
                 else
                     motor_free(motor_motion, tabptr);
 
@@ -362,7 +362,7 @@ static void process_messages(struct driver_table *tabptr, epicsTime tick,
 
                 /* this is tricky - see velocity comment */
                 if (!motor_motion)      /* if NULL */
-                    (*tabptr->card_array)[card]->motor_in_motion = 2;
+                    (*tabptr->card_array)[card]->motor_in_motion++;
                 else
                     motor_free(motor_motion, tabptr);
 
