@@ -146,10 +146,11 @@ typedef union
     {
 #ifdef MSB_First
 	unsigned int ERRNO          :8; /* Error number */
-	unsigned int NA             :7; /* N/A bits */
+	unsigned int NA             :6; /* N/A bits */
 	unsigned int MCHB           :1; /* Missing MCode heart-beat */
 	unsigned int RA_POWERUP     :1; /* Power-cycled */
-        unsigned int RA_HOMED       :1; /* Axis has been homed.*/
+	unsigned int RA_STALL       :1; /* Stall detected */
+	unsigned int RA_HOMED       :1; /* Axis has been homed.*/
 	unsigned int RA_MINUS_LS    :1;	/* minus limit switch has been hit */
 	unsigned int CNTRL_COMM_ERR :1;	/* Controller communication error. */
 	unsigned int GAIN_SUPPORT   :1;	/* Motor supports closed-loop position control. */
@@ -179,10 +180,11 @@ typedef union
 	unsigned int GAIN_SUPPORT   :1;	/* Motor supports closed-loop position control. */
 	unsigned int CNTRL_COMM_ERR :1;	/* Controller communication error. */
 	unsigned int RA_MINUS_LS    :1;	/* minus limit switch has been hit */
-        unsigned int RA_HOMED       :1; /* Axis has been homed.*/
+	unsigned int RA_HOMED       :1; /* Axis has been homed.*/
+	unsigned int RA_STALL       :1; /* Stall detected */
 	unsigned int RA_POWERUP     :1; /* Power-cycled */
 	unsigned int MCHB           :1; /* Missing MCode heart-beat */
-	unsigned int NA             :7; /* N/A bits */
+	unsigned int NA             :6; /* N/A bits */
 	unsigned int ERRNO          :8; /* error number */
 #endif
     } Bits;                                
