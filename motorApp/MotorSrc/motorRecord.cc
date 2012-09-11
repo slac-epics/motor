@@ -1335,24 +1335,13 @@ static long process(dbCommon *arg)
                 goto process_exit;
             }
 
-	    //printf( "pp %d, mip %d, rhls %d, rlls %d, stall %d\n", pmr->pp, pmr->mip, pmr->rhls, pmr->rlls,msta.Bits.RA_STALL); 
-            /* Do another update after LS error. */
-            if (pmr->mip != MIP_DONE && (pmr->rhls || pmr->rlls || msta.Bits.RA_STALL))
+            if (pmr->mip != MIP_DONE &&
+                (pmr->rhls || pmr->rlls || msta.Bits.RA_STALL))
             {
-                /* Restore DMOV to false and UNMARK it so it is not posted. */
-                /* Sheng Peng Debug(1, "set dmov to 0, location 8\n");
-                pmr->dmov = FALSE;
-                UNMARK(M_DMOV); */
-                INIT_MSG();
-                WRITE_MSG(GET_INFO, NULL);
-                SEND_MSG();
-                pmr->pp = TRUE;
                 pmr->mip = MIP_DONE;
                 MARK(M_MIP);
-                goto process_exit;
             }
 
-            msta.All = pmr->msta;
             if (pmr->pp || pmr->rhls || pmr->rlls || msta.Bits.RA_STALL)
             {
                 if ((pmr->val != pmr->lval) &&
