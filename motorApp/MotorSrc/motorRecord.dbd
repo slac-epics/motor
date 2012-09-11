@@ -842,5 +842,11 @@ recordtype(motor) {
 		special(SPC_NOMOD)
 		interest(1)
 	}
+	field(HBAS,DBF_DOUBLE) {
+                prompt("Home Base Velocity (EGU/s)")
+                promptgroup(GUI_COMMON)
+                special(SPC_MOD)
+                interest(1)
+        }
 }
 

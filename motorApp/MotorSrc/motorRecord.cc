@@ -329,6 +329,7 @@ typedef union
         unsigned int M_HOMF     :1;
         unsigned int M_HOMR     :1;
         unsigned int M_MSEC     :1;
+	unsigned int M_HBAS     :1;
     } Bits;
 } nmap_field;
 
@@ -800,7 +801,7 @@ static long postProcess(motorRecord * pmr)
         if (pmr->mip & MIP_STOP)
         {
             /* Stopped and Hom* button still down.  Now do Hom*. */
-            double vbase = pmr->vbas / fabs(pmr->mres);
+            double vbase = pmr->hbas / fabs(pmr->mres);
             double hpos = 0;
             double hvel = pmr->hvel / fabs(pmr->mres);
             double acc  = (hvel - vbase) / pmr->accl;
@@ -2085,7 +2086,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                     MARK(M_ERES);
                 }
 
-                vbase = pmr->vbas / fabs(pmr->mres);
+                vbase = pmr->hbas / fabs(pmr->mres);
                 hvel  = pmr->hvel / fabs(pmr->mres);
                 acc   = (hvel - vbase) / pmr->accl;
                 hpos = 0;
@@ -3095,8 +3096,12 @@ pidcof:
         break;
 
     case motorRecordHVEL:
-        range_check(pmr, &pmr->hvel, pmr->vbas, pmr->vmax);
+        range_check(pmr, &pmr->hvel, pmr->hbas, pmr->vmax);
         break;
+
+    case motorRecordHBAS:
+	range_check(pmr, &pmr->hbas, 0.0, pmr->hvel);
+	break;
 
     case motorRecordSTUP:
         if (pmr->stup != motorSTUP_ON)
@@ -3161,6 +3166,7 @@ velcheckA:
 
             range_check(pmr, &pmr->jvel, pmr->vbas, pmr->vmax);
             range_check(pmr, &pmr->hvel, pmr->vbas, pmr->vmax);
+            range_check(pmr, &pmr->hbas, 0.0, pmr->hvel);
     }
     /* Do not process (i.e., clear) marked fields here.  PP fields (e.g., MRES) must remain marked. */
     return(OK);
@@ -3186,6 +3192,7 @@ static long get_units(const DBADDR *paddr, char *units)
     case motorRecordVBAS:
     case motorRecordJVEL:
     case motorRecordHVEL:
+    case motorRecordHBAS:
         strncpy(s, pmr->egu, DB_UNITS_SIZE);
         strcat(s, "/sec");
         break;
@@ -3945,6 +3952,9 @@ static void check_speed_and_resolution(motorRecord * pmr)
         pmr->hvel = pmr->vbas;
     else
         range_check(pmr, &pmr->hvel, pmr->vbas, pmr->vmax);
+
+    /* Sanity check on home base velocity. */
+    range_check(pmr, &pmr->hbas, 0.0, pmr->hvel);
 }
 
 /*
