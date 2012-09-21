@@ -384,13 +384,16 @@ motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_table *t
 
     mr->rmp = axis_query.position;      /* raw motor pulse count */
     mr->rep = axis_query.encoder_position;      /* raw encoder pulse count */
-    mr->msta = axis_query.status.All;   /* status info */
 
     /* Dehong Zhang: initialize for limit switch and power cycle checking */
     motor_info = &((*tabptr->card_array)[card]->motor_info[signal]);
     motor_info->p_time   = 0;
     motor_info->RA_DONE  = 1;
     motor_info->MCHB     = 0;
+
+    msta.All = axis_query.status.All;                          /* status info */
+    msta.Bits.EA_SLIP = motor_info->stall_mode;             /* stall mode bit */
+    mr->msta = msta.All;
 
     mr->mver = motor_info->mcode_version;
 
@@ -427,7 +430,9 @@ epicsShareFunc CALLBACK_VALUE motor_update_values(struct motorRecord * mr)
             mr->rvel = ptrans->vel;
             db_post_events(mr, &mr->rvel, DBE_VAL_LOG);
         }
-        mr->msta = (mr->msta & 16384) | ptrans->status.All;
+
+        /* carry over EA_SLIP and RA_HOMED bits */
+        mr->msta = (mr->msta & (16384+16)) | ptrans->status.All;
         ptrans->callback_changed = NO;
         rc = CALLBACK_DATA;
     }

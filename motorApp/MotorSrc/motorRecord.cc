@@ -779,22 +779,22 @@ static long postProcess(motorRecord * pmr)
         MARK(M_RDIF);
     }
 
-    if (msta.Bits.RA_STALL)
-    {
-        if (pmr->homf != 0)
-        {
-            pmr->homf = 0;
-            MARK_AUX(M_HOMF);
-        }
-
-        if (pmr->homr != 0)
-        {
-            pmr->homr = 0;
-            MARK_AUX(M_HOMR);
-        }
-    }
-    else if (pmr->mip & MIP_LOAD_P)
+    if (pmr->mip & MIP_LOAD_P)
         pmr->mip = MIP_DONE;    /* We sent LOAD_POS, followed by GET_INFO. */
+    if ( (!msta.Bits.EA_SLIP) && msta.Bits.RA_STALL)
+        {
+            if (pmr->homf != 0)
+            {
+                pmr->homf = 0;
+                MARK_AUX(M_HOMF);
+            }
+
+            if (pmr->homr != 0)
+            {
+                pmr->homr = 0;
+                MARK_AUX(M_HOMR);
+            }
+        }
     else if (pmr->mip & MIP_HOME)
     {
         /* Home command */
@@ -827,6 +827,20 @@ static long postProcess(motorRecord * pmr)
             if (pmr->mres < 0.0)
                 pmr->cdir = !pmr->cdir;
         }
+/*	else if ( (!msta.Bits.EA_SLIP) && msta.Bits.RA_STALL)
+        {
+            if (pmr->homf != 0)
+            {
+                pmr->homf = 0;
+                MARK_AUX(M_HOMF);
+            }
+
+            if (pmr->homr != 0)
+            {
+                pmr->homr = 0;
+                MARK_AUX(M_HOMR);
+            }
+        } */
         else if ( (msta.Bits.ERRNO > 79) && (msta.Bits.ERRNO < 83) )
         {
             if (pmr->mip & MIP_HOMF)
@@ -844,7 +858,7 @@ static long postProcess(motorRecord * pmr)
                 Debug(3, "post process: homeR failed\n");
             }
         }
-        else if ( ! msta.Bits.RA_STALL )
+        else if ( msta.Bits.EA_SLIP || (!msta.Bits.RA_STALL) )
         {
             if (pmr->mip & MIP_HOMF)
             {
@@ -1336,13 +1350,15 @@ static long process(dbCommon *arg)
             }
 
             if (pmr->mip != MIP_DONE &&
-                (pmr->rhls || pmr->rlls || msta.Bits.RA_STALL))
+                (pmr->rhls || pmr->rlls ||
+                 (!msta.Bits.EA_SLIP && msta.Bits.RA_STALL)))
             {
                 pmr->mip = MIP_DONE;
                 MARK(M_MIP);
             }
 
-            if (pmr->pp || pmr->rhls || pmr->rlls || msta.Bits.RA_STALL)
+            if (pmr->pp || pmr->rhls || pmr->rlls ||
+                (!msta.Bits.EA_SLIP && msta.Bits.RA_STALL))
             {
                 if ((pmr->val != pmr->lval) &&
                    !(pmr->mip & MIP_STOP)   &&
@@ -1431,7 +1447,7 @@ enter_do_work:
     if (pmr->stop || pmr->dmov ||
         (pmr->spmg == motorSPMG_Stop) || (pmr->spmg == motorSPMG_Pause) ||
         ((process_reason != CALLBACK_DATA) && (! pmr->movn)) ||
-        ((! pmr->dmov) && (pmr->mip & MIP_RETRY) && pmr->rcnt == 0))
+        ((! pmr->dmov) && (pmr->mip & MIP_RETRY)))
     {
         status = do_work(pmr, process_reason);
     }
@@ -2579,9 +2595,12 @@ static long special(DBADDR *paddr, int after)
             case motorRecordRLV:
                 if ( pmr->dmov && (! pmr->disp) && (pmr->disa != pmr->disv) )
                 {
-                    Debug(1, "set dmov to 0, location 19\n");
-                    pmr->dmov = FALSE;
-                    db_post_events(pmr, &pmr->dmov, DBE_VAL_LOG);
+                    if ( ! pmr->set )
+                    {
+                        Debug(1, "set dmov to 0, location 19\n");
+                        pmr->dmov = FALSE;
+                        db_post_events(pmr, &pmr->dmov, DBE_VAL_LOG);
+                    }
                 }
                 else         /* not done yet, or disabled, ignore new request */
                 {
@@ -3400,13 +3419,15 @@ static void alarm_sub(motorRecord * pmr)
         status = recGblSetSevr((dbCommon *) pmr, COMM_ALARM,  INVALID_ALARM);
         return;
     }
-    else if ((msta.Bits.MCHB     != 0) || (msta.Bits.RA_POWERUP    != 0) ||
-             (msta.Bits.RA_STALL != 0) || (msta.Bits.EA_SLIP_STALL != 0)    )
+    else if ((msta.Bits.MCHB          != 0) || (msta.Bits.RA_POWERUP != 0) ||
+             (msta.Bits.EA_SLIP_STALL != 0) ||
+             (!msta.Bits.EA_SLIP && msta.Bits.RA_STALL)                       )
     {
         status = recGblSetSevr((dbCommon *) pmr, STATE_ALARM, MAJOR_ALARM  );
         return;
     }
-    else if (msta.Bits.ERRNO != 0)
+    else if ((msta.Bits.ERRNO != 0) ||
+             (msta.Bits.EA_SLIP && msta.Bits.RA_STALL))
     {
         status = recGblSetSevr((dbCommon *) pmr, STATE_ALARM, MINOR_ALARM  );
         return;
@@ -3751,7 +3772,7 @@ static void load_pos(motorRecord * pmr)
     pmr->mip = MIP_LOAD_P;
     MARK(M_MIP);
     pmr->pp = TRUE;
-    if (pmr->dmov == TRUE)
+    if (pmr->dmov == TRUE && (!pmr->set))
     {
         Debug(1, "set dmov to 0, location 20\n");
         pmr->dmov = FALSE;

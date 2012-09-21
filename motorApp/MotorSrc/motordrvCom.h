@@ -169,6 +169,7 @@ struct mess_info
     unsigned long p_time;	/* time when position was last checked */
     short         RA_DONE;	/* previous value of RA_DONE */
     unsigned long MCHB;		/* previous value of the MCode heart-beat */
+    unsigned int  stall_mode;	/* IMS only; stall detection mode */
     unsigned int  mcode_version;/* IMS only; MCode program version */
 };
 

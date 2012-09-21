@@ -148,8 +148,8 @@ typedef union
 	unsigned int ERRNO          :8; /* Error number */
 	unsigned int NA             :6; /* N/A bits */
 	unsigned int MCHB           :1; /* Missing MCode heart-beat */
-	unsigned int RA_POWERUP     :1; /* Power-cycled */
 	unsigned int RA_STALL       :1; /* Stall detected */
+	unsigned int RA_POWERUP     :1; /* Power-cycled */
 	unsigned int RA_HOMED       :1; /* Axis has been homed.*/
 	unsigned int RA_MINUS_LS    :1;	/* minus limit switch has been hit */
 	unsigned int CNTRL_COMM_ERR :1;	/* Controller communication error. */
@@ -160,7 +160,7 @@ typedef union
 	unsigned int EA_HOME        :1; /* encoder home signal on */
 	unsigned int EA_SLIP_STALL  :1; /* slip/stall detected */
 	unsigned int EA_POSITION    :1; /* position maintenence enabled */
-	unsigned int EA_SLIP        :1; /* encoder slip enabled */
+	unsigned int EA_SLIP        :1; /* continue on stall detect */
 	unsigned int RA_HOME        :1; /* The home signal is on */
 	unsigned int RA_PLUS_LS     :1; /* plus limit switch has been hit */
 	unsigned int RA_DONE        :1;	/* a motion is complete */
@@ -170,7 +170,7 @@ typedef union
 	unsigned int RA_DONE        :1;	/* a motion is complete */
 	unsigned int RA_PLUS_LS     :1; /* plus limit switch has been hit */
 	unsigned int RA_HOME        :1; /* The home signal is on */
-	unsigned int EA_SLIP        :1; /* encoder slip enabled */
+	unsigned int EA_SLIP        :1; /* continue on stall detect */
 	unsigned int EA_POSITION    :1; /* position maintenence enabled */
 	unsigned int EA_SLIP_STALL  :1; /* slip/stall detected */
 	unsigned int EA_HOME        :1; /* encoder home signal on */
@@ -181,8 +181,8 @@ typedef union
 	unsigned int CNTRL_COMM_ERR :1;	/* Controller communication error. */
 	unsigned int RA_MINUS_LS    :1;	/* minus limit switch has been hit */
 	unsigned int RA_HOMED       :1; /* Axis has been homed.*/
-	unsigned int RA_STALL       :1; /* Stall detected */
 	unsigned int RA_POWERUP     :1; /* Power-cycled */
+	unsigned int RA_STALL       :1; /* Stall detected */
 	unsigned int MCHB           :1; /* Missing MCode heart-beat */
 	unsigned int NA             :6; /* N/A bits */
 	unsigned int ERRNO          :8; /* error number */

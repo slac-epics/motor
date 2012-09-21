@@ -298,6 +298,36 @@ static int set_status(int card, int signal)
 
             plusdir = (status.Bits.RA_DIRECTION) ? true : false;
         }
+
+        /* check the stall flag */
+        retry = 0;
+        while(1)
+        {
+            send_mess(card, "PR \"ST=\",ST", MDrivePlus_axis[signal]);
+            rtn_state = recv_mess(card, buff, 1);
+            if (rtn_state > 0)
+                break;
+            else                                               /* no response */
+            {
+                recv_mess(card, buff, FLUSH);
+                if (retry++ > 3)
+                {
+                    Debug(0, "set_status(): MDrivePlus no response for ST for 3 tries, ERROR\n");
+                    cntrl->status = COMM_ERR;
+                    status.Bits.CNTRL_COMM_ERR = 1;
+                    status.Bits.RA_PROBLEM     = 1;
+                    rtn_state = 1;
+                    goto exit;
+                }
+
+                Debug(0, "set_status(): MDrivePlus no response for ST, retrying ...\n");
+                epicsThreadSleep(1.0);
+            }
+        }
+
+        scan_rtn = sscanf( buff, "ST=%d", &rtnval );
+        if ( (scan_rtn == 1) && ((rtnval == 0) || (rtnval == 1)) )
+            status.Bits.RA_STALL = rtnval;
     }
 
     /*
@@ -484,36 +514,6 @@ static int set_status(int card, int signal)
             }
         }
 
-        /* check the stall flag */
-        retry = 0;
-        while(1)
-        {
-            send_mess(card, "PR \"ST=\",ST", MDrivePlus_axis[signal]);
-            rtn_state = recv_mess(card, buff, 1);
-            if (rtn_state > 0)
-                break;
-            else                                               /* no response */
-            {
-                recv_mess(card, buff, FLUSH);
-                if (retry++ > 3)
-                {
-                    Debug(0, "set_status(): MDrivePlus no response for ST for 3 tries, ERROR\n");
-                    cntrl->status = COMM_ERR;
-                    status.Bits.CNTRL_COMM_ERR = 1;
-                    status.Bits.RA_PROBLEM     = 1;
-                    rtn_state = 1;
-                    goto exit;
-                }
-
-                Debug(0, "set_status(): MDrivePlus no response for ST, retrying ...\n");
-                epicsThreadSleep(1.0);
-            }
-        }
-
-        scan_rtn = sscanf( buff, "ST=%d", &rtnval );
-        if ( (scan_rtn == 1) && ((rtnval == 0) || (rtnval == 1)) )
-            status.Bits.RA_STALL = rtnval;
-
         /* check the power-cycle flag */
         retry = 0;
         while(1)
@@ -608,7 +608,7 @@ static int set_status(int card, int signal)
         if ( scan_rtn == 1 )
         {
             ecode = ecode & 0xFF;
-            if ( ( ecode == 83 ) || ( ecode == 84 ) || ( ecode == 86 ) )
+            if ( ( ecode == 83 ) || ( ecode == 84 ) )
                 status.Bits.ERRNO = 0;
             else
                 status.Bits.ERRNO = ecode;
@@ -621,7 +621,6 @@ static int set_status(int card, int signal)
     status.Bits.EA_POSITION = 0;
 
     /* encoder status */
-    status.Bits.EA_SLIP       = 0;
     status.Bits.EA_SLIP_STALL = 0;
     status.Bits.EA_HOME       = 0;
 
@@ -952,6 +951,24 @@ static int motor_init()
                  (confptr->minusLS == 0) ? m_label : p_label);
         }
 
+        /* Determine stall detection mode */
+        sprintf(buff, "PR \"SM=\",SM");
+        send_mess(card_index, buff, MDrivePlus_axis[motor_index]);
+        status = recv_mess(card_index, buff, 1);
+        if (status > 0)
+        {
+            status = sscanf( buff, "SM=%d", &rtnval );
+            if ( (status == 1) && (rtnval == 0 || rtnval ==1) )
+                motor_info->stall_mode = rtnval;
+            else
+                motor_info->stall_mode = 0;
+        }
+        else
+        {
+            errlogPrintf("Error reading stall detection mode\n");
+            motor_info->stall_mode = 0;
+        }
+
         // Test for MCode program version.
         sprintf(buff, "PR \"VE=\",VE");
         send_mess(card_index, buff, MDrivePlus_axis[motor_index]);
@@ -967,7 +984,7 @@ static int motor_init()
             errlogPrintf("Error reading MCode version.\n");
             motor_info->mcode_version = 0;
         }
-	
+
         set_status(card_index, motor_index);  /* Read status of each motor */
         }
     }
