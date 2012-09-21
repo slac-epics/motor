@@ -1032,8 +1032,15 @@ static void XPSPoller(XPSController *pController)
         
         anyMoving = 0;
         for (i=0; i<pController->numAxes; i++) {
+            if ( pController->pAxis == NULL )
+				break;
             pAxis = &pController->pAxis[i];
-            if (!pAxis->mutexId) break;
+            if ( pAxis == NULL )
+				continue;
+            if (!pAxis->mutexId)
+				continue;
+            if (!pAxis->pollSocket)
+				continue;
             epicsMutexLock(pAxis->mutexId);
             status = GroupStatusGet(pAxis->pollSocket, 
                                     pAxis->groupName, 
@@ -1234,18 +1241,17 @@ int XPSConfig(int card,           /* Controller number */
     }
 
     pController = &pXPSController[card];
-    pController->pAxis = (AXIS_HDL) calloc(numAxes, sizeof(motorAxis));
-    pController->numAxes = numAxes;
     pController->movingPollPeriod = movingPollPeriod/1000.;
     pController->idlePollPeriod = idlePollPeriod/1000.;
 
     pollSocket = TCP_ConnectToServer((char *)ip, port, TCP_TIMEOUT);
 
     if (pollSocket < 0) {
-        printf("XPSConfig: error calling TCP_ConnectToServer for pollSocket\n");
+        printf("XPSConfig: error connectig to %s for ctrlr %d\n", ip, card );
         return MOTOR_AXIS_ERROR;
     }
 
+    pController->pAxis = (AXIS_HDL) calloc(numAxes, sizeof(motorAxis));
     for (axis=0; axis<numAxes; axis++) {
         pAxis = &pController->pAxis[axis];
         pAxis->pController = pController;
@@ -1255,17 +1261,24 @@ int XPSConfig(int card,           /* Controller number */
         pAxis->ip = epicsStrDup(ip);
         pAxis->moveSocket = TCP_ConnectToServer((char *)ip, port, TCP_TIMEOUT);
         if (pAxis->moveSocket < 0) {
-            printf("XPSConfig: error calling TCP_ConnectToServer for move socket\n");
-            return MOTOR_AXIS_ERROR;
+            printf("XPSConfig: Error creating moveSocket for ctrlr %d axis %d\n", card, axis );
+            /*
+			 * Don't leave controller half initialized or it will crash.
+			 * return MOTOR_AXIS_ERROR;
+			 */
         }
-        /* Set the poll rate on the moveSocket to a negative number, which means that SendAndReceive should do only a write, no read */
-        TCP_SetTimeout(pAxis->moveSocket, -0.1);
+		else {
+			/* Set the poll rate on the moveSocket to a negative number,
+			 * which means that SendAndReceive should do only a write, no read */
+			TCP_SetTimeout(pAxis->moveSocket, -0.1);
+		}
         /* printf("XPSConfig: pollSocket=%d, moveSocket=%d, ip=%s, port=%d,"
          *     " axis=%d controller=%d\n",
          *     pAxis->pollSocket, pAxis->moveSocket, ip, port, axis, card);
          */
         pAxis->params = motorParam->create(0, MOTOR_AXIS_NUM_PARAMS + XPS_NUM_PARAMS);
     }
+    pController->numAxes = numAxes;
 
     FirmwareVersionGet(pollSocket, pController->firmwareVersion);
     
@@ -1302,11 +1315,19 @@ int XPSConfigAxis(int card,                   /* specify which controller 0-up*/
         return MOTOR_AXIS_ERROR;
     }
     pController = &pXPSController[card];
+    if ( pController->pAxis == NULL ) {
+        printf("XPSConfigAxis: Ctrlr %d axis table not initialized\n", card );
+        return MOTOR_AXIS_ERROR;
+	}
     if ((axis < 0) || (axis >= pController->numAxes)) {
         printf("XPSConfigAxis: axis must in range 0 to %d\n", pController->numAxes-1);
         return MOTOR_AXIS_ERROR;
     }
     pAxis = &pController->pAxis[axis];
+    if (pAxis == NULL) {
+        printf("XPSConfigAxis: Ctrlr %d Axis %d not initialized.\n", card, axis );
+        return MOTOR_AXIS_ERROR;
+    }
     index = strchr(positionerName, '.');
     if (index == NULL) {
         printf("XPSConfigAxis: positionerName must be of form group.positioner\n");
