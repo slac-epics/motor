@@ -340,7 +340,7 @@ static int set_status(int card, int signal)
         status.Bits.RA_HOME = 0;
         ls_active = false;
     }
-    else if (motor_info->RA_DONE == 1)
+    else
     {
         if (confptr->plusLS == 0)
             status.Bits.RA_PLUS_LS  = 0;

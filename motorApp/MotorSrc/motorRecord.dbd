@@ -848,5 +848,11 @@ recordtype(motor) {
                 special(SPC_MOD)
                 interest(1)
         }
+	field(OLDB,DBF_SHORT) {
+		prompt("Old Behavior")
+		promptgroup(GUI_COMMON)
+		special(SPC_MOD)
+		initial("1")
+	}
 }
 

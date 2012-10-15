@@ -663,7 +663,6 @@ static long init_record(dbCommon* arg, int pass)
     /* Initialize miscellaneous control fields. */
     Debug(1, "set dmov to 1 and movn to 0, location 1\n");
     pmr->dmov = TRUE;
-    MARK(M_DMOV);
     pmr->movn = FALSE;
     MARK(M_MOVN);
     pmr->lspg = pmr->spmg = motorSPMG_Go;
@@ -781,20 +780,21 @@ static long postProcess(motorRecord * pmr)
 
     if (pmr->mip & MIP_LOAD_P)
         pmr->mip = MIP_DONE;    /* We sent LOAD_POS, followed by GET_INFO. */
-    if ( (!msta.Bits.EA_SLIP) && msta.Bits.RA_STALL)
-        {
-            if (pmr->homf != 0)
-            {
-                pmr->homf = 0;
-                MARK_AUX(M_HOMF);
-            }
 
-            if (pmr->homr != 0)
-            {
-                pmr->homr = 0;
-                MARK_AUX(M_HOMR);
-            }
+    if ( (!msta.Bits.EA_SLIP) && msta.Bits.RA_STALL)
+    {
+        if (pmr->homf != 0)
+        {
+            pmr->homf = 0;
+            MARK_AUX(M_HOMF);
         }
+
+        if (pmr->homr != 0)
+        {
+            pmr->homr = 0;
+            MARK_AUX(M_HOMR);
+        }
+    }
     else if (pmr->mip & MIP_HOME)
     {
         /* Home command */
@@ -809,7 +809,6 @@ static long postProcess(motorRecord * pmr)
             pmr->mip &= ~MIP_STOP;
             Debug(1, "set dmov to 0, location 2\n");
             pmr->dmov = FALSE;
-            MARK(M_DMOV);
             pmr->rcnt = 0;
             MARK(M_RCNT);
             INIT_MSG();
@@ -827,21 +826,8 @@ static long postProcess(motorRecord * pmr)
             if (pmr->mres < 0.0)
                 pmr->cdir = !pmr->cdir;
         }
-/*	else if ( (!msta.Bits.EA_SLIP) && msta.Bits.RA_STALL)
-        {
-            if (pmr->homf != 0)
-            {
-                pmr->homf = 0;
-                MARK_AUX(M_HOMF);
-            }
-
-            if (pmr->homr != 0)
-            {
-                pmr->homr = 0;
-                MARK_AUX(M_HOMR);
-            }
-        } */
-        else if ( (msta.Bits.ERRNO > 79) && (msta.Bits.ERRNO < 83) )
+        else if ( msta.Bits.RA_STALL                                 ||
+                  ((msta.Bits.ERRNO > 79) && (msta.Bits.ERRNO < 83))    )
         {
             if (pmr->mip & MIP_HOMF)
             {
@@ -858,7 +844,7 @@ static long postProcess(motorRecord * pmr)
                 Debug(3, "post process: homeR failed\n");
             }
         }
-        else if ( msta.Bits.EA_SLIP || (!msta.Bits.RA_STALL) )
+        else if ( ! msta.Bits.RA_STALL )
         {
             if (pmr->mip & MIP_HOMF)
             {
@@ -897,7 +883,6 @@ static long postProcess(motorRecord * pmr)
             /* Restore DMOV to false and UNMARK it so it is not posted. */
             Debug(1, "set dmov to 0, location 3\n");
             pmr->dmov = FALSE;
-            UNMARK(M_DMOV);
 
             INIT_MSG();
 
@@ -965,7 +950,6 @@ static long postProcess(motorRecord * pmr)
         /* Restore DMOV to false and UNMARK it so it is not posted. */
         Debug(1, "set dmov to 0, location 4\n");
         pmr->dmov = FALSE;
-        UNMARK(M_DMOV);
 
         INIT_MSG();
 
@@ -1034,8 +1018,8 @@ static void maybeRetry(motorRecord * pmr)
                 /* Too many retries. */
                 /* pmr->spmg = motorSPMG_Pause; MARK(M_SPMG); */
                 pmr->mip = MIP_DONE;
-		if ((pmr->jogf && !pmr->hls) || (pmr->jogr && !pmr->lls))
-		   pmr->mip |= MIP_JOG_REQ;
+                if ((pmr->jogf && !pmr->hls) || (pmr->jogr && !pmr->lls))
+                    pmr->mip |= MIP_JOG_REQ;
 
                 pmr->lval = pmr->val;
                 pmr->ldvl = pmr->dval;
@@ -1051,7 +1035,6 @@ static void maybeRetry(motorRecord * pmr)
             {
 //              Debug(1, "maybeRetry: set dmov to 0, location 2\n");
 //              pmr->dmov = FALSE;
-//              MARK(M_DMOV);
                 pmr->mip = MIP_RETRY;
             }
             MARK(M_RCNT);
@@ -1085,8 +1068,6 @@ static void maybeRetry(motorRecord * pmr)
         }
     }
     MARK(M_MIP);
-
-    if (pmr->dmov != old_dmov) MARK(M_DMOV);
 }
 
 
@@ -1241,11 +1222,10 @@ static long process(dbCommon *arg)
     motorRecord *pmr = (motorRecord *) arg;
     long status = OK;
     CALLBACK_VALUE process_reason;
-    int old_lvio = pmr->lvio;
+    int old_lvio = pmr->lvio, old_dmov = pmr->dmov;
     unsigned int old_msta = pmr->msta;
     struct motor_dset *pdset = (struct motor_dset *) (pmr->dset);
     struct callback *pcallback = (struct callback *) pmr->cbak; /* v3.2 */
-    unsigned int old_mip = pmr->mip;
     msta_field msta;
 
     if (pmr->pact) return(OK);
@@ -1305,7 +1285,6 @@ static long process(dbCommon *arg)
             if (pmr->dmov) {
                 Debug(1, "set dmov to 0, location 6\n");
                 pmr->dmov = FALSE;
-                MARK(M_DMOV);
                 Debug(3, "pmr->mip: %d (%#.4x)\n", pmr->mip, pmr->mip);
                 pmr->mip |= MIP_EXTERNAL;
                 Debug(3, "pmr->mip |= MIP_EXTERNAL: %d (%#.4x)\n", pmr->mip, pmr->mip);
@@ -1344,13 +1323,10 @@ static long process(dbCommon *arg)
             {
                 Debug(1, "process: set dmov to 1, location 7\n");
                 pmr->dmov = TRUE;
-                MARK(M_DMOV);
-
-                goto process_exit;
             }
 
             if (pmr->mip != MIP_DONE &&
-                (pmr->rhls || pmr->rlls ||
+                (pmr->rhls || pmr->rlls || (pmr->mip & MIP_MOVE_BL) ||
                  (!msta.Bits.EA_SLIP && msta.Bits.RA_STALL)))
             {
                 pmr->mip = MIP_DONE;
@@ -1390,7 +1366,6 @@ static long process(dbCommon *arg)
                         /* Restore DMOV to false and UNMARK it so it is not posted. */
                         Debug(1, "set dmov to 0, location 9\n");
                         pmr->dmov = FALSE;
-                        UNMARK(M_DMOV);
                         goto process_exit;
                     }
                     else if (pmr->stup != motorSTUP_ON && pmr->mip != MIP_DONE)
@@ -1410,7 +1385,6 @@ static long process(dbCommon *arg)
                     /* Restore DMOV to false and UNMARK it so it is not posted. */
                     Debug(1, "set dmov to 0, location 10\n");
                     pmr->dmov = FALSE;
-                    UNMARK(M_DMOV);
                     goto process_exit;
                 }
             }
@@ -1446,8 +1420,7 @@ enter_do_work:
     /* Do we need to examine the record to figure out what work to perform? */
     if (pmr->stop || pmr->dmov ||
         (pmr->spmg == motorSPMG_Stop) || (pmr->spmg == motorSPMG_Pause) ||
-        ((process_reason != CALLBACK_DATA) && (! pmr->movn)) ||
-        ((! pmr->dmov) && (pmr->mip & MIP_RETRY)))
+        (process_reason != CALLBACK_DATA) || (pmr->mip & MIP_RETRY))
     {
         status = do_work(pmr, process_reason);
     }
@@ -1531,7 +1504,6 @@ enter_do_work:
 
         recGblFwdLink(pmr);     /* Process the forward-scan-link record. */
     }
-    if ( pmr->msta != old_msta ) MARK(M_MSTA);
 
 process_exit:
     if (process_reason == CALLBACK_DATA && pmr->stup == motorSTUP_BUSY)
@@ -1539,6 +1511,9 @@ process_exit:
         pmr->stup = motorSTUP_OFF;
         MARK_AUX(M_STUP);
     }
+
+    if ( pmr->dmov != old_dmov ) MARK(M_DMOV);
+    if ( pmr->msta != old_msta ) MARK(M_MSTA);
 
     /*** We're done.  Report the current state of the motor. ***/
     recGblGetTimeStamp(pmr);
@@ -1898,7 +1873,6 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                         MARK(M_MIP);
                         Debug(1, "set dmov to 1, location 11\n");
                         pmr->dmov = TRUE;
-                        MARK(M_DMOV);
                     }
                     /* Send message (just in case), but don't put MIP in STOP state. */
                     INIT_MSG();
@@ -2041,7 +2015,6 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             {
                 Debug(1, "set dmov to 0, location 12\n");
                 pmr->dmov = FALSE;
-                MARK(M_DMOV);
                 return(OK);
             }
             /* check for limit violation */
@@ -2108,7 +2081,6 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 
                 Debug(1, "set dmov to 0, location 13\n");
                 pmr->dmov = FALSE;
-                MARK(M_DMOV);
                 pmr->rcnt = 0;
                 MARK(M_RCNT);
                 pmr->cdir = (pmr->mip & MIP_HOMF) ? 1 : 0;
@@ -2154,7 +2126,6 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
 
                 Debug(1, "set dmov to 0, location 14\n");
                 pmr->dmov = FALSE;
-                MARK(M_DMOV);
                 pmr->pp = TRUE;
                 if (pmr->jogf)
                     pmr->cdir = 1;
@@ -2202,7 +2173,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
          */
         if (pmr->twf || pmr->twr)
         {
-            if (pmr->dmov) pmr->val += pmr->twv * (pmr->twf ? 1 : -1);
+            pmr->val += pmr->twv * (pmr->twf ? 1 : -1);
 
             /* Later, we'll act on this. */
             if (pmr->twf)
@@ -2262,7 +2233,6 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             MARK(M_MIP);
             Debug(1, "set dmov to 1, location 15\n");
             pmr->dmov = TRUE;
-            MARK(M_DMOV);
             return(OK);
         }
         else
@@ -2296,7 +2266,6 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
         {
             Debug(1, "set dmov to 1, location 16\n");
             pmr->dmov = TRUE;
-            MARK(M_DMOV);
         }
         return(OK);
     }
@@ -2370,7 +2339,6 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 {
                     Debug(1, "set dmov to 1, location 17\n");
                     pmr->dmov = TRUE;
-                    MARK(M_DMOV);
                     if (pmr->mip != MIP_DONE)
                     {
                         pmr->mip = MIP_DONE;
@@ -2437,7 +2405,6 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 {
                     Debug(1, "do_work: set dmov to 0, location 1\n");
                     pmr->dmov = FALSE;
-                    MARK(M_DMOV);
                 }
                 pmr->ldvl = pmr->dval;
                 pmr->lval = pmr->val;
@@ -2574,6 +2541,20 @@ static long special(DBADDR *paddr, int after)
     {
         switch (fieldIndex)
         {
+            case motorRecordVAL:
+            case motorRecordDVAL:
+            case motorRecordRVAL:
+            case motorRecordRLV:
+                if (pmr->disa == pmr->disv || pmr->disp)
+                    return(OK);
+                if (pmr->dmov == TRUE)
+                {
+                    Debug(1, "set dmov to 0, location 19\n");
+                    pmr->dmov = FALSE;
+                    db_post_events(pmr, &pmr->dmov, DBE_VAL_LOG);
+                }
+                return(OK);
+
             case motorRecordHOMF:
             case motorRecordHOMR:
                 if (pmr->mip & MIP_HOME)
@@ -2584,32 +2565,6 @@ static long special(DBADDR *paddr, int after)
                     return(ERROR);      /* Prevent record processing. */
         }
         return(OK);
-    }
-    else
-    {
-        switch (fieldIndex)
-        {
-            case motorRecordVAL:
-            case motorRecordDVAL:
-            case motorRecordRVAL:
-            case motorRecordRLV:
-                if ( pmr->dmov && (! pmr->disp) && (pmr->disa != pmr->disv) )
-                {
-                    if ( ! pmr->set )
-                    {
-                        Debug(1, "set dmov to 0, location 19\n");
-                        pmr->dmov = FALSE;
-                        db_post_events(pmr, &pmr->dmov, DBE_VAL_LOG);
-                    }
-                }
-                else         /* not done yet, or disabled, ignore new request */
-                {
-                    pmr->val = pmr->lval;
-                    db_post_events(pmr, &pmr->val,  DBE_VAL_LOG);
-                    return(OK);
-                }
-                break;
-        }
     }
 
     fabs_urev = fabs(pmr->urev);
@@ -3421,13 +3376,13 @@ static void alarm_sub(motorRecord * pmr)
     }
     else if ((msta.Bits.MCHB          != 0) || (msta.Bits.RA_POWERUP != 0) ||
              (msta.Bits.EA_SLIP_STALL != 0) ||
-             (!msta.Bits.EA_SLIP && msta.Bits.RA_STALL)                       )
+             (!msta.Bits.EA_SLIP && msta.Bits.RA_STALL && !pmr->oldb)         )
     {
         status = recGblSetSevr((dbCommon *) pmr, STATE_ALARM, MAJOR_ALARM  );
         return;
     }
-    else if ((msta.Bits.ERRNO != 0) ||
-             (msta.Bits.EA_SLIP && msta.Bits.RA_STALL))
+    else if (!pmr->oldb && ((msta.Bits.ERRNO != 0) ||
+                            (msta.Bits.EA_SLIP && msta.Bits.RA_STALL)))
     {
         status = recGblSetSevr((dbCommon *) pmr, STATE_ALARM, MINOR_ALARM  );
         return;
@@ -3776,7 +3731,6 @@ static void load_pos(motorRecord * pmr)
     {
         Debug(1, "set dmov to 0, location 20\n");
         pmr->dmov = FALSE;
-        MARK(M_DMOV);
     }
 
     /* Load pos. into motor controller.  Get new readback vals. */
