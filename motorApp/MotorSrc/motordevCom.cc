@@ -387,9 +387,7 @@ motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_table *t
 
     /* Dehong Zhang: initialize for limit switch and power cycle checking */
     motor_info = &((*tabptr->card_array)[card]->motor_info[signal]);
-    motor_info->p_time   = 0;
-    motor_info->RA_DONE  = 1;
-    motor_info->MCHB     = 0;
+    motor_info->MCHB = 0;
 
     msta.All = axis_query.status.All;                          /* status info */
     msta.Bits.EA_SLIP = motor_info->stall_mode;             /* stall mode bit */
@@ -553,7 +551,7 @@ static void motor_callback(struct mess_node * motor_return)
     ptrans->lock->signal();
 
     /* free the return data buffer */
-    (ptrans->tabptr->free) (motor_return, ptrans->tabptr);
+    (ptrans->tabptr->free) (motor_return->card, motor_return, ptrans->tabptr);
 
     dbScanLock((struct dbCommon *) mr);
     dbProcess((struct dbCommon *) mr);  /* Process the motor record. */
@@ -579,7 +577,7 @@ static void motor_init_callback(struct mess_node * motor_return)
     ptrans->status = motor_return->status;
 
     /* free the return data buffer */
-    (ptrans->tabptr->free) (motor_return, ptrans->tabptr);
+    (ptrans->tabptr->free) (motor_return->card, motor_return, ptrans->tabptr);
     ptrans->initSem->signal();
 
     /* load event for next transfer */

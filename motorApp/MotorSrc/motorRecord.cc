@@ -429,7 +429,7 @@ static void enforceMinRetryDeadband(motorRecord * pmr)
 {
     double min_rdbd;
 
-    min_rdbd = fabs(pmr->mres);
+    min_rdbd = pmr->res;
 
     if (pmr->rdbd < min_rdbd)
     {
@@ -631,12 +631,14 @@ static long init_record(dbCommon* arg, int pass)
      */
     (*pdset->update_values) (pmr);
 
-    pmr->res = pmr->mres;       /* After R4.5, RES is always = MRES. */
     if (pmr->eres == 0.0)
     {
         pmr->eres = pmr->mres;
         MARK(M_ERES);
     }
+
+    if (pmr->ueip) pmr->res = pmr->eres;
+    else           pmr->res = pmr->mres;
 
     process_motor_info(pmr, true);
 
@@ -648,28 +650,28 @@ static long init_record(dbCommon* arg, int pass)
      */
     if (pmr->omsl != menuOmslclosed_loop)
     {
-        pmr->val = pmr->rbv;
-        MARK(M_VAL);
+        pmr->val  = pmr->rbv;
         pmr->dval = pmr->drbv;
+        pmr->rval = NINT(pmr->dval / pmr->res);
+        MARK(M_VAL );
         MARK(M_DVAL);
-        pmr->rval = NINT(pmr->dval / pmr->mres);
         MARK(M_RVAL);
     }
 
     /* Reset limits in case database values are invalid. */
     set_dial_highlimit(pmr, pdset);
-    set_dial_lowlimit(pmr, pdset);
+    set_dial_lowlimit (pmr, pdset);
 
     /* Initialize miscellaneous control fields. */
     Debug(1, "set dmov to 1 and movn to 0, location 1\n");
     pmr->dmov = TRUE;
     pmr->movn = FALSE;
-    MARK(M_MOVN);
     pmr->lspg = pmr->spmg = motorSPMG_Go;
-    MARK(M_SPMG);
     pmr->diff = pmr->dval - pmr->drbv;
+    pmr->rdif = NINT(pmr->diff / pmr->res);
+    MARK(M_MOVN);
+    MARK(M_SPMG);
     MARK(M_DIFF);
-    pmr->rdif = NINT(pmr->diff / pmr->mres);
     MARK(M_RDIF);
     pmr->lval = pmr->val;
     pmr->ldvl = pmr->dval;
@@ -678,7 +680,8 @@ static long init_record(dbCommon* arg, int pass)
 
     if ((pmr->dhlm == pmr->dllm) && (pmr->dllm == 0.0))
         ;
-    else if ((pmr->drbv > pmr->dhlm + pmr->mres) || (pmr->drbv < pmr->dllm - pmr->mres))
+    else if ((pmr->drbv > pmr->dhlm + pmr->res) ||
+             (pmr->drbv < pmr->dllm - pmr->res)    )
     {
         pmr->lvio = 1;
         MARK(M_LVIO);
@@ -762,19 +765,19 @@ static long postProcess(motorRecord * pmr)
 #ifdef DMR_SOFTMOTOR_MODS
         /* Mark Rivers - make val and dval agree with rrbv, rather than rbv or
            drbv */
-        pmr->val = (pmr->rrbv * pmr->mres) * dir + pmr->off;
-        pmr->dval = pmr->rrbv * pmr->mres;
+        pmr->val  = pmr->rrbv * pmr->res * dir + pmr->off;
+        pmr->dval = pmr->rrbv * pmr->res;
 #else
-        pmr->val = pmr->rbv;
+        pmr->val  = pmr->rbv;
         pmr->dval = pmr->drbv;
 #endif
-        MARK(M_VAL);
-        MARK(M_DVAL);
-        pmr->rval = NINT(pmr->dval / pmr->mres);
-        MARK(M_RVAL);
+        pmr->rval = NINT(pmr->dval / pmr->res);
         pmr->diff = 0.;
-        MARK(M_DIFF);
         pmr->rdif = 0;
+        MARK(M_VAL );
+        MARK(M_DVAL);
+        MARK(M_RVAL);
+        MARK(M_DIFF);
         MARK(M_RDIF);
     }
 
@@ -801,10 +804,10 @@ static long postProcess(motorRecord * pmr)
         if (pmr->mip & MIP_STOP)
         {
             /* Stopped and Hom* button still down.  Now do Hom*. */
-            double vbase = pmr->hbas / fabs(pmr->mres);
-            double hpos = 0;
-            double hvel = pmr->hvel / fabs(pmr->mres);
-            double acc  = (hvel - vbase) / pmr->accl;
+            double vbase = pmr->hbas / pmr->res;
+            double hvel  = pmr->hvel / pmr->res;
+            double acc   = (hvel - vbase) / pmr->accl;
+            double hpos  = 0;
 
             pmr->mip &= ~MIP_STOP;
             Debug(1, "set dmov to 0, location 2\n");
@@ -813,7 +816,7 @@ static long postProcess(motorRecord * pmr)
             MARK(M_RCNT);
             INIT_MSG();
             WRITE_MSG(SET_VEL_BASE, &vbase);
-            WRITE_MSG(SET_VELOCITY, &hvel);
+            WRITE_MSG(SET_VELOCITY, &hvel );
             if (acc > 0.0)  /* Don't SET_ACCEL to zero. */
                 WRITE_MSG(SET_ACCEL, &acc);
 
@@ -821,12 +824,11 @@ static long postProcess(motorRecord * pmr)
             WRITE_MSG(GO, NULL);
             SEND_MSG();
 
-            pmr->pp = TRUE;
+            pmr->pp   = TRUE;
             pmr->cdir = (pmr->mip & MIP_HOMF) ? 1 : 0;
-            if (pmr->mres < 0.0)
-                pmr->cdir = !pmr->cdir;
+            if (pmr->mres < 0.0) pmr->cdir = !pmr->cdir;
         }
-        else if ( msta.Bits.RA_STALL                                 ||
+        else if ( (!msta.Bits.EA_SLIP && msta.Bits.RA_STALL) ||
                   ((msta.Bits.ERRNO > 79) && (msta.Bits.ERRNO < 83))    )
         {
             if (pmr->mip & MIP_HOMF)
@@ -844,7 +846,7 @@ static long postProcess(motorRecord * pmr)
                 Debug(3, "post process: homeR failed\n");
             }
         }
-        else if ( ! msta.Bits.RA_STALL )
+        else
         {
             if (pmr->mip & MIP_HOMF)
             {
@@ -868,17 +870,14 @@ static long postProcess(motorRecord * pmr)
     }
     else if (pmr->mip & MIP_JOG_STOP || pmr->mip & MIP_MOVE)
     {
-        if (fabs(pmr->bdst) >  fabs(pmr->mres))
+        if (fabs(pmr->bdst) > pmr->res)
         {
             /* First part of jog done. Do backlash correction. */
-            double vbase = pmr->vbas / fabs(pmr->mres);
-            double vel = pmr->velo / fabs(pmr->mres);
-            double bpos = (pmr->dval - pmr->bdst) / pmr->mres;
+            double vbase  = pmr->vbas / pmr->res;
+            double vel    = pmr->velo / pmr->res;
 
-            /* Use if encoder or ReadbackLink is in use. */
-            bool use_rel = (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip));
-            double relpos = pmr->diff / pmr->mres;
-            double relbpos = ((pmr->dval - pmr->bdst) - pmr->drbv) / pmr->mres;
+            double bpos   = (pmr->dval - pmr->bdst) / pmr->res;
+            double relpos = pmr->diff               / pmr->res;
 
             /* Restore DMOV to false and UNMARK it so it is not posted. */
             Debug(1, "set dmov to 0, location 3\n");
@@ -890,46 +889,35 @@ static long postProcess(motorRecord * pmr)
             {
                 double acc = (vel - vbase) / pmr->accl;
 
+                if (vel <= vbase) vel = vbase + 1;
                 WRITE_MSG(SET_VEL_BASE, &vbase);
-                if (vel <= vbase)
-                    vel = vbase + 1;
-                WRITE_MSG(SET_VELOCITY, &vel);
+                WRITE_MSG(SET_VELOCITY, &vel  );
                 if (acc > 0.0)  /* Don't SET_ACCEL if vel = vbase. */
                     WRITE_MSG(SET_ACCEL, &acc);
-                if (use_rel == true)
-                    WRITE_MSG(MOVE_REL, &relbpos);
-                else
-                    WRITE_MSG(MOVE_ABS, &bpos);
+
+                WRITE_MSG(MOVE_ABS, &bpos);
                 pmr->mip = MIP_JOG_BL1;
             }
             else
             {
-                double bvel = pmr->bvel / fabs(pmr->mres);
+                double bvel = pmr->bvel / pmr->res;
                 double bacc = (bvel - vbase) / pmr->bacc;
 
-                if (bvel <= vbase)
-                    bvel = vbase + 1;
+                if (bvel <= vbase) bvel = vbase + 1;
                 WRITE_MSG(SET_VELOCITY, &bvel);
                 if (bacc > 0.0) /* Don't SET_ACCEL if bvel = vbase. */
                     WRITE_MSG(SET_ACCEL, &bacc);
-                if (use_rel == true)
-                {
-                    relpos = (relpos - relbpos) * pmr->frac;
-                    WRITE_MSG(MOVE_REL, &relpos);
-                }
-                else
-                {
-                    double currpos = pmr->dval / pmr->mres;
-                    double newpos = bpos + pmr->frac * (currpos - bpos);
-                    pmr->rval = NINT(newpos);
-                    WRITE_MSG(MOVE_ABS, &newpos);
-                }
-                pmr->mip = MIP_MOVE_BL;
+
+                double currpos = pmr->dval / pmr->res;
+                double newpos  = bpos + pmr->frac * (currpos - bpos);
+                pmr->rval = NINT(newpos);
+                WRITE_MSG(MOVE_ABS, &newpos);
+                pmr->mip  = MIP_MOVE_BL;
             }
             WRITE_MSG(GO, NULL);
-            pmr->cdir = (relpos < 0.0) ? 0 : 1;
             SEND_MSG();
-            pmr->pp = TRUE;
+            pmr->cdir = (relpos < 0.0) ? 0 : 1;
+            pmr->pp   = TRUE;
         }
         pmr->mip &= ~MIP_JOG_STOP;
         pmr->mip &= ~MIP_MOVE;
@@ -937,15 +925,12 @@ static long postProcess(motorRecord * pmr)
     else if (pmr->mip & MIP_JOG_BL1)
     {
         /* First part of jog done. Do backlash correction. */
-        double bvel = pmr->bvel / fabs(pmr->mres);
-        double vbase = pmr->vbas / fabs(pmr->mres);
-        double bacc = (bvel - vbase) / pmr->bacc;
-        double bpos = (pmr->dval - pmr->bdst) / pmr->mres;
+        double bvel   = pmr->bvel / pmr->res;
+        double vbase  = pmr->vbas / pmr->res;
+        double bacc   = (bvel - vbase) / pmr->bacc;
 
-        /* Use if encoder or ReadbackLink is in use. */
-        bool use_rel = (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip));
-        double relpos = pmr->diff / pmr->mres;
-        double relbpos = ((pmr->dval - pmr->bdst) - pmr->drbv) / pmr->mres;
+        double bpos   = (pmr->dval - pmr->bdst) / pmr->res;
+        double relpos = pmr->diff / pmr->res;
 
         /* Restore DMOV to false and UNMARK it so it is not posted. */
         Debug(1, "set dmov to 0, location 4\n");
@@ -953,29 +938,21 @@ static long postProcess(motorRecord * pmr)
 
         INIT_MSG();
 
-        if (bvel <= vbase)
-            bvel = vbase + 1;
+        if (bvel <= vbase) bvel = vbase + 1;
         WRITE_MSG(SET_VELOCITY, &bvel);
         if (bacc > 0.0) /* Don't SET_ACCEL if bvel = vbase. */
             WRITE_MSG(SET_ACCEL, &bacc);
-        if (use_rel == true)
-        {
-            relpos = (relpos - relbpos) * pmr->frac;
-            WRITE_MSG(MOVE_REL, &relpos);
-        }
-        else
-        {
-            double currpos = pmr->dval / pmr->mres;
-            double newpos = bpos + pmr->frac * (currpos - bpos);
-            pmr->rval = NINT(newpos);
-            WRITE_MSG(MOVE_ABS, &newpos);
-        }
-        WRITE_MSG(GO, NULL);
-        pmr->cdir = (relpos < 0.0) ? 0 : 1;
-        SEND_MSG();
 
-        pmr->mip = MIP_JOG_BL2;
-        pmr->pp = TRUE;
+        double currpos = pmr->dval / pmr->res;
+        double newpos  = bpos + pmr->frac * (currpos - bpos);
+        pmr->rval = NINT(newpos);
+        WRITE_MSG(MOVE_ABS, &newpos);
+        WRITE_MSG(GO, NULL);
+        SEND_MSG();
+        pmr->cdir = (relpos < 0.0) ? 0 : 1;
+
+        pmr->mip  = MIP_JOG_BL2;
+        pmr->pp   = TRUE;
     }
     /* Save old values for next call. */
     pmr->msta = msta.All;
@@ -987,7 +964,6 @@ static long postProcess(motorRecord * pmr)
 
     return(OK);
 }
-
 
 /******************************************************************************
         maybeRetry()
@@ -1404,8 +1380,8 @@ enter_do_work:
         else if(pmr->mip & MIP_HOME)
             pmr->lvio = false;
         else
-            pmr->lvio = (pmr->drbv > pmr->dhlm + fabs(pmr->mres)) ||
-                        (pmr->drbv < pmr->dllm - fabs(pmr->mres));
+            pmr->lvio = (pmr->drbv > pmr->dhlm + pmr->res) ||
+                        (pmr->drbv < pmr->dllm - pmr->res);
     }
 
     if (pmr->lvio != old_lvio)
@@ -1888,16 +1864,15 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 else
                 {
                     pmr->val  = pmr->lval = pmr->rbv;
-                    MARK(M_VAL);
                     pmr->dval = pmr->ldvl = pmr->drbv;
+                    pmr->rval = pmr->lrvl = NINT(pmr->dval / pmr->res);
+                    MARK(M_VAL );
                     MARK(M_DVAL);
-                    pmr->rval = pmr->lrvl = NINT(pmr->dval / pmr->mres);
                     MARK(M_RVAL);
                 }
             }
             /* Cancel any operations. */
-            if (pmr->mip & MIP_HOME)
-                clear_buttons(pmr);
+            if (pmr->mip & MIP_HOME) clear_buttons(pmr);
             
             pmr->mip = MIP_STOP;
             MARK(M_MIP);
@@ -1937,8 +1912,8 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
         double ep_mp[2];
         long m;
 
-        if (MARKED(M_MRES))
-            pmr->res = pmr->mres;       /* After R4.5, RES is always = MRES. */
+        if (MARKED(M_MRES) && (! msta.Bits.EA_PRESENT))
+            pmr->res = pmr->mres;
 
         /* Set the encoder ratio.  Note this is blatantly device dependent. */
         if (msta.Bits.EA_PRESENT && pmr->ueip)
@@ -2064,14 +2039,14 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                     MARK(M_ERES);
                 }
 
-                vbase = pmr->hbas / fabs(pmr->mres);
-                hvel  = pmr->hvel / fabs(pmr->mres);
+                vbase = pmr->hbas / pmr->res;
+                hvel  = pmr->hvel / pmr->res;
                 acc   = (hvel - vbase) / pmr->accl;
-                hpos = 0;
+                hpos  = 0;
 
                 INIT_MSG();
                 WRITE_MSG(SET_VEL_BASE, &vbase);
-                WRITE_MSG(SET_VELOCITY, &hvel);
+                WRITE_MSG(SET_VELOCITY, &hvel );
                 if (acc > 0.0)  /* Don't SET_ACCEL to zero. */
                     WRITE_MSG(SET_ACCEL, &acc);
 
@@ -2082,11 +2057,10 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 Debug(1, "set dmov to 0, location 13\n");
                 pmr->dmov = FALSE;
                 pmr->rcnt = 0;
-                MARK(M_RCNT);
                 pmr->cdir = (pmr->mip & MIP_HOMF) ? 1 : 0;
+                if (pmr->mres < 0.0) pmr->cdir = !pmr->cdir;
                 Debug(3, "cdir is: %f\n", pmr->cdir);
-                if (pmr->mres < 0.0)
-                    pmr->cdir = !pmr->cdir;
+                MARK(M_RCNT);
             }
             return(OK);
         }
@@ -2120,13 +2094,13 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             }
             else
             {
-                double jogv = (pmr->jvel * dir) / pmr->mres;
-                double jacc = pmr->jar / fabs(pmr->mres);
-                double vbase = pmr->vbas / fabs(pmr->mres);
+                double jogv  = pmr->jvel * dir / pmr->res;
+                double jacc  = pmr->jar  / pmr->res;
+                double vbase = pmr->vbas / pmr->res;
 
                 Debug(1, "set dmov to 0, location 14\n");
                 pmr->dmov = FALSE;
-                pmr->pp = TRUE;
+                pmr->pp   = TRUE;
                 if (pmr->jogf)
                     pmr->cdir = 1;
                 else
@@ -2135,15 +2109,13 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                     jogv = -jogv;
                 }
 
-                if (pmr->mres < 0.0)
-                    pmr->cdir = !pmr->cdir;
-                if (dir == -1)
-                    pmr->cdir = !pmr->cdir;
+                if (pmr->mres < 0.0) pmr->cdir = !pmr->cdir;
+                if (dir == -1)       pmr->cdir = !pmr->cdir;
 
                 INIT_MSG();
                 WRITE_MSG(SET_VEL_BASE, &vbase);
-                WRITE_MSG(SET_ACCEL, &jacc);
-                WRITE_MSG(JOG, &jogv);
+                WRITE_MSG(SET_ACCEL,    &jacc );
+                WRITE_MSG(JOG,          &jogv );
                 SEND_MSG();
 
                 msta.Bits.RA_HOMED = 0;
@@ -2202,7 +2174,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
         }
         /* New raw value.  Propagate to .dval and act later. */
         if (pmr->rval != pmr->lrvl)
-            pmr->dval = pmr->rval * pmr->mres;  /* Later, we'll act on this. */
+            pmr->dval = pmr->rval * pmr->res;     /* Later, we'll act on this */
     }
 
     /*** Collect .dval (Dial value) changes from all sources. ***
@@ -2276,15 +2248,14 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
     /* IF DVAL field has changed, OR, NOT done moving. */
     if (pmr->dval != pmr->ldvl || !pmr->dmov)
     {
-        if (pmr->dval != pmr->ldvl)
-            MARK(M_DVAL);
         pmr->diff = pmr->dval - pmr->drbv;
+        pmr->rdif = NINT(pmr->diff / pmr->res);
+        if (pmr->dval != pmr->ldvl) MARK(M_DVAL);
         MARK(M_DIFF);
-        pmr->rdif = NINT(pmr->diff / pmr->mres);
         MARK(M_RDIF);
         if (set)
         {
-            if ((pmr->mip & MIP_LOAD_P) == 0) /* Test for LOAD_POS completion. */
+            if ((pmr->mip & MIP_LOAD_P) == 0) /* Test for LOAD_POS completion */
                 load_pos(pmr);
             /* device support will call us back when load is done. */
             return(OK);
@@ -2292,29 +2263,25 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
         else
         {
             /** Calc new raw position, and do a (backlash-corrected?) move. **/
-            double rbvpos = pmr->drbv / pmr->mres;      /* where motor is  */
-            double currpos = pmr->ldvl / pmr->mres;     /* where we are    */
-            double newpos = pmr->dval / pmr->mres;      /* where to go     */
-            double vbase = pmr->vbas / fabs(pmr->mres); /* base speed      */
-            double vel = pmr->velo / fabs(pmr->mres);   /* normal speed    */
-            double acc = (vel - vbase) / pmr->accl;     /* normal accel.   */
+            double vbase   = pmr->vbas / pmr->res;              /* base speed */
+            double vel     = pmr->velo / pmr->res;            /* normal speed */
+            double acc     = (vel - vbase) / pmr->accl;       /* normal accel */
+
+            double rbvpos  = pmr->drbv / pmr->res;          /* where motor is */
+            double currpos = pmr->ldvl / pmr->res;            /* where we are */
+            double newpos  = pmr->dval / pmr->res;             /* where to go */
             /*
              * 'bpos' is one backlash distance away from 'newpos'.
              */
-            double bpos = (pmr->dval - pmr->bdst) / pmr->mres;
-            double bvel = pmr->bvel / fabs(pmr->mres);  /* backlash speed  */
-            double bacc = (bvel - vbase) / pmr->bacc;   /* backlash accel. */
-            bool use_rel, preferred_dir;
-            double relpos = pmr->diff / pmr->mres;
-            double relbpos = ((pmr->dval - pmr->bdst) - pmr->drbv) / pmr->mres;
-            long rdbdpos = NINT(pmr->rdbd / fabs(pmr->mres)); /* retry deadband steps */
-            long rpos, npos;
+            double bvel = pmr->bvel / pmr->res;             /* backlash speed */
+            double bacc = (bvel - vbase) / pmr->bacc;       /* backlash accel */
+            double bpos = (pmr->dval - pmr->bdst) / pmr->res;
 
-            /*** Use if encoder or ReadbackLink is in use. ***/
-            if (pmr->rtry != 0 && (msta.Bits.EA_PRESENT && pmr->ueip))
-                use_rel = true;
-            else
-                use_rel = false;
+            bool   preferred_dir;
+            double relpos  = pmr->diff / pmr->res;
+            double relbpos = ((pmr->dval - pmr->bdst) - pmr->drbv) / pmr->res;
+            long rdbdpos = NINT(pmr->rdbd / fabs(pmr->res)); /* retry deadband steps */
+            long rpos, npos;
 
             /*
              * Post new values, recalc .val to reflect the change in .dval. (We
@@ -2322,12 +2289,10 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
              * .val, we're ok as we are, but if .dval was changed directly, we
              * must make .val agree.)
              */
-            pmr->val = pmr->dval * dir + pmr->off;
-            if (pmr->val != pmr->lval)
-                MARK(M_VAL);
-            pmr->rval = NINT(pmr->dval / pmr->mres);
-            if (pmr->rval != pmr->lrvl)
-                MARK(M_RVAL);
+            pmr->val  = pmr->dval * dir + pmr->off;
+            pmr->rval = NINT(pmr->dval / pmr->res);
+            if (pmr->val  != pmr->lval) MARK(M_VAL );
+            if (pmr->rval != pmr->lrvl) MARK(M_RVAL);
 
             /* Don't move if we're within retry deadband. */
 
@@ -2363,12 +2328,10 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 double factor = (pmr->rtry - pmr->rcnt + 1.0) / pmr->rtry;
                 
                 relpos *= factor;
-                if (fabs(relpos) < 1.0)
-                    relpos = (relpos > 0.0) ? 1.0 : -1.0;
+                if (fabs(relpos ) < 1.0) relpos  = (relpos  > 0.0) ? 1.0 : -1.0;
                 
                 relbpos *= factor;
-                if (fabs(relbpos) < 1.0)
-                    relbpos = (relbpos > 0.0) ? 1.0 : -1.0;
+                if (fabs(relbpos) < 1.0) relbpos = (relbpos > 0.0) ? 1.0 : -1.0;
             }
             else if (pmr->rmod == motorRMOD_G) /* Do geometric sequence retries. */
             {
@@ -2377,17 +2340,13 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 factor = 1 / pow(2.0, (pmr->rcnt - 1));
 
                 relpos *= factor;
-                if (fabs(relpos) < 1.0)
-                    relpos = (relpos > 0.0) ? 1.0 : -1.0;
+                if (fabs(relpos ) < 1.0) relpos  = (relpos  > 0.0) ? 1.0 : -1.0;
                 
                 relbpos *= factor;
-                if (fabs(relbpos) < 1.0)
-                    relbpos = (relbpos > 0.0) ? 1.0 : -1.0;
+                if (fabs(relbpos) < 1.0) relbpos = (relbpos > 0.0) ? 1.0 : -1.0;
             }
             
-
-            if (((use_rel == false) && ((pmr->dval > pmr->ldvl) == (pmr->bdst > 0))) ||
-                ((use_rel == true)  && ((pmr->diff > 0)         == (pmr->bdst > 0))))
+            if ( (pmr->dval > pmr->ldvl) == (pmr->bdst > 0) )
                 preferred_dir = true;
             else
                 preferred_dir = false;
@@ -2416,22 +2375,17 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                  * since move is in preferred direction (preferred_dir==ON),
                  * AND, backlash acceleration and velocity are the same as slew values
                  * (BVEL == VELO, AND, BACC == ACCL). */
-                if ((fabs(pmr->bdst) <  fabs(pmr->mres)) ||
+                if ((fabs(pmr->bdst) < pmr->res) ||
                     (preferred_dir == true && pmr->bvel == pmr->velo &&
                      pmr->bacc == pmr->accl))
                 {
                     velocity = vel;
-                    accel = acc;
-                    if (use_rel == true)
-                        position = relpos * pmr->frac;
-                    else
-                        position = currpos + pmr->frac * (newpos - currpos);
+                    accel    = acc;
+                    position = currpos + pmr->frac * (newpos - currpos);
                 }
                 /* Is current position within backlash or retry range? */
                 else if ((fabs(pmr->diff) < pmr->rdbd) ||
-                         (use_rel == true  && ((relbpos < 0) == (relpos > 0))) ||
-                         (use_rel == false && (((currpos + pmr->rdbd) > bpos) ==
-                                               (newpos > currpos))))
+                         (((currpos + pmr->rdbd) > bpos) == (newpos > currpos)))
                 {
 /******************************************************************************
  * Backlash correction imposes a much larger penalty on overshoot than on
@@ -2445,46 +2399,34 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
  * handled by the motor record.)
  *****************************************************************************/
                     velocity = bvel;
-                    accel = bacc;
-                    if (use_rel == true)
-                        position = relpos * pmr->frac;
-                    else
-                        position = currpos + pmr->frac * (newpos - currpos);
+                    accel    = bacc;
+                    position = currpos + pmr->frac * (newpos - currpos);
                 }
                 else
                 {
                     velocity = vel;
-                    accel = acc;
-                    if (use_rel == true)
-                        position = relbpos;
-                    else
-                        position = bpos;
-                    pmr->pp = TRUE;              /* do backlash from posprocess(). */
+                    accel    = acc;
+                    position = bpos;
+                    pmr->pp  = TRUE;        /* do backlash from postProcess() */
                 }
 
                 short old_movn = pmr->movn;
 
                 Debug(1, "do_work: set movn to 1, location 1\n");
                 pmr->movn = 1;
-
                 if (pmr->movn != old_movn) MARK(M_MOVN);
 
                 pmr->cdir = (pmr->rdif < 0.0) ? 0 : 1;
-                WRITE_MSG(SET_VEL_BASE, &vbase);
+                WRITE_MSG(SET_VEL_BASE, &vbase   );
                 WRITE_MSG(SET_VELOCITY, &velocity);
                 if (accel > 0.0)        /* Don't SET_ACCEL = 0.0 */
                     WRITE_MSG(SET_ACCEL, &accel);
-                if (use_rel == true)
-                    WRITE_MSG(MOVE_REL, &position);
-                else
-                {
-                    Debug(0, "do_work: \"%s\" move to %f\n", pmr->name, pmr->val);
-                    WRITE_MSG(MOVE_ABS, &position);
 
-                    msta.Bits.RA_HOMED = 0;
-                }
+                Debug(0, "do_work: \"%s\" move to %f\n", pmr->name, pmr->val);
+                WRITE_MSG(MOVE_ABS, &position);
                 WRITE_MSG(GO, NULL);
                 SEND_MSG();
+                msta.Bits.RA_HOMED = 0;
             }
         }
     }
@@ -2756,7 +2698,7 @@ static long special(DBADDR *paddr, int after)
             command = SET_LOW_LIMIT;
         }
 
-        tmp_raw = tmp_limit / pmr->mres;
+        tmp_raw = tmp_limit / pmr->res;
 
         INIT_MSG();
         rtnval = (*pdset->build_trans)(command, &tmp_raw, pmr);
@@ -2810,7 +2752,7 @@ static long special(DBADDR *paddr, int after)
             command = SET_HIGH_LIMIT;
         }
 
-        tmp_raw = tmp_limit / pmr->mres;
+        tmp_raw = tmp_limit / pmr->res;
 
         INIT_MSG();
         rtnval = (*pdset->build_trans)(command, &tmp_raw, pmr);
@@ -2886,6 +2828,8 @@ static long special(DBADDR *paddr, int after)
         }
 
 velcheckB:
+        if (! pmr->ueip) pmr->res = pmr->mres;
+
         if (pmr->velo != (temp_dbl = fabs_urev * pmr->s))
         {
             pmr->velo = temp_dbl;
@@ -2919,6 +2863,8 @@ velcheckB:
         {
             pmr->mres = pmr->urev / pmr->srev;
             MARK(M_MRES);
+
+            if (! pmr->ueip) pmr->res = pmr->mres;
         }
         break;
 
@@ -2927,6 +2873,8 @@ velcheckB:
         if (pmr->eres == 0.0)   /* Don't allow ERES = 0. */
             pmr->eres = pmr->mres;
         MARK(M_ERES);
+
+        if (pmr->ueip) pmr->res = pmr->eres;
         break;
 
         /* new ueip flag */
@@ -3039,14 +2987,13 @@ pidcof:
 
         if ((pmr->mip & MIP_JOGF) || (pmr->mip & MIP_JOGR))
         {
-            double jogv = (pmr->jvel * dir) / pmr->mres;
-            double jacc = pmr->jar / fabs(pmr->mres);
+            double jogv = pmr->jvel * dir / pmr->res;
+            double jacc = pmr->jar / pmr->res;
 
-            if (pmr->jogr)
-                jogv = -jogv;
+            if (pmr->jogr) jogv = -jogv;
 
             INIT_MSG();
-            WRITE_MSG(SET_ACCEL, &jacc);
+            WRITE_MSG(SET_ACCEL,    &jacc);
             WRITE_MSG(JOG_VELOCITY, &jogv);
             SEND_MSG();
         }
@@ -3221,13 +3168,13 @@ static long get_graphic_double(const DBADDR *paddr, struct dbr_grDouble * pgd)
     case motorRecordRRBV:
         if (pmr->mres >= 0)
         {
-            pgd->upper_disp_limit = pmr->dhlm / pmr->mres;
-            pgd->lower_disp_limit = pmr->dllm / pmr->mres;
+            pgd->upper_disp_limit = pmr->dhlm / pmr->res;
+            pgd->lower_disp_limit = pmr->dllm / pmr->res;
         }
         else
         {
-            pgd->upper_disp_limit = pmr->dllm / pmr->mres;
-            pgd->lower_disp_limit = pmr->dhlm / pmr->mres;
+            pgd->upper_disp_limit = pmr->dllm / pmr->res;
+            pgd->lower_disp_limit = pmr->dhlm / pmr->res;
         }
         break;
 
@@ -3272,13 +3219,13 @@ static long
     case motorRecordRRBV:
         if (pmr->mres >= 0)
         {
-            pcd->upper_ctrl_limit = pmr->dhlm / pmr->mres;
-            pcd->lower_ctrl_limit = pmr->dllm / pmr->mres;
+            pcd->upper_ctrl_limit = pmr->dhlm / pmr->res;
+            pcd->lower_ctrl_limit = pmr->dllm / pmr->res;
         }
         else
         {
-            pcd->upper_ctrl_limit = pmr->dllm / pmr->mres;
-            pcd->lower_ctrl_limit = pmr->dhlm / pmr->mres;
+            pcd->upper_ctrl_limit = pmr->dllm / pmr->res;
+            pcd->lower_ctrl_limit = pmr->dhlm / pmr->res;
         }
         break;
 
@@ -3359,10 +3306,11 @@ static void alarm_sub(motorRecord * pmr)
     msta.All  = pmr->msta;
 
     /* disable all dbPutFields during trimming or when problems */
-    /* if ( pmr->ttry > 0 )
+    if ( pmr->ttry > 0 )
         pmr->disp = 1;
-    else */
-        pmr->disp = msta.Bits.RA_PROBLEM | msta.Bits.CNTRL_COMM_ERR | msta.Bits.RA_POWERUP;
+    else
+        pmr->disp = msta.Bits.RA_PROBLEM | msta.Bits.CNTRL_COMM_ERR |
+                    msta.Bits.RA_POWERUP | (msta.Bits.EA_PRESENT != pmr->ueip);
 
     if (pmr->udf == TRUE)
     {
@@ -3374,7 +3322,8 @@ static void alarm_sub(motorRecord * pmr)
         status = recGblSetSevr((dbCommon *) pmr, COMM_ALARM,  INVALID_ALARM);
         return;
     }
-    else if ((msta.Bits.MCHB          != 0) || (msta.Bits.RA_POWERUP != 0) ||
+    else if ((msta.Bits.EA_PRESENT != pmr->ueip) ||
+             (msta.Bits.MCHB          != 0) || (msta.Bits.RA_POWERUP != 0) ||
              (msta.Bits.EA_SLIP_STALL != 0) ||
              (!msta.Bits.EA_SLIP && msta.Bits.RA_STALL && !pmr->oldb)         )
     {
@@ -3606,50 +3555,36 @@ static void post_MARKed_fields(motorRecord * pmr, unsigned short mask)
 static void process_motor_info(motorRecord * pmr, bool initcall)
 {
     double old_drbv = pmr->drbv;
-    double old_rbv = pmr->rbv;
-    long old_rrbv = pmr->rrbv;
-    short old_tdir = pmr->tdir;
-    short old_movn = pmr->movn;
-    short old_hls = pmr->hls;
-    short old_lls = pmr->lls;
-    short old_athm = pmr->athm;
-    int dir = (pmr->dir == motorDIR_Pos) ? 1 : -1;
-    bool ls_active;
+    double old_rbv  = pmr->rbv;
+    long   old_rrbv = pmr->rrbv;
+    short  old_tdir = pmr->tdir;
+    short  old_movn = pmr->movn;
+    short  old_hls  = pmr->hls;
+    short  old_lls  = pmr->lls;
+    short  old_athm = pmr->athm;
+    int    dir = (pmr->dir == motorDIR_Pos) ? 1 : -1;
+    bool   ls_active;
     msta_field msta;
 
-    /*** Process record fields. ***/
+    msta.All  = pmr->msta;
 
     /* Calculate raw and dial readback values. */
-    msta.All = pmr->msta;
-    if (msta.Bits.EA_PRESENT && pmr->ueip)
-    {
-        /* An encoder is present and the user wants us to use it. */
-        pmr->rrbv = pmr->rep;
-        pmr->drbv = pmr->rrbv * pmr->eres;
-    }
-    else
-    {
-        pmr->rrbv = pmr->rmp;
-        pmr->drbv = pmr->rrbv * pmr->mres;
-    }
+    pmr->rrbv = pmr->rmp;
+    pmr->drbv = pmr->rrbv * pmr->res;
 
     MARK(M_RMP);
     MARK(M_REP);
-    if (pmr->rrbv != old_rrbv)
-        MARK(M_RRBV);
-    if (pmr->drbv != old_drbv)
-        MARK(M_DRBV);
+    if (pmr->rrbv != old_rrbv) MARK(M_RRBV);
+    if (pmr->drbv != old_drbv) MARK(M_DRBV);
 
     /* Calculate user readback value. */
     pmr->rbv = dir * pmr->drbv + pmr->off;
-    if (pmr->rbv != old_rbv)
-        MARK(M_RBV);
+    if (pmr->rbv  != old_rbv ) MARK(M_RBV );
 
     /* Set most recent raw direction. */
     pmr->tdir = (msta.Bits.RA_DIRECTION) ? 1 : 0;
     Debug(3, "process_motor_info: dir = %i, tdir = %i\n", dir, pmr->tdir);
-    if (pmr->tdir != old_tdir)
-        MARK(M_TDIR);
+    if (pmr->tdir != old_tdir) MARK(M_TDIR);
 
     /* Get states of high, low limit switches. */
 /*  pmr->rhls = (msta.Bits.RA_PLUS_LS)  &&  pmr->cdir; */
@@ -3661,23 +3596,20 @@ static void process_motor_info(motorRecord * pmr, bool initcall)
     
     pmr->hls = ((pmr->dir == motorDIR_Pos) == (pmr->mres >= 0)) ? pmr->rhls : pmr->rlls;
     pmr->lls = ((pmr->dir == motorDIR_Pos) == (pmr->mres >= 0)) ? pmr->rlls : pmr->rhls;
-    if (pmr->hls != old_hls)
-        MARK(M_HLS);
-    if (pmr->lls != old_lls)
-        MARK(M_LLS);
+    if (pmr->hls != old_hls) MARK(M_HLS);
+    if (pmr->lls != old_lls) MARK(M_LLS);
 
     /* Get motor-now-moving indicator. */
     if (ls_active == true || msta.Bits.RA_DONE || msta.Bits.RA_PROBLEM)
     {
         Debug(1, "process_motor_info: set movn to 0, location 2\n");
         pmr->movn = 0;
-        if (ls_active == true)
-            clear_buttons(pmr);
+        if (ls_active == true) clear_buttons(pmr);
     }
     else
         pmr->movn = 1;
-    if (pmr->movn != old_movn)
-        MARK(M_MOVN);
+
+    if (pmr->movn != old_movn) MARK(M_MOVN);
     
     /* Get state of motor's or encoder's home switch. */
     if (msta.Bits.EA_PRESENT && pmr->ueip)
@@ -3685,12 +3617,11 @@ static void process_motor_info(motorRecord * pmr, bool initcall)
     else
         pmr->athm = (msta.Bits.RA_HOME) ? 1 : 0;
 
-    if (pmr->athm != old_athm)
-        MARK(M_ATHM);
+    if (pmr->athm != old_athm) MARK(M_ATHM);
 
     pmr->diff = pmr->dval - pmr->drbv;
+    pmr->rdif = NINT(pmr->diff / pmr->res);
     MARK(M_DIFF);
-    pmr->rdif = NINT(pmr->diff / pmr->mres);
     MARK(M_RDIF);
 }
 
@@ -3698,7 +3629,7 @@ static void process_motor_info(motorRecord * pmr, bool initcall)
 static void load_pos(motorRecord * pmr)
 {
     struct motor_dset *pdset = (struct motor_dset *) (pmr->dset);
-    double newpos = pmr->dval / pmr->mres;
+    double newpos = pmr->dval / pmr->res;
 
     pmr->ldvl = pmr->dval;
     pmr->lval = pmr->val;
@@ -3936,13 +3867,11 @@ static void set_dial_highlimit(motorRecord *pmr, struct motor_dset *pdset)
     motor_cmnd command;
     RTN_STATUS rtnval;
 
-    tmp_raw = pmr->dhlm / pmr->mres;
+    tmp_raw = pmr->dhlm / pmr->res;
     INIT_MSG();
-    if (pmr->mres < 0) {
-        command = SET_LOW_LIMIT;
-    } else {
-        command = SET_HIGH_LIMIT;
-    }
+    if (pmr->mres < 0) command = SET_LOW_LIMIT;
+    else               command = SET_HIGH_LIMIT;
+
     rtnval = (*pdset->build_trans)(command, &tmp_raw, pmr);
     offset = pmr->off;
     if (rtnval == OK)
@@ -3976,14 +3905,12 @@ static void set_dial_lowlimit(motorRecord *pmr, struct motor_dset *pdset)
     motor_cmnd command;
     RTN_STATUS rtnval;
 
-    tmp_raw = pmr->dllm / pmr->mres;
+    tmp_raw = pmr->dllm / pmr->res;
 
     INIT_MSG();
-    if (pmr->mres < 0) {
-        command = SET_HIGH_LIMIT;
-    } else {
-        command = SET_LOW_LIMIT;
-    }
+    if (pmr->mres < 0) command = SET_HIGH_LIMIT;
+    else               command = SET_LOW_LIMIT;
+
     rtnval = (*pdset->build_trans)(command, &tmp_raw, pmr);
     offset = pmr->off;
     if (rtnval == OK)

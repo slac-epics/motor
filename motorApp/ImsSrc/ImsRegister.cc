@@ -31,73 +31,31 @@ extern "C"
 {
 
 // Ims Setup arguments
-static const iocshArg setupArg0 = {"Max. controller count", iocshArgInt};
-static const iocshArg setupArg1 = {"Polling rate", iocshArgInt};
+static const iocshArg setupArg0  = {"Max. controller count", iocshArgInt   };
 // Ims Config arguments
-static const iocshArg configArg0 = {"Card being configured", iocshArgInt};
-static const iocshArg configArg1 = {"asyn port name", iocshArgString};
+static const iocshArg configArg0 = {"Asyn port name",        iocshArgString};
+static const iocshArg configArg1 = {"Polling rate",          iocshArgInt   };
 
-
-static const iocshArg * const IM483SetupArgs[2]  = {&setupArg0,  &setupArg1};
+static const iocshArg * const IM483SetupArgs [1] = {&setupArg0};
 static const iocshArg * const IM483ConfigArgs[2] = {&configArg0, &configArg1};
 
-static const iocshFuncDef setupIM483SM = {"IM483SMSetup", 2, IM483SetupArgs};
-static const iocshFuncDef setupIM483PL = {"IM483PLSetup", 2, IM483SetupArgs};
-static const iocshFuncDef setupMDrive  = {"MDriveSetup",  2, IM483SetupArgs};
-static const iocshFuncDef setupMDrivePlus  = {"MDrivePlusSetup",  2, IM483SetupArgs};
+static const iocshFuncDef setupMDrivePlus  = {"MDrivePlusSetup",  1, IM483SetupArgs };
+static const iocshFuncDef configMDrivePlus = {"MDrivePlusConfig", 2, IM483ConfigArgs};
 
-static const iocshFuncDef configIM483SM = {"IM483SMConfig", 2, IM483ConfigArgs};
-static const iocshFuncDef configIM483PL = {"IM483PLConfig", 2, IM483ConfigArgs};
-static const iocshFuncDef configMDrive  = {"MDriveConfig",  2, IM483ConfigArgs};
-static const iocshFuncDef configMDrivePlus  = {"MDrivePlusConfig",  2, IM483ConfigArgs};
-
-static void setupSMCallFunc(const iocshArgBuf *args)
-{
-    IM483SMSetup(args[0].ival, args[1].ival);
-}
-static void setupPLCallFunc(const iocshArgBuf *args)
-{
-    IM483PLSetup(args[0].ival, args[1].ival);
-}
-static void setupMDriveCallFunc(const iocshArgBuf *args)
-{
-    MDriveSetup(args[0].ival, args[1].ival);
-}
 static void setupMDrivePlusCallFunc(const iocshArgBuf *args)
 {
-    MDrivePlusSetup(args[0].ival, args[1].ival);
+    MDrivePlusSetup (args[0].ival);
 }
 
-
-static void configSMCallFunc(const iocshArgBuf *args)
-{
-    IM483SMConfig(args[0].ival, args[1].sval);
-}
-static void configPLCallFunc(const iocshArgBuf *args)
-{
-    IM483PLConfig(args[0].ival, args[1].sval);
-}
-static void configMDriveCallFunc(const iocshArgBuf *args)
-{
-    MDriveConfig(args[0].ival, args[1].sval);
-}
 static void configMDrivePlusCallFunc(const iocshArgBuf *args)
 {
-    MDrivePlusConfig(args[0].ival, args[1].sval);
+    MDrivePlusConfig(args[0].sval, args[1].ival);
 }
-
 
 static void IMSmotorRegister(void)
 {
-    iocshRegister(&setupIM483SM, setupSMCallFunc);
-    iocshRegister(&setupIM483PL, setupPLCallFunc);
-    iocshRegister(&setupMDrive,  setupMDriveCallFunc);
-    iocshRegister(&setupMDrivePlus,  setupMDrivePlusCallFunc);
-
-    iocshRegister(&configIM483SM, configSMCallFunc);
-    iocshRegister(&configIM483PL, configPLCallFunc);
-    iocshRegister(&configMDrive,  configMDriveCallFunc);
-    iocshRegister(&configMDrivePlus,  configMDrivePlusCallFunc);
+    iocshRegister(&setupMDrivePlus,  setupMDrivePlusCallFunc );
+    iocshRegister(&configMDrivePlus, configMDrivePlusCallFunc);
 }
 
 epicsExportRegistrar(IMSmotorRegister);

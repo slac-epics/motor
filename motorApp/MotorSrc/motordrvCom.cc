@@ -80,10 +80,10 @@ extern "C" {epicsExportAddress(int, motordrvComdebug);}
 
 
 /* Function declarations. */
-static double query_axis(int, struct driver_table *, epicsTime, double);
-static void process_messages(struct driver_table *, epicsTime, double);
-static struct mess_node *get_head_node(struct driver_table *);
-static struct mess_node *motor_malloc(struct circ_queue *, epicsEvent *);
+epicsShareFunc double query_axis(int, struct driver_table *, epicsTime, double);
+epicsShareFunc void   process_messages(int, struct driver_table *, epicsTime, double);
+epicsShareFunc struct mess_node *get_head_node(int, struct driver_table *);
+epicsShareFunc struct mess_node *motor_malloc(struct circ_queue *, epicsEvent *);
 
 
 /*
@@ -131,16 +131,19 @@ static struct mess_node *motor_malloc(struct circ_queue *, epicsEvent *);
 epicsShareFunc int motor_task(struct thread_args *args)
 {
     struct driver_table *tabptr;
+    struct controller   *brdptr;
     bool sem_ret;
     epicsTime previous_time, current_time;
     double scan_sec, wait_time, time_lapse, stale_data_max_delay, stale_data_delay = 0.0;
     const double quantum = epicsThreadSleepQuantum();
     double half_quantum;
-    int itera;
+    int card = args->card;
 
-    tabptr = args->table;    
     previous_time = epicsTime::getCurrent();
-    scan_sec = 1 / (double) args->motor_scan_rate;      /* Convert HZ to seconds. */
+
+    tabptr   = args->table;    
+    brdptr   = (*tabptr->card_array)[card];
+    scan_sec = 1 / (double) brdptr->scan_rate;       /* Convert HZ to seconds */
 
     if (args->update_delay == 0.0)
         stale_data_max_delay = 0.0;
@@ -153,7 +156,7 @@ epicsShareFunc int motor_task(struct thread_args *args)
 
     for(;;)
     {
-        if (*tabptr->any_inmotion_ptr == 0)
+        if (brdptr->motor_in_motion == 0)
             wait_time = 1000;   /* Wait forever = 1,000 seconds. */
         else if (stale_data_delay != 0)
         {
@@ -174,38 +177,32 @@ epicsShareFunc int motor_task(struct thread_args *args)
                 wait_time = 0.0;
         }
 
-        Debug(5, "motor_task: wait_time = %f\n", wait_time);
+        Debug(5, "motor_task: card %d, wait_time = %f\n", card, wait_time);
 
         if (wait_time != 0.0)
-            sem_ret = tabptr->semptr->wait(wait_time);
+            sem_ret = (*tabptr->semptr)[card]->wait(wait_time);
         previous_time = epicsTime::getCurrent();
 
-        if (*tabptr->any_inmotion_ptr)
+        if (brdptr->motor_in_motion)
         {
             if (tabptr->strtstat != NULL)
                 (*tabptr->strtstat) (ALL_CARDS);        /* Start data area update on motor cards */
 
-            for (itera = 0; itera < *tabptr->cardcnt_ptr; itera++)
-            {
-                struct controller *brdptr = (*tabptr->card_array)[itera];
-                if (brdptr != NULL && brdptr->motor_in_motion)
-                    stale_data_delay = query_axis(itera, tabptr, previous_time, stale_data_max_delay);
-            }
+            stale_data_delay = query_axis(card, tabptr, previous_time, stale_data_max_delay);
         }
-        process_messages(tabptr, previous_time, stale_data_max_delay);
+        process_messages(card, tabptr, previous_time, stale_data_max_delay);
     }
     return(0);
 }
 
-
-static double query_axis(int card, struct driver_table *tabptr, epicsTime tick,
-                         double max_delay)
+epicsShareFunc double query_axis(int card, struct driver_table *tabptr,
+                                 epicsTime tick, double max_delay)
 {
     struct controller *brdptr;
     double rtndelay = 0.0;
     int index;
 
-    Debug(5, "query_axis: enter\n");
+    Debug(5, "query_axis: card %d, enter\n", card);
 
     brdptr = (*tabptr->card_array)[card];
 
@@ -240,7 +237,8 @@ static double query_axis(int card, struct driver_table *tabptr, epicsTime tick,
                 motor_motion->velocity = motor_info->velocity;
                 motor_motion->status = motor_info->status;
 
-                mess_ret = (struct mess_node *) motor_malloc(tabptr->freeptr, tabptr->freelockptr);
+                mess_ret = (struct mess_node *) motor_malloc((*tabptr->freeptr)[card], (*tabptr->freelockptr)[card]);
+                mess_ret->card     = card;
                 mess_ret->callback = motor_motion->callback;
                 mess_ret->mrecord = motor_motion->mrecord;
                 mess_ret->position = motor_motion->position;
@@ -272,44 +270,35 @@ static double query_axis(int card, struct driver_table *tabptr, epicsTime tick,
                     brdptr->motor_in_motion--;
                     if ( brdptr->motor_in_motion == 0 )
                     {
-                        motor_free(motor_motion, tabptr);
+                        motor_free(card, motor_motion, tabptr);
                         motor_motion = (struct mess_node *) NULL;
                         motor_info->motor_motion = (struct mess_node *) NULL;
                     }
                 }
 
                 callbackRequest(&mess_ret->callback);
-
-                if (brdptr->motor_in_motion == 0)
-                {
-                    SET_MM_OFF(*tabptr->any_inmotion_ptr, card);
-                }
             }
         }
     }
-    Debug(5, "query_axis: exit\n");
+    Debug(5, "query_axis: card %d, exit\n", card);
     return(rtndelay);
 }
 
-
-static void process_messages(struct driver_table *tabptr, epicsTime tick,
-                             double max_delay)
+epicsShareFunc void process_messages(int card, struct driver_table *tabptr,
+                                     epicsTime tick, double max_delay)
 {
     struct mess_node *node, *motor_motion;
     double delay;
 
-    Debug(5, "process_messages: entry\n");
+    Debug(5, "process_messages: card %d, entry\n", card);
 
-    while ((node = get_head_node(tabptr)))
+    while ((node = get_head_node(card, tabptr)))
     {
-        int card, axis;
+        int axis;
 
-        card = node->card;
         axis = node->signal;
 
-        if ((card >= 0 && card < *tabptr->cardcnt_ptr) &&
-            (*tabptr->card_array)[card] &&
-            (axis >= 0 && axis < (*tabptr->card_array)[card]->total_axis))
+        if (axis >= 0 && axis < (*tabptr->card_array)[card]->total_axis)
         {
             struct mess_info *motor_info;
             struct controller *brdptr;
@@ -348,9 +337,8 @@ static void process_messages(struct driver_table *tabptr, epicsTime tick,
                 if (!motor_motion)      /* if NULL */
                     (*tabptr->card_array)[card]->motor_in_motion++;
                 else
-                    motor_free(motor_motion, tabptr);
+                    motor_free(card, motor_motion, tabptr);
 
-                SET_MM_ON(*tabptr->any_inmotion_ptr, card);
                 motor_info->motor_motion = node;
                 motor_info->status_delay = tick;
                 break;
@@ -364,9 +352,8 @@ static void process_messages(struct driver_table *tabptr, epicsTime tick,
                 if (!motor_motion)      /* if NULL */
                     (*tabptr->card_array)[card]->motor_in_motion++;
                 else
-                    motor_free(motor_motion, tabptr);
+                    motor_free(card, motor_motion, tabptr);
 
-                SET_MM_ON(*tabptr->any_inmotion_ptr, card);
                 motor_info->no_motion_count = 0;
                 motor_info->motor_motion = node;
                 motor_info->status_delay = tick;
@@ -410,14 +397,14 @@ static void process_messages(struct driver_table *tabptr, epicsTime tick,
                 (*tabptr->sendmsg) (card, node->message, axis_name);
                 if (brdptr->cmnd_response == true)
                     (*tabptr->getmsg) (card, inbuf, 1);
-                motor_free(node, tabptr);       /* free message buffer */
+                motor_free(card, node, tabptr);       /* free message buffer */
                 break;
 
             default:
                 (*tabptr->sendmsg) (card, node->message, axis_name);
                 if (brdptr->cmnd_response == true)
                     (*tabptr->getmsg) (card, inbuf, 1);
-                motor_free(node, tabptr);       /* free message buffer */
+                motor_free(card, node, tabptr);       /* free message buffer */
                 motor_info->status_delay = tick;
                 break;
             }
@@ -432,7 +419,7 @@ static void process_messages(struct driver_table *tabptr, epicsTime tick,
             callbackRequest((CALLBACK *) node);
         }
     }
-    Debug(5, "process_messages: exit\n");
+    Debug(5, "process_messages: card %d, exit\n", card);
 }
 
 
@@ -440,13 +427,14 @@ static void process_messages(struct driver_table *tabptr, epicsTime tick,
 /* Get a message off the queue */
 /* get_head_node()                           */
 /*****************************************************/
-static struct mess_node *get_head_node(struct driver_table *tabptr)
+epicsShareFunc struct mess_node *get_head_node(int card,
+                                               struct driver_table *tabptr)
 {
     struct circ_queue *qptr;
     struct mess_node *node;
 
-    tabptr->quelockptr->wait();
-    qptr = tabptr->queptr;
+    (*tabptr->quelockptr)[card]->wait();
+    qptr = (*tabptr->queptr)[card];
     node = qptr->head;
 
     /* delete node from list */
@@ -458,7 +446,7 @@ static struct mess_node *get_head_node(struct driver_table *tabptr)
             qptr->tail = NULL;
     }
 
-    tabptr->quelockptr->signal();
+    (*tabptr->quelockptr)[card]->signal();
 
     return (node);
 }
@@ -481,7 +469,8 @@ epicsShareFunc RTN_STATUS motor_send(struct mess_node *u_msg, struct driver_tabl
     struct mess_node *new_message;
     struct circ_queue *qptr;
 
-    new_message = motor_malloc(tabptr->freeptr, tabptr->freelockptr);
+    new_message = motor_malloc((*tabptr->freeptr)[u_msg->card],
+                               (*tabptr->freelockptr)[u_msg->card]);
     new_message->callback = u_msg->callback;
     new_message->next = (struct mess_node *) NULL;
     new_message->type = u_msg->type;
@@ -509,9 +498,9 @@ epicsShareFunc RTN_STATUS motor_send(struct mess_node *u_msg, struct driver_tabl
     }
 
     /* Lock queue */
-    tabptr->quelockptr->wait();
+    (*tabptr->quelockptr)[u_msg->card]->wait();
 
-    qptr = tabptr->queptr;
+    qptr = (*tabptr->queptr)[u_msg->card];
     if (qptr->tail)
     {
         qptr->tail->next = new_message;
@@ -525,13 +514,14 @@ epicsShareFunc RTN_STATUS motor_send(struct mess_node *u_msg, struct driver_tabl
 
 
     /* Unlock message queue */
-    tabptr->quelockptr->signal();
+    (*tabptr->quelockptr)[u_msg->card]->signal();
 
-    tabptr->semptr->signal();
+    (*tabptr->semptr)[u_msg->card]->signal();
     return (OK);
 }
 
-static struct mess_node *motor_malloc(struct circ_queue *freelistptr, epicsEvent *lockptr)
+epicsShareFunc struct mess_node *motor_malloc(struct circ_queue *freelistptr,
+                                              epicsEvent *lockptr)
 {
     struct mess_node *node;
 
@@ -552,13 +542,13 @@ static struct mess_node *motor_malloc(struct circ_queue *freelistptr, epicsEvent
     return (node);
 }
 
-epicsShareFunc int motor_free(struct mess_node * node, struct driver_table *tabptr)
+epicsShareFunc int motor_free(int card, struct mess_node * node, struct driver_table *tabptr)
 {
     struct circ_queue *freelistptr;
     
-    freelistptr = tabptr->freeptr;
+    freelistptr = (*tabptr->freeptr)[card];
 
-    tabptr->freelockptr->wait();
+    (*tabptr->freelockptr)[card]->wait();
 
     node->next = (struct mess_node *) NULL;
 
@@ -573,7 +563,7 @@ epicsShareFunc int motor_free(struct mess_node * node, struct driver_table *tabp
         freelistptr->tail = node;
     }
 
-    tabptr->freelockptr->signal();
+    (*tabptr->freelockptr)[card]->signal();
 
     return (0);
 }

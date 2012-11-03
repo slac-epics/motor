@@ -70,17 +70,11 @@ struct IM483controller
 };
 
 /* Function prototypes. */
-extern RTN_STATUS IM483SMSetup(int, int);
-extern RTN_STATUS IM483PLSetup(int, int);
-extern RTN_STATUS MDriveSetup(int, int);
-extern RTN_STATUS IM483SMConfig(int, const char *);
-extern RTN_STATUS IM483PLConfig(int, const char *);
-extern RTN_STATUS MDriveConfig(int, const char *);
 #ifdef __cplusplus
 extern "C" {
 #endif
-extern RTN_STATUS MDrivePlusSetup(int, int);
-extern RTN_STATUS MDrivePlusConfig(int, const char *);
+extern RTN_STATUS MDrivePlusSetup(int);
+extern RTN_STATUS MDrivePlusConfig(const char *, int);
 #ifdef __cplusplus
 }
 #endif

@@ -293,8 +293,7 @@ recordtype(motor) {
 	field(UEIP,DBF_MENU) {
 		prompt("Use Encoder If Present")
 		promptgroup(GUI_COMMON)
-		special(SPC_MOD)
-		pp(TRUE)
+		special(SPC_NOMOD)
 		interest(1)
 		menu(motorUEIP)
 	}

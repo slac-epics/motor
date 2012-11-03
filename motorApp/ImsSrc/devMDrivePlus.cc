@@ -15,12 +15,12 @@
 extern struct driver_table MDrivePlus_access;
 
 /* ----------------Create the dsets for devMDrivePlus----------------- */
-STATIC struct driver_table *drvtabptr;
-STATIC long MDrivePlus_init(void *);
-STATIC long MDrivePlus_init_record(void *);
-STATIC long MDrivePlus_start_trans(struct motorRecord *);
-STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd, double *, struct motorRecord *);
-STATIC RTN_STATUS MDrivePlus_end_trans(struct motorRecord *);
+struct driver_table *drvtabptr;
+epicsShareFunc long MDrivePlus_init(void *);
+epicsShareFunc long MDrivePlus_init_record(void *);
+epicsShareFunc long MDrivePlus_start_trans(struct motorRecord *);
+epicsShareFunc RTN_STATUS MDrivePlus_build_trans(motor_cmnd, double *, struct motorRecord *);
+epicsShareFunc RTN_STATUS MDrivePlus_end_trans(struct motorRecord *);
 
 struct motor_dset devMDrivePlus =
 {
@@ -79,12 +79,12 @@ static struct board_stat **MDrivePlus_cards;
 
 
 /* initialize device support for MDrivePlus stepper motor */
-STATIC long MDrivePlus_init(void *arg)
+epicsShareFunc long MDrivePlus_init(void *arg)
 {
     long rtnval;
     int after = (arg == 0) ? 0 : 1;
 
-    printf( "** devMDrivePlus is @ 0x%p.\n", &devMDrivePlus );
+    printf( "** devMDrivePlus is @ %p, after = %d\n", &devMDrivePlus, after );
 
     if (after == 0)
     {
@@ -92,8 +92,11 @@ STATIC long MDrivePlus_init(void *arg)
     // Call the driver's initialization routine.
     (drvtabptr->init)();
     }
+    printf( "** devMDrivePlus is @ %p, after = %d\n", &devMDrivePlus, after );
+    printf( "** devMDrivePlus is @ %p, after = %d\n", &devMDrivePlus, after );
 
     rtnval = motor_init_com(after, *drvtabptr->cardcnt_ptr, drvtabptr, &MDrivePlus_cards);
+    printf( "** devMDrivePlus is @ %p, after = %d\n", &devMDrivePlus, after );
     return(rtnval);
 }
 
@@ -103,7 +106,7 @@ STATIC long MDrivePlus_init(void *arg)
 // }
 
 /* initialize a record instance */
-STATIC long MDrivePlus_init_record(void *arg)
+epicsShareFunc long MDrivePlus_init_record(void *arg)
 {
   long ret;
     struct motorRecord *mr = (struct motorRecord *) arg;
@@ -117,21 +120,21 @@ STATIC long MDrivePlus_init_record(void *arg)
 
 
 /* start building a transaction */
-STATIC long MDrivePlus_start_trans(struct motorRecord *mr)
+epicsShareFunc long MDrivePlus_start_trans(struct motorRecord *mr)
 {
     return(OK);
 }
 
 
 /* end building a transaction */
-STATIC RTN_STATUS MDrivePlus_end_trans(struct motorRecord *mr)
+epicsShareFunc RTN_STATUS MDrivePlus_end_trans(struct motorRecord *mr)
 {
     return(OK);
 }
 
 
 /* add a part to the transaction */
-STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, struct motorRecord *mr)
+epicsShareFunc RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, struct motorRecord *mr)
 {
     struct motor_trans *trans = (struct motor_trans *) mr->dpvt;
     struct mess_node *motor_call;
@@ -203,9 +206,6 @@ STATIC RTN_STATUS MDrivePlus_build_trans(motor_cmnd command, double *parms, stru
     switch (command)
     {
     case MOVE_ABS:
-        motor_info->p_time  = time(NULL);
-        motor_info->RA_DONE = 0;
-
         sprintf(buff, "MA %d", intval);
         break;
     

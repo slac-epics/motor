@@ -36,14 +36,13 @@ Last Modified:	2002/10/31 20:46:17
 #include <epicsEvent.h>
 
 /* --- Local data common to each driver. --- */
-static struct controller **motor_state;
 static int total_cards;
-static int any_motor_in_motion;
-static struct circ_queue mess_queue;	/* in message queue head */
-static epicsEvent queue_lock(epicsEventFull);
-static struct circ_queue free_list;
-static epicsEvent freelist_lock(epicsEventFull);
-static epicsEvent motor_sem(epicsEventEmpty);
-static bool initialized = false;	/* Driver initialized indicator. */
+static struct controller **motor_state;
+static struct circ_queue **mess_queue;               /* in message queue head */
+static struct circ_queue **free_list;
+static epicsEvent **queue_lock;
+static epicsEvent **freelist_lock;
+static epicsEvent **motor_sem;
+static bool* initialized;                     /* Driver initialized indicator */
 
 #endif	/* INCmotordrvComCode */

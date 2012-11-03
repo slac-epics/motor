@@ -92,10 +92,6 @@ enum msg_types {
 };
 
 
-/* Macros used to set/clear bits in any_motor_in_motion variable. */
-#define SET_MM_ON(v,a)  v|=(1<<a)
-#define SET_MM_OFF(v,a) v&=~(1<<a)
-
 /* Misc. defines. */
 #define ALL_CARDS -1
 
@@ -166,8 +162,6 @@ struct mess_info
     int pid_present;		/* PID control indicator for VME58 (YES/NO). */
     double high_limit;		/* MM4000 only; Controller's high travel limit. */
     double low_limit;		/* MM4000 only; Controller's low travel limit. */
-    unsigned long p_time;	/* time when position was last checked */
-    short         RA_DONE;	/* previous value of RA_DONE */
     unsigned long MCHB;		/* previous value of the MCode heart-beat */
     unsigned int  stall_mode;	/* IMS only; stall detection mode */
     unsigned int  mcode_version;/* IMS only; MCode program version */
@@ -183,6 +177,7 @@ struct controller	/* Controller board information. */
 	    * to VELOCITY, MOTION and MOVE_TERM type commands. */
     void *DevicePrivate; /* Pointer to device specific structure. */
     struct mess_info motor_info[MAX_AXIS];
+    int  scan_rate;
 };
 
 /* The "driver_table" structure allows device level access to driver level
@@ -193,17 +188,16 @@ struct driver_table
 {
     int (*init) (void);
     RTN_STATUS (*send) (struct mess_node *, struct driver_table *);
-    int (*free) (struct mess_node *, struct driver_table *);
+    int (*free) (int, struct mess_node *, struct driver_table *);
     int (*get_card_info) (int, MOTOR_CARD_QUERY *, struct driver_table *);
     int (*get_axis_info) (int, int, MOTOR_AXIS_QUERY *, struct driver_table *);
-    struct circ_queue *queptr;
-    epicsEvent *quelockptr;
-    struct circ_queue *freeptr;
-    epicsEvent *freelockptr;
-    epicsEvent *semptr;
+    struct circ_queue ***queptr;
+    epicsEvent ***quelockptr;
+    struct circ_queue ***freeptr;
+    epicsEvent ***freelockptr;
+    epicsEvent ***semptr;
     struct controller ***card_array;
     int *cardcnt_ptr;
-    int *any_inmotion_ptr;
     RTN_STATUS (*sendmsg) (int, char const *, char *);
     int (*getmsg) (int, char *, int);
     int (*setstat) (int, int);
@@ -216,7 +210,7 @@ struct driver_table
 
 struct thread_args
 {
-    int motor_scan_rate; /* Poll rate in HZ. */
+    int card;
     struct driver_table *table;
     double update_delay; /* Some controllers (OMS VME58) require a delay
     between a move command and a status update to prevent "stale" data.  A
@@ -227,7 +221,7 @@ struct thread_args
 /* Function prototypes. */
 
 epicsShareFunc RTN_STATUS motor_send(struct mess_node *, struct driver_table *);
-epicsShareFunc int motor_free(struct mess_node *, struct driver_table *);
+epicsShareFunc int motor_free(int, struct mess_node *, struct driver_table *);
 epicsShareFunc int motor_card_info(int, MOTOR_CARD_QUERY *, struct driver_table *);
 epicsShareFunc int motor_axis_info(int, int, MOTOR_AXIS_QUERY *, struct driver_table *);
 epicsShareFunc int motor_task(struct thread_args *);
