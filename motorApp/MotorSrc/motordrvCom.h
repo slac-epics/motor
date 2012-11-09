@@ -57,7 +57,7 @@ Last Modified:	2008/03/14 20:41:02
 #include "motor.h"
 
 #define MAX_IDENT_LEN 100
-#define MAX_TIMEOUT   5.0 /* Maximum communication timeout for all devices
+#define MAX_TIMEOUT    30 /* Maximum communication timeout for all devices
 			   drivers (in sec.). */
 
 /* Controller communication port type, followed by status. */

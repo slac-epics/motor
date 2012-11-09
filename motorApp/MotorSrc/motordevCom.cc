@@ -372,6 +372,7 @@ motor_init_record_com(struct motorRecord *mr, int brdcnt, struct driver_table *t
             recGblRecordError(S_dev_NoInit, (void *) mr,
                 (char *) "dev_NoInit (init_record_com: callback2 timeout");
         delete(ptrans->initSem);
+        ptrans->initSem = NULL;
 
         /* Restore regular record callback */
         callbackSetCallback((void (*)(struct callbackPvt *)) motor_callback,
@@ -578,7 +579,7 @@ static void motor_init_callback(struct mess_node * motor_return)
 
     /* free the return data buffer */
     (ptrans->tabptr->free) (motor_return->card, motor_return, ptrans->tabptr);
-    ptrans->initSem->signal();
+    if (ptrans->initSem) ptrans->initSem->signal();
 
     /* load event for next transfer */
     ptrans->lock->signal();
