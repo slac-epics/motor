@@ -126,7 +126,7 @@ Last Modified:  2009/06/22 18:06:37
  *                  - Prevent redundant DMOV postings when using DLY field.
  */                                                        
 
-#define VERSION 6.44
+#define VERSION 7.0
 
 #include    <stdlib.h>
 #include    <string.h>
