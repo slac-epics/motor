@@ -543,7 +543,7 @@ static long init_record(dbCommon* arg, int pass)
     }
 
     // Check if IMS motor and desired MCode version is loaded
-    if ( pmr->ims == 1 && pmr->mver != pmr->dver)
+    if ( pmr->ims == 1 && (pmr->mver>>1) != pmr->dver )
     {
         /* load the MCode program to the controller */
         if ( ( pmr->menv != "" ) || ( pmr->mpgm != "" ) )
@@ -608,7 +608,34 @@ static long init_record(dbCommon* arg, int pass)
             sleep( 1 );
         }
     }
+    else if ( pmr->ims == 1 && (pmr->mver>>1) == pmr->dver &&
+                               (pmr->mver &1) == 0 )        // MCode not running
+    {
+        char line[256];
 
+        strcpy( line, "EX=1\r\n" );
+        INIT_MSG();
+        WRITE_MSG(LOAD_MCODE, (double *)line);
+        SEND_MSG();
+
+        sleep( 1 );
+
+        strcpy( line, "PU=0\r\n" );
+        INIT_MSG();
+        WRITE_MSG(LOAD_MCODE, (double *)line);
+        SEND_MSG();
+
+        sleep( 1 );
+
+        strcpy( line, "S\r\n" );
+        INIT_MSG();
+        WRITE_MSG(LOAD_MCODE, (double *)line);
+        SEND_MSG();
+
+        sleep( 1 );
+    }
+
+    if ( pmr->ims  == 1             ) pmr->mver = pmr->mver >> 1;
     if ( pmr->urip == motorUEIP_Yes ) pmr->msec = 0;
 
     /*

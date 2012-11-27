@@ -613,7 +613,7 @@ static int motor_init()
     int card_index, motor_index;
     char buff[BUFF_SIZE], fmt_str[32];
     int total_axis = 0;
-    int status, rtnval;
+    int status, rtnval, byv;
     asynStatus success_rtn;
     static const char output_terminator[] = "\n";
     static const char input_terminator[]  = "\r\n";
@@ -792,15 +792,17 @@ static int motor_init()
             motor_info->stall_mode = 0;
         }
 
-        // Test for MCode program version.
-        sprintf(buff, "PR \"VE=\",VE");
+        // Check the MCode program version and running status
+        sprintf(buff, "PR \"VE=\",VE,\",BY=\",BY");
         send_mess(card_index, buff, MDrivePlus_axis[motor_index]);
         status = recv_mess(card_index, buff, 1);
         if (status > 0)
         {
-            status = sscanf( buff, "VE=%d", &rtnval );
-            if ( status == 1 ) motor_info->mcode_version = rtnval;
-            else               motor_info->mcode_version = 0;
+            status = sscanf( buff, "VE=%d,BY=%d", &rtnval, &byv );
+            if ( status == 2 )
+                motor_info->mcode_version = (rtnval << 1) + (byv & 1);
+            else
+                motor_info->mcode_version = 0;
         }
         else
         {
