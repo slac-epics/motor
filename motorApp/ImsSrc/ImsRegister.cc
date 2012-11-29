@@ -31,16 +31,17 @@ extern "C"
 {
 
 // Ims Setup arguments
-static const iocshArg setupArg0  = {"Max. controller count", iocshArgInt   };
+static const iocshArg setupArg0  = {"Max. controller count", iocshArgInt};
 // Ims Config arguments
-static const iocshArg configArg0 = {"Asyn port name",        iocshArgString};
-static const iocshArg configArg1 = {"Polling rate",          iocshArgInt   };
+static const iocshArg configArg0 = {"Card being configured", iocshArgInt};
+static const iocshArg configArg1 = {"Asyn port name",        iocshArgString};
+static const iocshArg configArg2 = {"Polling rate",          iocshArgInt   };
 
 static const iocshArg * const IM483SetupArgs [1] = {&setupArg0};
-static const iocshArg * const IM483ConfigArgs[2] = {&configArg0, &configArg1};
+static const iocshArg * const IM483ConfigArgs[3] = {&configArg0, &configArg1, &configArg2};
 
 static const iocshFuncDef setupMDrivePlus  = {"MDrivePlusSetup",  1, IM483SetupArgs };
-static const iocshFuncDef configMDrivePlus = {"MDrivePlusConfig", 2, IM483ConfigArgs};
+static const iocshFuncDef configMDrivePlus = {"MDrivePlusConfig", 3, IM483ConfigArgs};
 
 static void setupMDrivePlusCallFunc(const iocshArgBuf *args)
 {
@@ -49,7 +50,7 @@ static void setupMDrivePlusCallFunc(const iocshArgBuf *args)
 
 static void configMDrivePlusCallFunc(const iocshArgBuf *args)
 {
-    MDrivePlusConfig(args[0].sval, args[1].ival);
+    MDrivePlusConfig(args[0].ival, args[1].sval, args[2].ival);
 }
 
 static void IMSmotorRegister(void)

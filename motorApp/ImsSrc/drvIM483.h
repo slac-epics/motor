@@ -74,7 +74,7 @@ struct IM483controller
 extern "C" {
 #endif
 extern RTN_STATUS MDrivePlusSetup(int);
-extern RTN_STATUS MDrivePlusConfig(const char *, int);
+extern RTN_STATUS MDrivePlusConfig(int, const char *, int);
 #ifdef __cplusplus
 }
 #endif

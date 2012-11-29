@@ -37,8 +37,6 @@ extern "C" {epicsExportAddress(int, drvMDrivePlusdebug);}
 int MDrivePlus_num_cards = 0;
 static char *MDrivePlus_axis[] = {"1", "2", "3", "4", "5", "6", "7", "8"};
 
-static int   midx = -1;
-
 /* Local data required for every driver; see "motordrvComCode.h" */
 #include    "motordrvComCode.h"
 
@@ -574,23 +572,22 @@ MDrivePlusSetup(int num_cards)          /* maximum number of chains in system */
 /* MDrivePlusConfig()                                    */
 /*****************************************************/
 RTN_STATUS
-MDrivePlusConfig(const char *name,                          /* ASYN port name */
-                 int scan_rate)              /* polling rate - 1/60 sec units */
+MDrivePlusConfig(int card,        	/* chain being configured */
+	 	 const char *name,      /* ASYN port name */
+                 int scan_rate)         /* polling rate - 1/60 sec units */
 {
     struct IM483controller *cntrl;
 
-    midx++;
+    if (card < 0 || card >= MDrivePlus_num_cards) return(ERROR);
 
-    if (midx >= MDrivePlus_num_cards) return(ERROR);
-
-    motor_state[midx] = (struct controller *) malloc(sizeof(struct controller));
+    motor_state[card] = (struct controller *) malloc(sizeof(struct controller));
     if (scan_rate >= 1 && scan_rate <= 60)
-        motor_state[midx]->scan_rate = scan_rate;
+        motor_state[card]->scan_rate = scan_rate;
     else
-        motor_state[midx]->scan_rate = SCAN_RATE;
+        motor_state[card]->scan_rate = SCAN_RATE;
 
-    motor_state[midx]->DevicePrivate = malloc(sizeof(struct IM483controller));
-    cntrl = (struct IM483controller *) motor_state[midx]->DevicePrivate;
+    motor_state[card]->DevicePrivate = malloc(sizeof(struct IM483controller));
+    cntrl = (struct IM483controller *) motor_state[card]->DevicePrivate;
 
     strcpy(cntrl->asyn_port, name);
     // strncpy(cntrl->initCmds, initCmds, 80);
