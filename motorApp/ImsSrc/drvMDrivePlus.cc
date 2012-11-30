@@ -743,7 +743,7 @@ static int motor_init()
 
         for (int itera = 1; itera <= 4; itera++)
         {
-            int type=-9999, active;
+            int type, active;
 
             retry = 0;
             do
@@ -756,27 +756,30 @@ static int motor_init()
                 {
                     sprintf(fmt_str, "S%d=%%d,%%d", itera);
                     status = sscanf(buff, fmt_str, &type, &active);
-                    switch (type)
+                    if (status == 2)
                     {
-                        case 1: // Home switch.
-                            confptr->homeLS  = itera;
-                            break;
-                        case 2: // Plus limit switch.
-                            confptr->plusLS  = itera;
-                            break;
-                        case 3: // Minus limit switch.
-                            confptr->minusLS = itera;
-                            break;
-                        case 0:
-                        case 16: // external encoder
-                        case 17: // break
-                            break;
-                        default:
-                            status = 0;
-                            errlogPrintf("Invalid I/O type: %d.\n", type);
+                        switch (type)
+                        {
+                            case 1: // Home switch.
+                                confptr->homeLS  = itera;
+                                break;
+                            case 2: // Plus limit switch.
+                                confptr->plusLS  = itera;
+                                break;
+                            case 3: // Minus limit switch.
+                                confptr->minusLS = itera;
+                                break;
+                            case 0:
+                            case 16: // external encoder
+                            case 17: // break
+                                break;
+                            default:
+                                status = 0;
+                                errlogPrintf("Invalid I/O type: %d.\n", type);
+                        }
                     }
-
-                    if (status == 2) break;
+                    else
+                        status = 0;
                 }
 
                 epicsThreadSleep(0.5);
