@@ -777,6 +777,8 @@ static int motor_init()
                                 status = 0;
                                 errlogPrintf("Invalid I/O type: %d.\n", type);
                         }
+
+                        if ( status == 2 ) break;
                     }
                     else
                         status = 0;
