@@ -31,9 +31,9 @@ extern "C"
 {
 
 // Ims Setup arguments
-static const iocshArg setupArg0  = {"Max. controller count", iocshArgInt};
+static const iocshArg setupArg0  = {"Max. controller count", iocshArgInt   };
 // Ims Config arguments
-static const iocshArg configArg0 = {"Card being configured", iocshArgInt};
+static const iocshArg configArg0 = {"Card being configured", iocshArgInt   };
 static const iocshArg configArg1 = {"Asyn port name",        iocshArgString};
 static const iocshArg configArg2 = {"Polling rate",          iocshArgInt   };
 

@@ -572,9 +572,9 @@ MDrivePlusSetup(int num_cards)          /* maximum number of chains in system */
 /* MDrivePlusConfig()                                    */
 /*****************************************************/
 RTN_STATUS
-MDrivePlusConfig(int card,        	/* chain being configured */
-	 	 const char *name,      /* ASYN port name */
-                 int scan_rate)         /* polling rate - 1/60 sec units */
+MDrivePlusConfig(int card,                           /* card being configured */
+                 const char *name,                          /* ASYN port name */
+                 int scan_rate)              /* polling rate - 1/60 sec units */
 {
     struct IM483controller *cntrl;
 
@@ -607,113 +607,125 @@ static int motor_init()
 {
     struct controller *brdptr;
     struct IM483controller *cntrl;
-    int card_index, motor_index;
+    struct mess_info *motor_info;
+    int  card_index, retry, status, rtnval, byv, failed;
     char buff[BUFF_SIZE], fmt_str[32];
-    int total_axis = 0;
-    int status, rtnval, byv;
-    asynStatus success_rtn;
     static const char output_terminator[] = "\n";
     static const char input_terminator[]  = "\r\n";
+    asynStatus success_rtn;
+    input_config* confptr;
 
     /* Check for setup */
-    if (MDrivePlus_num_cards <= 0)
-    return(ERROR);
+    if (MDrivePlus_num_cards <= 0) return(ERROR);
 
     for (card_index = 0; card_index < MDrivePlus_num_cards; card_index++)
     {
-    if (!motor_state[card_index])
-        continue;
+        if (!motor_state[card_index])
+        {
+            Debug(0, "motor_init(): skip initializing motor #%d\n", card_index);
+            continue;
+        }
 
-    brdptr = motor_state[card_index];
-    brdptr->ident[0] = (char) NULL;    /* No controller identification message. */
-    brdptr->cmnd_response = false;
-    total_cards = card_index + 1;
-    cntrl = (struct IM483controller *) brdptr->DevicePrivate;
+        brdptr = motor_state[card_index];
+        brdptr->ident[0] = (char) NULL;   /* No controller identification msg */
+        brdptr->cmnd_response = false;
+        total_cards = card_index + 1;
+        cntrl = (struct IM483controller *) brdptr->DevicePrivate;
 
-    /* Initialize communications channel */
-    success_rtn = pasynOctetSyncIO->connect(cntrl->asyn_port, 0,
-                        &cntrl->pasynUser, NULL);
+        failed = 0;
 
-    if (success_rtn == asynSuccess)
-    {
+        /* Initialize communications channel */
+        success_rtn = pasynOctetSyncIO->connect(cntrl->asyn_port, 0,
+                                                &cntrl->pasynUser, NULL);
+
+        if (success_rtn != asynSuccess)
+        {
+            failed = 1;
+            goto finish_up;
+        }
+
         pasynOctetSyncIO->setOutputEos(cntrl->pasynUser, output_terminator,
-                       strlen(output_terminator));
-        pasynOctetSyncIO->setInputEos(cntrl->pasynUser, input_terminator,
-                      strlen(input_terminator));
+                                       strlen(output_terminator));
+        pasynOctetSyncIO->setInputEos (cntrl->pasynUser, input_terminator,
+                                       strlen(input_terminator));
         /* Send a message to the board, see if it exists */
         /* flush any junk at input port - should not be any data available */
         pasynOctetSyncIO->flush(cntrl->pasynUser);
 
-        for (total_axis = 0; total_axis < 1 /*MAX_AXES*/; total_axis++)
-        {
-        int retry = 0;
-
         /* Try 3 times to connect to controller. */
+        retry = 0;
         do
         {
-            send_mess(card_index, "PR VR", MDrivePlus_axis[total_axis]);
+            send_mess(card_index, "PR VR", MDrivePlus_axis[0]);
             status = recv_mess(card_index, buff, 1);
-            retry++;
-        } while (status == 0 && retry < 3);
+            epicsThreadSleep(0.5);
+        } while (status == 0 && retry++ < 3);
 
-        if (status <= 0)
-            break;
-        else if (total_axis == 0)
-            strcpy(brdptr->ident, buff);
+        if (status <= 0 )
+        {
+            failed = 1;
+            goto finish_up;
         }
-        brdptr->total_axis = total_axis;
-        cntrl->inconfig = (input_config *) malloc(
-                             sizeof(struct IM483controller) * total_axis);
-    }
 
-    if (success_rtn == asynSuccess && total_axis > 0)
-    {
-        input_config *confptr = cntrl->inconfig;
+        strcpy(brdptr->ident, buff);
 
-        brdptr->localaddr = (char *) NULL;
+        brdptr->total_axis      = 1;
+        brdptr->localaddr       = (char *) NULL;
         brdptr->motor_in_motion = 0;
 
-        for (motor_index = 0; motor_index < total_axis; motor_index++)
-        {
-        int itera;
-        struct mess_info *motor_info = &brdptr->motor_info[motor_index];
+        cntrl->inconfig = (input_config *) malloc( sizeof(struct IM483controller) );
 
-        motor_info->status.All = 0;
-        motor_info->no_motion_count = 0;
+        confptr = cntrl->inconfig;
+
+        motor_info = &brdptr->motor_info[0];
+
+        motor_info->status.All       = 0;
+        motor_info->no_motion_count  = 0;
         motor_info->encoder_position = 0;
-        motor_info->position = 0;
-        brdptr->motor_info[motor_index].motor_motion = NULL;
-        /* Assume no encoder support. */
-        motor_info->encoder_present = NO;
+        motor_info->position         = 0;
+        motor_info->encoder_present  = NO;       /* Assume no encoder support */
+        brdptr->motor_info[0].motor_motion = NULL;
 
-	/* Determine if encoder present based on EE setting */
+        /* Determine if encoder present based on EE setting */
         /* HW check of the 2 part saftey check */
         /* (HW) EA_PRESENT && (SW) pmr->ueip==1 must be enabled */
-        sprintf(buff, "PR \"EE=\",EE");
-        send_mess(card_index, buff, MDrivePlus_axis[motor_index]);
-        status = recv_mess(card_index, buff, 1);
-        if (status > 0)
+        retry = 0;
+        do
         {
-            status = sscanf( buff, "EE=%d", &rtnval );
-            if ( (status == 1) && (rtnval == 0 || rtnval ==1) )
+            sprintf(buff, "PR \"EE=\",EE");
+            send_mess(card_index, buff, MDrivePlus_axis[0]);
+            status = recv_mess(card_index, buff, 1);
+            if (status > 0)
             {
-		if (rtnval ==1)
-		{
-	                motor_info->encoder_present = YES;
-        	        motor_info->status.Bits.EA_PRESENT = 1;
-		}
-            	else
-            	{
-                	motor_info->encoder_present = NO;
-	                motor_info->status.Bits.EA_PRESENT = 0;
-        	}
-	    }
-        }
-        else
+                status = sscanf( buff, "EE=%d", &rtnval );
+                if ( (status == 1) && (rtnval == 0 || rtnval ==1) )
+                {
+                    if (rtnval ==1)
+                    {
+                        motor_info->encoder_present        = YES;
+                        motor_info->status.Bits.EA_PRESENT = 1;
+                    }
+                    else
+                    {
+                        motor_info->encoder_present        = NO;
+                        motor_info->status.Bits.EA_PRESENT = 0;
+                    }
+                    break;
+	        }
+                else
+                    status = 0;
+            }
+
+            epicsThreadSleep(0.5);
+        } while (retry++ < 3);
+
+        if (status != 1)
         {
-                errlogPrintf("Error reading Encoder status\n");
-                motor_info->encoder_present = NO;
-                motor_info->status.Bits.EA_PRESENT = 0;
+            errlogPrintf("Error reading Encoder status\n");
+            motor_info->encoder_present        = NO;
+            motor_info->status.Bits.EA_PRESENT = 0;
+
+            failed = 1;
         }
 
         /* Determine if encoder present based last character of "ident". 
@@ -724,107 +736,145 @@ static int motor_init()
             motor_info->encoder_present = YES;
             motor_info->status.Bits.EA_PRESENT = 1;
         }
-	*/
+        */
 
         /* Determine input configuration. */
         confptr->homeLS = confptr->minusLS = confptr->plusLS = 0;
 
-        for (itera = 1; itera <= 4; itera++)
+        for (int itera = 1; itera <= 4; itera++)
         {
-            int type, active;
+            int type=-9999, active;
 
-            sprintf(buff, "PR \"S%d=\",S%d", itera, itera);
-            send_mess(card_index, buff, MDrivePlus_axis[motor_index]);
-            status = recv_mess(card_index, buff, 1);
-            if (status == 0)
+            retry = 0;
+            do
             {
-            errlogPrintf("Error reading I/O configuration.\n");
-            break;
-            }
+                sprintf(buff, "PR \"S%d=\",S%d", itera, itera);
+                send_mess(card_index, buff, MDrivePlus_axis[0]);
+                status = recv_mess(card_index, buff, 1);
 
-            sprintf(fmt_str, "S%d=%%d,%%d", itera);
-            status = sscanf(buff, fmt_str, &type, &active);
-            switch (type)
+                if (status > 0)
+                {
+                    sprintf(fmt_str, "S%d=%%d,%%d", itera);
+                    status = sscanf(buff, fmt_str, &type, &active);
+                    switch (type)
+                    {
+                        case 1: // Home switch.
+                            confptr->homeLS  = itera;
+                            break;
+                        case 2: // Plus limit switch.
+                            confptr->plusLS  = itera;
+                            break;
+                        case 3: // Minus limit switch.
+                            confptr->minusLS = itera;
+                            break;
+                        case 0:
+                        case 16: // external encoder
+                        case 17: // break
+                            break;
+                        default:
+                            status = 0;
+                            errlogPrintf("Invalid I/O type: %d.\n", type);
+                    }
+
+                    if (status == 2) break;
+                }
+
+                epicsThreadSleep(0.5);
+            } while (retry++ < 3);
+
+            if (status != 2)
             {
-            case 0:
-            break;
-            case 1: // Home switch.
-            confptr->homeLS = itera;
-            break;
-            case 2: // Plus limit switch.
-            confptr->plusLS = itera;
-            break;
-            case 3: // Minus limit switch.
-            confptr->minusLS = itera;
-            break;
-            default:
-            errlogPrintf("Invalid I/O type: %d.\n", type);
+                errlogPrintf("Error reading I/O type: %d\n", type);
 
+                failed = 1;
             }
         }
+
         // Test for missing configuration.
         if (confptr->minusLS == 0 || confptr->plusLS == 0)
-        {
-            const char p_label[6] = "Plus", m_label[6] = "Minus";
-            errlogPrintf("MDrivePlus chain #%d, motor #%d %s LS not configured.\n",
-                 card_index, motor_index,
-                 (confptr->minusLS == 0) ? m_label : p_label);
-        }
+            errlogPrintf("MDrivePlus motor #%d %s LS not configured.\n",
+                         card_index, (confptr->minusLS == 0)? "Minus" : "Plus");
 
         /* Determine stall detection mode */
-        sprintf(buff, "PR \"SM=\",SM");
-        send_mess(card_index, buff, MDrivePlus_axis[motor_index]);
-        status = recv_mess(card_index, buff, 1);
-        if (status > 0)
+        retry = 0;
+        do
         {
-            status = sscanf( buff, "SM=%d", &rtnval );
-            if ( (status == 1) && (rtnval == 0 || rtnval ==1) )
-                motor_info->stall_mode = rtnval;
-            else
-                motor_info->stall_mode = 0;
-        }
-        else
+            sprintf(buff, "PR \"SM=\",SM");
+            send_mess(card_index, buff, MDrivePlus_axis[0]);
+            status = recv_mess(card_index, buff, 1);
+            if (status > 0)
+            {
+                status = sscanf( buff, "SM=%d", &rtnval );
+                if ( (status == 1) && (rtnval == 0 || rtnval ==1) )
+                {
+                    motor_info->stall_mode = rtnval;
+                    break;
+                }
+                else
+                    status = 0;
+            }
+
+            epicsThreadSleep(0.5);
+        } while (retry++ < 3);
+
+        if (status != 1)
         {
             errlogPrintf("Error reading stall detection mode\n");
             motor_info->stall_mode = 0;
+
+            failed = 1;
         }
 
         // Check the MCode program version and running status
-        sprintf(buff, "PR \"VE=\",VE,\",BY=\",BY");
-        send_mess(card_index, buff, MDrivePlus_axis[motor_index]);
-        status = recv_mess(card_index, buff, 1);
-        if (status > 0)
+        retry = 0;
+        do
         {
-            status = sscanf( buff, "VE=%d,BY=%d", &rtnval, &byv );
-            if ( status == 2 )
-                motor_info->mcode_version = (rtnval << 1) + (byv & 1);
-            else
-                motor_info->mcode_version = 0;
-        }
-        else
+            sprintf(buff, "PR \"VE=\",VE,\",BY=\",BY");
+            send_mess(card_index, buff, MDrivePlus_axis[0]);
+            status = recv_mess(card_index, buff, 1);
+            if (status > 0)
+            {
+                status = sscanf( buff, "VE=%d,BY=%d", &rtnval, &byv );
+                if ( status == 2 )
+                {
+                    motor_info->mcode_version = (rtnval << 1) + (byv & 1);
+                    break;
+                }
+                else
+                    status = 0;
+            }
+
+            epicsThreadSleep(0.5);
+        } while (retry++ < 3);
+
+        if (status != 2)
         {
             errlogPrintf("Error reading MCode version.\n");
             motor_info->mcode_version = 0;
+
+            failed = 1;
         }
 
-        set_status(card_index, motor_index);  /* Read status of each motor */
-        }
-    }
-/*  else                       // if cannot find controller, IOC should continue
-        motor_state[card_index] = (struct controller *) NULL; */
+        set_status(card_index, 0); /* Read status of each motor */
 
-    mess_queue[card_index]->head = (struct mess_node *) NULL;
-    mess_queue[card_index]->tail = (struct mess_node *) NULL;
+        finish_up:
+        mess_queue[card_index]->head = (struct mess_node *) NULL;
+        mess_queue[card_index]->tail = (struct mess_node *) NULL;
 
-    free_list[card_index]->head = (struct mess_node *) NULL;
-    free_list[card_index]->tail = (struct mess_node *) NULL;
+        free_list [card_index]->head = (struct mess_node *) NULL;
+        free_list [card_index]->tail = (struct mess_node *) NULL;
 
-    targs.card = card_index;
-    epicsThreadCreate(cntrl->asyn_port, epicsThreadPriorityMedium,
-              epicsThreadGetStackSize(epicsThreadStackMedium),
-              (EPICSTHREADFUNC) motor_task, (void *) &targs);
+        targs.card = card_index;
+        epicsThreadCreate(cntrl->asyn_port, epicsThreadPriorityMedium,
+                          epicsThreadGetStackSize(epicsThreadStackMedium),
+                          (EPICSTHREADFUNC) motor_task, (void *) &targs);
 
-    initialized[card_index] = true;    /* Indicate that driver is initialized */
+        initialized[card_index] = true;/* Indicate that driver is initialized */
+
+        if ( failed == 1 )
+            printf("motor_init(): failed to initialize motor #%d\n", card_index);
+        else
+            printf("motor_init(): finished initializing motor #%d\n", card_index);
     }
 
     return(OK);
