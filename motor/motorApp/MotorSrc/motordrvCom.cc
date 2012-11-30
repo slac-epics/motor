@@ -3,10 +3,10 @@ FILENAME...     motordrvCom.cc
 USAGE...        This file contains driver functions that are common
                 to all motor record driver modules.
 
-Version:        $Revision: 13610 $
-Modified By:    $Author: rivers $
-Last Modified:  $Date: 2011-09-07 12:41:46 -0500 (Wed, 07 Sep 2011) $
-HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-7-1/motorApp/MotorSrc/motordrvCom.cc $
+Version:        $Revision: 15586 $
+Modified By:    $Author: sluiter $
+Last Modified:  $Date: 2012-11-30 16:27:08 -0600 (Fri, 30 Nov 2012) $
+HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-8/motorApp/MotorSrc/motordrvCom.cc $
 */
 
 /*
@@ -50,6 +50,8 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-7
  *                  is < 1/2 time quantum.
  * .06 02/05/09 rls Always call process_messages() to check for incoming
  *                  messages.
+ * .07 11/30/12 rls In process_messages(), pass commanded velocity from
+ *                  motor_info->velocity to node->velocity with INFO request.
  */
 
 
@@ -386,6 +388,7 @@ static void process_messages(struct driver_table *tabptr, epicsTime tick,
                 node->position = motor_info->position;
                 node->encoder_position = motor_info->encoder_position;
                 node->status = motor_info->status;
+                node->velocity = motor_info->velocity;
 
 /*=============================================================================
 * node->status & RA_DONE is not a reliable indicator of anything, in this case,
