@@ -2,9 +2,9 @@
 FILENAME...     motorRecord.cc
 USAGE...        Motor Record Support.
 
-Version:        $Revision: 13840 $
+Version:        $Revision: 15373 $
 Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2011-10-20 14:02:14 -0700 (Thu, 20 Oct 2011) $
+Last Modified:  $Date: 2012-10-09 08:49:41 -0700 (Tue, 09 Oct 2012) $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/MotorSrc/motorRecord.cc $
 */
 
@@ -151,10 +151,20 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/mot
  * .62 10-20-11 rls - Disable soft travel limit error check during home search.
  *                  - Use home velocity (HVEL), base velocity (BVEL) and accel.
  *                    time (ACCL) fields to calculate home acceleration rate.
- *
+ * .63 04-10-12 kmp - Inverted the priority of sync and status update in do_work().
+ * .64 07-13-12 mrp - Fixed problem with using DLY field. If a process due to device support
+ *                    happened before the DLY timer expired, then the put callback 
+ *                    returned prematurely. Also, if there was no process due to
+ *                    device support, then the record could get stuck at the end of the move
+ *                    because it wasn't setting DMOV back to True or processing forward links.
+ * .65 07-23-12 rls - The motor record's process() function was not processing
+ *                    alarms, events and the forward scan link in the same order
+ *                    as specified in the "EPICS Application Developer's Guide".
+ * .66 09-06-12 rls - Refix of DLY problem (see 64 above). Hold DMOV false until DLY times out.
+ * 
  */
 
-#define VERSION 6.7
+#define VERSION 6.8
 
 #include    <stdlib.h>
 #include    <string.h>
@@ -553,8 +563,10 @@ static long init_record(dbCommon* arg, int pass)
             case (PV_LINK):
             case (DB_LINK):
             case (CA_LINK):
-            case (INST_IO):
                 pmr->card = -1;
+                break;
+            case (INST_IO):
+                pmr->card = 0;
                 break;
             default:
                 recGblRecordError(S_db_badField, (void *) pmr, (char *) errmsg);
@@ -1127,13 +1139,13 @@ LOGIC:
         Call do_work().
     ENDIF
     Update Readback output link (RLNK), call dbPutLink().
-    IF Done Moving field (DMOV) is TRUE.
-        Process the forward-scan-link record, call recGblFwdLink().
-    ENDIF
 Exit:
     Update record timestamp, call recGblGetTimeStamp().
     Process alarms, call alarm_sub().
     Monitor changes to record fields, call monitor().
+    IF Done Moving field (DMOV) is TRUE.
+        Process the forward-scan-link record, call recGblFwdLink().
+    ENDIF
     Set Processing Active indicator field (PACT) false.
     Exit.
 
@@ -1271,7 +1283,7 @@ static long process(dbCommon *arg)
             }
 
             /* Are we "close enough" to desired position? */
-            if (pmr->dmov && !(pmr->rhls || pmr->rlls))
+            if (pmr->dmov == TRUE && !(pmr->rhls || pmr->rlls))
             {
                 mmap_bits.All = pmr->mmap; /* Initialize for MARKED. */
 
@@ -1295,18 +1307,21 @@ static long process(dbCommon *arg)
                         maybeRetry(pmr);
                     }
                 }
-                else if (MARKED(M_DMOV) && !(pmr->mip & MIP_DELAY_REQ))
-                {
-                    pmr->mip |= MIP_DELAY_REQ;
-                    MARK(M_MIP);
+               else if (MARKED(M_DMOV))
+               {
+                  if (!(pmr->mip & MIP_DELAY_REQ))
+                  {
+                     pmr->mip |= MIP_DELAY_REQ;
+                     MARK(M_MIP);
 
-                    callbackRequestDelayed(&pcallback->dly_callback, pmr->dly);
+                     callbackRequestDelayed(&pcallback->dly_callback, pmr->dly);
+                  }
 
-                    /* Restore DMOV to false and UNMARK it so it is not posted. */
-                    pmr->dmov = FALSE;
-                    UNMARK(M_DMOV);
-                    goto process_exit;
-                }
+                  /* Restore DMOV to false and UNMARK it so it is not posted. */
+                  pmr->dmov = FALSE;
+                  UNMARK(M_DMOV);
+                  goto process_exit;
+               }
             }
         }
     }   /* END of (process_reason == CALLBACK_DATA). */
@@ -1348,9 +1363,6 @@ enter_do_work:
 
     /* Fire off readback link */
     status = dbPutLink(&(pmr->rlnk), DBR_DOUBLE, &(pmr->rbv), 1);
-
-    if (pmr->dmov)
-        recGblFwdLink(pmr);     /* Process the forward-scan-link record. */
     
 process_exit:
     if (process_reason == CALLBACK_DATA && pmr->stup == motorSTUP_BUSY)
@@ -1363,6 +1375,10 @@ process_exit:
     recGblGetTimeStamp(pmr);
     alarm_sub(pmr);                     /* If we've violated alarm limits, yell. */
     monitor(pmr);               /* If values have changed, broadcast them. */
+
+    if (pmr->dmov)
+        recGblFwdLink(pmr);     /* Process the forward-scan-link record. */
+    
     pmr->pact = 0;
     Debug(4, "process:---------------------- end; motor \"%s\"\n", pmr->name);
     return (status);
@@ -2313,6 +2329,18 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             }
         }
     }
+    else if (pmr->sync != 0 && pmr->mip == MIP_DONE)
+    {
+        /* Sync target positions with readbacks. */
+        pmr->val  = pmr->lval = pmr->rbv;
+        MARK(M_VAL);
+        pmr->dval = pmr->ldvl = pmr->drbv;
+        MARK(M_DVAL);
+        pmr->rval = pmr->lrvl = NINT(pmr->dval / pmr->mres);
+        MARK(M_RVAL);
+        pmr->sync = 0;
+        db_post_events(pmr, &pmr->sync, DBE_VAL_LOG);
+    }
     else if (proc_ind == NOTHING_DONE && pmr->stup == motorSTUP_OFF)
     {
         RTN_STATUS status;
@@ -2327,17 +2355,6 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             pmr->stup = motorSTUP_OFF;
         else
             SEND_MSG();
-    }
-    else if (pmr->sync != 0 && pmr->mip == MIP_DONE)
-    {
-        /* Sync target positions with readbacks. */
-        pmr->val  = pmr->lval = pmr->rbv;
-        MARK(M_VAL);
-        pmr->dval = pmr->ldvl = pmr->drbv;
-        MARK(M_DVAL);
-        pmr->rval = pmr->lrvl = NINT(pmr->dval / pmr->mres);
-        MARK(M_RVAL);
-        pmr->sync = 0;
     }
 
     return(OK);

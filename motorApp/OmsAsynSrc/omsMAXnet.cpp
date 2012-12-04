@@ -1,6 +1,14 @@
 /*
- * omsMAXnet.cpp
- *
+FILENAME...     omsMAXnet.cpp
+USAGE...        Pro-Dex OMS MAXnet asyn motor controller support
+
+Version:        $Revision$
+Modified By:    $Author$
+Last Modified:  $Date$
+HeadURL:        $URL$
+*/
+
+/*
  *  Created on: 10/2010
  *      Author: eden
  */
@@ -127,7 +135,6 @@ omsMAXnet::omsMAXnet(const char* portName, int numAxes, const char* serialPortNa
     Debug(9, "omsMAXnet setInputEos \n");
     // CAUTION firmware versions before 1.33.4 use '\n' for serial port and '\n\r' for IP port as InputEOS
     // Set inputEOS in st.cmd for old firmware versions
-    status = pasynOctetSerial->setInputEos(octetPvtSerial, pasynUserSerial, "\n\r", 2);
     status = pasynOctetSyncIO->setInputEos(pasynUserSyncIOSerial, "\n\r", 2);
     if(status != asynSuccess){
         printf("MAXnetConfig: unable to set InputEOS %s: %s\n", serialPortName, pasynUserSyncIOSerial->errorMessage);

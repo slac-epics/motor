@@ -10,12 +10,11 @@
 #include "asynMotorAxis.h"
 
 #define DRIVER_NAME "ImsMDrivePlusMotorDriver"
-#define VERSION "2.0"  // this should match cvs...
 
 #define NUM_AXES 1
 #define DEFAULT_NUM_CARDS 32
 #define MAX_MESSAGES 100
-#define IMS_TIMEOUT 100
+#define IMS_TIMEOUT 2
 #define MAX_BUFF_LEN 80
 #define MAX_CMD_LEN MAX_BUFF_LEN-10  // leave room for line feeds surrounding command
 #define MAX_NAME_LEN 10
@@ -51,7 +50,7 @@ protected:
 private:
 	ImsMDrivePlusMotorController *pController;
 
-	int useEncoder;                         //! using encoder flag
+	//int useEncoder;                         //! using encoder flag
 	// FIXME handle lost position in driver or ioc??
 //	epicsTime idleTimeStart;                //! timer used to track idle time for saving to NVM
 //	double prevPosition;                    //! previous position used to see if motor has moved and need to update position in NVM in case of power failure

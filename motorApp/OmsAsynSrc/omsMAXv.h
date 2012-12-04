@@ -1,6 +1,14 @@
 /*
- * omsMAXv.h
- *
+FILENAME...     omsMAXv.h
+USAGE...        Pro-Dex OMS MAXv asyn motor controller support
+
+Version:        $Revision$
+Modified By:    $Author$
+Last Modified:  $Date$
+HeadURL:        $URL$
+*/
+
+/*
  *  Created on: 10/2010
  *      Author: eden
  */

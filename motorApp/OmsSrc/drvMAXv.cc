@@ -2,9 +2,9 @@
 FILENAME...     drvMAXv.cc
 USAGE...        Motor record driver level support for OMS model MAXv.
 
-Version:        $Revision: 13925 $
+Version:        $Revision: 14881 $
 Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2011-11-04 11:20:09 -0700 (Fri, 04 Nov 2011) $
+Last Modified:  $Date: 2012-07-16 10:23:49 -0700 (Mon, 16 Jul 2012) $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/OmsSrc/drvMAXv.cc $
 */
 
@@ -178,7 +178,7 @@ static int configurationFlags[MAXv_NUM_CARDS] = {0};
 /* Common local function declarations. */
 extern "C" {
 RTN_STATUS MAXvSetup(int, int, unsigned int, unsigned int, int, int);
-RTN_VALUES MAXvConfig(int, const char *);
+RTN_VALUES MAXvConfig(int, const char *, int);
 }
 static long report(int);
 static long init();

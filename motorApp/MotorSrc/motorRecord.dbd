@@ -1,8 +1,8 @@
 # FILENAME...   motorRecord.dbd
 
-# Version:       $Revision: 10799 $
+# Version:       $Revision: 15428 $
 # Modified By:   $Author: sluiter $
-# Last Modified: $Date: 2010-04-21 11:24:59 -0700 (Wed, 21 Apr 2010) $
+# Last Modified: $Date: 2012-11-01 08:15:54 -0700 (Thu, 01 Nov 2012) $
 # HeadURL:       $URL $
 
 # Experimental Physics and Industrial Control System (EPICS)
@@ -68,7 +68,7 @@ menu(motorSTUP) {
 }
 menu(motorRMOD) {
         choice(motorRMOD_D,"Default")
-        choice(motorRMOD_A,"Arthmetic")
+        choice(motorRMOD_A,"Arithmetic")
         choice(motorRMOD_G,"Geometric")
 }
 

@@ -97,6 +97,7 @@ using std::endl;
 
 #include "XPSController.h"
 #include "XPS_C8_drivers.h"
+#include "asynOctetSocket.h"
 
 #define XPSC8_END_OF_RUN_MINUS  0x80000100
 #define XPSC8_END_OF_RUN_PLUS   0x80000200
@@ -158,22 +159,25 @@ XPSAxis::XPSAxis(XPSController *pC, int axisNo, const char *positionerName, doub
 
   setIntegerParam(pC_->motorStatusGainSupport_, 1);
   setIntegerParam(pC_->motorStatusHasEncoder_, 1);
-  setDoubleParam(pC_->motorPgain_, xpsCorrectorInfo_.KP);
-  setDoubleParam(pC_->motorIgain_, xpsCorrectorInfo_.KI);
-  setDoubleParam(pC_->motorDgain_, xpsCorrectorInfo_.KD);
+  setDoubleParam(pC_->motorPGain_, xpsCorrectorInfo_.KP);
+  setDoubleParam(pC_->motorIGain_, xpsCorrectorInfo_.KI);
+  setDoubleParam(pC_->motorDGain_, xpsCorrectorInfo_.KD);
   callParamCallbacks();
   /* Initialise deferred move flags. */
   deferredRelative_ = 0;
   deferredPosition_ = 0;
   /* Disable deferred move for the axis. Should not cause move of this axis
      if other axes in same group do deferred move. */
-  deferredMove_ = 0; 
+  deferredMove_ = 0;
+  
+  // Assume axis is not moving
+  moving_ = false;
 
   index = (char *)strchr(positionerName, '.');
   if (index == NULL) {
-      asynPrint(pasynUser_, ASYN_TRACE_ERROR,
-                "%s:%s: positionerName must be of form group.positioner = %s\n",
-                driverName, functionName, positionerName);
+    asynPrint(pasynUser_, ASYN_TRACE_ERROR,
+              "%s:%s: positionerName must be of form group.positioner = %s\n",
+              driverName, functionName, positionerName);
   }
   positionerName_ = epicsStrDup(positionerName);
   groupName_ = epicsStrDup(positionerName);
@@ -201,6 +205,22 @@ XPSAxis::XPSAxis(XPSController *pC, int axisNo, const char *positionerName, doub
 
 }
 
+
+void XPSAxis::report(FILE *fp, int details)
+{
+  fprintf(fp, "  axis %d\n"
+              "    name = %s\n"
+              "    step size = %g\n"
+              "    poll socket = %d, moveSocket = %d\n"
+              "    status = %d\n", 
+          axisNo_,
+          positionerName_, 
+          stepSize_, 
+          pollSocket_, moveSocket_, 
+          axisStatus_);
+}
+
+
 asynStatus XPSAxis::move(double position, int relative, double min_velocity, double max_velocity, double acceleration)
 {
   char errorString[100];
@@ -221,11 +241,10 @@ asynStatus XPSAxis::move(double position, int relative, double min_velocity, dou
     if (pC_->autoEnable_) {
       status = GroupMotionEnable(pollSocket_, groupName_);
       if (status) {
-	asynPrint(pasynUser_, ASYN_TRACE_ERROR,
-		  "%s:%s: motorAxisMove[%s,%d]: error performing GroupMotionEnable %d\n",
-		  driverName, functionName, pC_->portName, axisNo_, status);
-	/* Error -27 is caused when the motor record changes dir i.e. when it aborts a move!*/
-	return asynError;
+        asynPrint(pasynUser_, ASYN_TRACE_ERROR,
+                  "%s:%s: motorAxisMove[%s,%d]: error performing GroupMotionEnable %d\n",
+                  driverName, functionName, pC_->portName, axisNo_, status);
+        return asynError;
       }
     } else {
       //Return error if a move is attempted and auto enable is turned off.
@@ -258,7 +277,7 @@ asynStatus XPSAxis::move(double position, int relative, double min_velocity, dou
         asynPrint(pasynUser_, ASYN_TRACE_ERROR,
                   "%s:%s: Error performing GroupMoveRelative[%s,%d] %d\n",
                   driverName, functionName, pC_->portName, axisNo_, status);
-        /* Error -27 is caused when the motor record changes dir i.e. when it aborts a move!*/
+        /* Error -27 is caused when the motor record changes dir i.e. when it aborts a move! */
         return asynError;
       }
     } else {
@@ -358,8 +377,8 @@ asynStatus XPSAxis::moveVelocity(double min_velocity, double max_velocity, doubl
   status = GroupJogParametersSet(moveSocket_, positionerName_, 1, &deviceVelocity, &deviceAcceleration);
   if (status) {
     asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
-	       "%s:%s: [%s,%d]: error calling GroupJogParametersSet error=%d\n",
-	       driverName, functionName, pC_->portName, axisNo_, status);
+              "%s:%s: [%s,%d]: error calling GroupJogParametersSet error=%d\n",
+              driverName, functionName, pC_->portName, axisNo_, status);
     return asynError;
   }
 
@@ -534,6 +553,7 @@ asynStatus XPSAxis::poll(bool *moving)
 {
   int status;
   int axisDone;
+  char readResponse[25];
   static const char *functionName = "poll";
 
   status = GroupStatusGet(pollSocket_, 
@@ -543,9 +563,6 @@ asynStatus XPSAxis::poll(bool *moving)
     asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
               "%s:%s: [%s,%d]: error calling GroupStatusGet status=%d\n",
               driverName, functionName, pC_->portName, axisNo_, status);
-    /* Update axis status and status string with error */
-    axisStatus_ = status;
-    sprintf(axisStatusString_, "%d",axisStatus_);
     goto done;
   }
   asynPrint(pasynUser_, ASYN_TRACE_FLOW, 
@@ -560,14 +577,13 @@ asynStatus XPSAxis::poll(bool *moving)
     /* These states mean it is moving/homeing/jogging etc*/
     axisDone = 0;
   }
+  /* Set the status */
+  setIntegerParam(pC_->XPSStatus_, axisStatus_);
   /* Set the axis done parameter */
   /* AND the done flag with the inverse of deferred_move.*/
   axisDone &= !deferredMove_;
   *moving = axisDone ? false : true;
   setIntegerParam(pC_->motorStatusDone_, axisDone);
-
-  /* Get the XPS status string */
-  status = GroupStatusStringGet(pollSocket_, axisStatus_, axisStatusString_);
 
   /*Read the controller software limits in case these have been changed by a TCL script.*/
   status = PositionerUserTravelLimitsGet(pollSocket_, positionerName_, &lowLimit_, &highLimit_);
@@ -587,7 +603,7 @@ asynStatus XPSAxis::poll(bool *moving)
     setIntegerParam(pC_->motorStatusHome_, 0);
   }
 
-  /*Set the HOMED signal.*/
+  /* Set the HOMED signal.*/
   if ((axisStatus_ >= 10 && axisStatus_ <= 21) || 
       (axisStatus_ == 44) || (axisStatus_ == 45) || (axisStatus_ == 47)) {
     if (referencingMode_ == 0) {
@@ -604,8 +620,8 @@ asynStatus XPSAxis::poll(bool *moving)
       (axisStatus_ >= 24 && axisStatus_ <= 26) ||
       (axisStatus_ == 28 || axisStatus_ == 35)) {
     asynPrint(pasynUser_, ASYN_TRACE_FLOW, 
-	      "%s:%s: [%s,%d]: in following error. XPS State Code: %d\n",
-	      driverName, functionName, pC_->portName, axisNo_, axisStatus_);
+              "%s:%s: [%s,%d]: in following error. XPS State Code: %d\n",
+              driverName, functionName, pC_->portName, axisNo_, axisStatus_);
     setIntegerParam(pC_->motorStatusFollowingError_, 1);
   } else {
     setIntegerParam(pC_->motorStatusFollowingError_, 0);
@@ -619,8 +635,8 @@ asynStatus XPSAxis::poll(bool *moving)
       setIntegerParam(pC_->motorStatusProblem_, 0);             
     } else {
       asynPrint(pasynUser_, ASYN_TRACE_FLOW, 
-	      "%s:%s: [%s,%d]: in unintialised/disabled/not referenced. XPS State Code: %d\n",
-	      driverName, functionName, pC_->portName, axisNo_, axisStatus_);
+          "%s:%s: [%s,%d]: in unintialised/disabled/not referenced. XPS State Code: %d\n",
+          driverName, functionName, pC_->portName, axisNo_, axisStatus_);
       setIntegerParam(pC_->motorStatusProblem_, 1);
     }
   } else {
@@ -685,18 +701,151 @@ asynStatus XPSAxis::poll(bool *moving)
   }
   setIntegerParam(pC_->motorStatusDirection_, (currentVelocity_ > XPS_VELOCITY_DEADBAND));
   setIntegerParam(pC_->motorStatusMoving_,    (fabs(currentVelocity_) > XPS_VELOCITY_DEADBAND));
-
+  
+  status = ReadXPSSocket(moveSocket_, readResponse, sizeof(readResponse), 0);
+  if (status < 0) {
+    asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
+              "%s:%s: [%s,%d]: error calling ReadXPSSocket status=%d\n",
+              driverName, functionName, pC_->portName, axisNo_,  status);
+    goto done;
+  }
+  if (status > 0) {
+    asynPrint(pasynUser_, ASYN_TRACE_FLOW, 
+              "%s:%s: [%s,%d]: readXPSSocket returned nRead=%d, [%s]\n",
+              driverName, functionName, pC_->portName, axisNo_,  status, readResponse);
+    status = 0;
+  }
+    
   done:
-  setIntegerParam(pC_->XPSStatus_, axisStatus_);
-  pC_->doCallbacksInt8Array(axisStatusString_, strlen(axisStatusString_), pC_->XPSStatusString_, axisNo_);  
   setIntegerParam(pC_->motorStatusCommsError_, status ? 1 : 0);
   callParamCallbacks();
   return status ? asynError : asynSuccess;
 }
 
+asynStatus XPSAxis::setLowLimit(double value)
+{
+  double deviceValue;
+  int status;
+  static const char *functionName = "setLowLimit";
+  
+  deviceValue = value*stepSize_;
+  /* We need to read the current highLimit because otherwise we could be setting it to an invalid value */
+  status = PositionerUserTravelLimitsGet(pollSocket_,
+                                         positionerName_,
+                                         &lowLimit_, &highLimit_);
+  if (status) {
+    asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
+              "%s:%s: error performing PositionerUserTravelLimitsGet status=%d\n",
+              driverName, functionName, pC_->portName, axisNo_, status);
+    goto done;
+  }
+  status = PositionerUserTravelLimitsSet(pollSocket_,
+                                         positionerName_,
+                                         deviceValue, highLimit_);
+  if (status) {
+    asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
+          "%s:%s: error performing PositionerUserTravelLimitsSet for lowLim=%f status=%d\n",
+              driverName, functionName, pC_->portName, axisNo_, deviceValue, status);
+    goto done;
+  } 
+  lowLimit_ = deviceValue;
+  asynPrint(pasynUser_, ASYN_TRACE_FLOW, 
+            "%s:%s: Set XPS %s, axis %d low limit to %f\n", 
+            driverName, functionName, pC_->portName, axisNo_, deviceValue);
+  
+  done:
+  return (asynStatus)status;
+}
+
+  
+asynStatus XPSAxis::setHighLimit(double value)
+{
+  double deviceValue;
+  int status;
+  static const char *functionName = "setHighLimit";
+  
+  deviceValue = value*stepSize_;
+  /* We need to read the current highLimit because otherwise we could be setting it to an invalid value */
+  status = PositionerUserTravelLimitsGet(pollSocket_,
+                                         positionerName_,
+                                         &lowLimit_, &highLimit_);
+  if (status) {
+    asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
+              "%s:%s: error performing PositionerUserTravelLimitsGet status=%d\n",
+              driverName, functionName, pC_->portName, axisNo_, status);
+    goto done;
+  }
+  status = PositionerUserTravelLimitsSet(pollSocket_,
+                                         positionerName_,
+                                         lowLimit_, deviceValue);
+  if (status) {
+    asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
+          "%s:%s: error performing PositionerUserTravelLimitsSet for highLim=%f status=%d\n",
+              driverName, functionName, pC_->portName, axisNo_, deviceValue, status);
+    goto done;
+  } 
+  highLimit_ = deviceValue;
+  asynPrint(pasynUser_, ASYN_TRACE_FLOW, 
+            "%s:%s: Set XPS %s, axis %d high limit to %f\n", 
+            driverName, functionName, pC_->portName, axisNo_, deviceValue);
+  
+  done:
+  return (asynStatus)status;
+}
+
+
+asynStatus XPSAxis::setPGain(double value)
+{
+  return setPID(&value, 0);
+}
+
+
+asynStatus XPSAxis::setIGain(double value)
+{
+  return setPID(&value, 1);
+}
+
+
+asynStatus XPSAxis::setDGain(double value)
+{
+  return setPID(&value, 2);
+}
+
+
+asynStatus XPSAxis::setClosedLoop(bool closedLoop)
+{
+  int status;
+  static const char *functionName = "setClosedLoop";
+  
+  if (closedLoop) {
+    status = GroupMotionEnable(pollSocket_, groupName_);
+    if (status) {
+      asynPrint(pasynUser_, ASYN_TRACE_ERROR,
+                "%s:%s: [%s,%d]: error calling GroupMotionEnable status=%d\n",
+                 driverName, functionName, pC_->portName, axisNo_, status);
+    } else {
+      asynPrint(pasynUser_, ASYN_TRACE_FLOW,
+                "%s:%s: set XPS %s, axis %d closed loop enable\n",
+                 driverName, functionName, pC_->portName, axisNo_);
+    }
+  } else {
+    status = GroupMotionDisable(pollSocket_, groupName_);
+    if (status) {
+      asynPrint(pasynUser_, ASYN_TRACE_ERROR,
+                "%s:%s: [%s,%d]: error calling GroupMotionDisable status=%d\n",
+                driverName, functionName, pC_->portName, axisNo_, status);
+    } else {
+      asynPrint(pasynUser_, ASYN_TRACE_FLOW,
+                "%s:%s: motorAxisSetInteger set XPS %s, axis %d closed loop disable\n",
+                driverName, functionName, pC_->portName, axisNo_);
+    }
+  }
+  return (asynStatus)status;
+}
+
 char *XPSAxis::getXPSError(int status, char *buffer)
 {
-    status = ErrorStringGet(this->pollSocket_, status, buffer);
+    status = ErrorStringGet(pollSocket_, status, buffer);
     return buffer;
 }
 
@@ -1322,7 +1471,7 @@ asynStatus XPSAxis::doMoveToHome(void)
       status = GroupStatusGet(pollSocket_, groupName_, &groupStatus);
       if (groupStatus != 44) {
         /* move finished for some other reason.*/
-	asynPrint(pasynUser_, ASYN_TRACE_ERROR, "%s:%s: Error performing GroupMoveRelative.\n", driverName, functionName);
+        asynPrint(pasynUser_, ASYN_TRACE_ERROR, "%s:%s: Error performing GroupMoveRelative.\n", driverName, functionName);
         /*Issue a kill here if we have failed to move.*/
         status = GroupKill(moveSocket_, groupName_);
         return asynError;

@@ -2,9 +2,9 @@
 FILENAME... drvEnsembleAsyn.cc
 USAGE...    Motor record asyn driver level support for Aerotech Ensemble.
 
-Version:        $Revision: 14419 $
+Version:        $Revision: 15236 $
 Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2012-02-02 10:29:20 -0800 (Thu, 02 Feb 2012) $
+Last Modified:  $Date: 2012-09-27 12:44:00 -0700 (Thu, 27 Sep 2012) $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/AerotechSrc/drvEnsembleAsyn.cc $
 */
 
@@ -60,6 +60,10 @@ in file LICENSE that is included with this distribution.
 *                    PLANESTATUS and AXISSTATUS for move_active. 
 * .14 12-22-11 rls - Restore home search; using HomeAsync.abx vendor program.
 * .15 02-02-12 rls - Replace "stepSize > 0.0" test with ReverseDirec parameter.
+* .16 04-19-12 rls - Added communication retries.
+*                  - Reading both feedback and commanded positions.
+*                  - Deleted duplicate error messages. 
+* .17 09-27-12 rls - Bug fix for incorrect jog acceleration rate.
 */
 
 
@@ -133,7 +137,7 @@ typedef struct motorAxisHandle
 {
     EnsembleController *pController;
     PARAMS params;
-    double currentPosition;
+    double currentCmdPos;
     double stepSize;
     double homePreset;
     int homeDirection;
@@ -160,10 +164,8 @@ typedef struct
 } motorEnsemble_t;
 
 
-extern "C" {
-static int motorEnsembleLogMsg(void * param, const motorAxisLogMask_t logMask, const char *pFormat, ...);
-}
-static asynStatus sendAndReceive(EnsembleController *pController, char *outputString, char *inputString, int inputSize);
+extern "C" {static int motorEnsembleLogMsg(void *, const motorAxisLogMask_t, const char *, ...);}
+static asynStatus sendAndReceive(EnsembleController *, char *, char *, int);
 
 #define PRINT   (drv.print)
 #define FLOW    motorAxisTraceFlow
@@ -198,7 +200,6 @@ the Ensemble parameters specified */
 #define ASCII_FAULT_CHAR    '#'   /* AsciiCmdFaultChar */
 #define ASCII_TIMEOUT_CHAR  '$'   /* AsciiCmdTimeoutChar */
 
-#define TCP_TIMEOUT 2.0
 static motorEnsemble_t drv = {NULL, NULL, motorEnsembleLogMsg, 0, {0, 0}};
 static int numEnsembleControllers;
 /* Pointer to array of controller structures */
@@ -467,8 +468,6 @@ static int motorAxisMove(AXIS_HDL pAxis, double position, int relative,
     PRINT(pAxis->logParam, FLOW, "Set card %d, axis %d move to %f, min vel=%f, max_vel=%f, accel=%f\n",
           pAxis->card, axis, position, min_velocity, max_velocity, acceleration);
 
-    posdir = false;
-
     if (relative)
     {
         if (position >= 0.0)
@@ -479,7 +478,7 @@ static int motorAxisMove(AXIS_HDL pAxis, double position, int relative,
     }
     else
     {
-        if (position >= pAxis->currentPosition)
+        if (position >= pAxis->currentCmdPos)
             posdir = true;
         else
             posdir = false;
@@ -589,8 +588,10 @@ static int motorAxisVelocityMove(AXIS_HDL pAxis, double min_velocity, double vel
     if (pAxis == NULL || pAxis->pController == NULL)
         return(MOTOR_AXIS_ERROR);
 
-    sprintf(outputBuff, "SETPARM @%d, %d, %.*f", pAxis->axis, PARAMETERID_DefaultRampRate,
+    sprintf(outputBuff, "SETPARM @%d, %d, %.*f", pAxis->axis, PARAMETERID_AbortDecelRate,
             pAxis->maxDigits, acceleration * fabs(pAxis->stepSize));
+    ret_status = sendAndReceive(pAxis->pController, outputBuff, inputBuff, sizeof(inputBuff));
+    sprintf(outputBuff, "RAMP RATE @%d %.*f", pAxis->axis, pAxis->maxDigits, acceleration * fabs(pAxis->stepSize));
     ret_status = sendAndReceive(pAxis->pController, outputBuff, inputBuff, sizeof(inputBuff));
     sprintf(outputBuff, "FREERUN @%d %.*f", pAxis->axis, pAxis->maxDigits, velocity  * fabs(pAxis->stepSize));
     ret_status = sendAndReceive(pAxis->pController, outputBuff, inputBuff, sizeof(inputBuff));
@@ -628,10 +629,10 @@ static int motorAxisStop(AXIS_HDL pAxis, double acceleration)
     if (pAxis == NULL || pAxis->pController == NULL)
         return (MOTOR_AXIS_ERROR);
 
-    PRINT(pAxis->logParam, FLOW, "Set card %d, axis %d\n",
-          pAxis->card, pAxis->axis);
+    PRINT(pAxis->logParam, FLOW, "Abort on card %d, axis %d\n", pAxis->card, pAxis->axis);
 
-    /* we can't accurately determine which type of motion is occurring on the controller, so don't worry about the acceleration rate, just stop the motion on the axis */
+    /* we can't accurately determine which type of motion is occurring on the controller,
+     * so don't worry about the acceleration rate, just stop the motion on the axis */
     sprintf(outputBuff, "ABORT @%d", pAxis->axis);    
     ret_status = sendAndReceive(pAxis->pController, outputBuff, inputBuff, sizeof(inputBuff));
     return (ret_status);
@@ -642,8 +643,7 @@ static int motorAxisforceCallback(AXIS_HDL pAxis)
     if (pAxis == NULL || pAxis->pController == NULL)
         return(MOTOR_AXIS_ERROR);
 
-    PRINT(pAxis->logParam, FLOW, "motorAxisforceCallback: request card %d, axis %d status update\n",
-          pAxis->card, pAxis->axis);
+    PRINT(pAxis->logParam, FLOW, "motorAxisforceCallback: request card %d, axis %d status update\n", pAxis->card, pAxis->axis);
 
     /* Force a status update. */
     motorParam->forceCallback(pAxis->params);
@@ -686,7 +686,6 @@ static void EnsemblePoller(EnsembleController *pController)
             comStatus = sendAndReceive(pController, outputBuff, inputBuff, sizeof(inputBuff));
             if (comStatus != asynSuccess || strlen(inputBuff) <= 1)
             {
-                PRINT(pAxis->logParam, TERROR, "EnsemblePoller: error reading status=%d\n", comStatus);
                 motorParam->setInteger(pAxis->params, motorAxisCommError, 1);
                 epicsMutexUnlock(pAxis->mutexId);
                 continue;
@@ -743,29 +742,34 @@ static void EnsemblePoller(EnsembleController *pController)
             comStatus = sendAndReceive(pController, outputBuff, inputBuff, sizeof(inputBuff));
             if (comStatus  != asynSuccess)
             {
-                PRINT(pAxis->logParam, TERROR, "EnsemblePoller: error reading position=%d\n", comStatus);
                 motorParam->setInteger(pAxis->params, motorAxisCommError, 1);
                 epicsMutexUnlock(pAxis->mutexId);
                 continue;
             }
             else
             {
-                double pfdbk;
+                double position;
                 if (inputBuff[0] != ASCII_ACK_CHAR)
-                    pfdbk = 0;
+                    position = 0;
                 else
-                    pfdbk = atof(&inputBuff[1]);
-                pAxis->currentPosition = pfdbk / fabs(pAxis->stepSize);
-                motorParam->setDouble(pAxis->params, motorAxisPosition, pAxis->currentPosition);
-                motorParam->setDouble(pAxis->params, motorAxisEncoderPosn, pAxis->currentPosition);
+                    position = atof(&inputBuff[1]);
+                position /= fabs(pAxis->stepSize);
+                motorParam->setDouble(pAxis->params, motorAxisEncoderPosn, position);
+
+                /* Read commanded postion. */
+                sprintf(outputBuff, "PCMDPROG(@%d)", pAxis->axis);
+                comStatus = sendAndReceive(pController, outputBuff, inputBuff, sizeof(inputBuff));
+                position = atof(&inputBuff[1]);
+                position /= fabs(pAxis->stepSize);
+                motorParam->setDouble(pAxis->params, motorAxisPosition, position);
+                pAxis->currentCmdPos = position;
                 PRINT(pAxis->logParam, IODRIVER, "EnsemblePoller: axis %d axisStatus=%x, position=%f\n", 
-                      pAxis->axis, pAxis->axisStatus, pAxis->currentPosition);
+                      pAxis->axis, pAxis->axisStatus, pAxis->currentCmdPos);
             }
             sprintf(outputBuff, "AXISFAULT(@%d)", pAxis->axis);
             comStatus = sendAndReceive(pController, outputBuff, inputBuff, sizeof(inputBuff));
             if (comStatus != asynSuccess)
             {
-                PRINT(pAxis->logParam, TERROR, "EnsemblePoller: error reading axisfault axis=%d error=%d\n", itera, comStatus);
                 motorParam->setInteger(pAxis->params, motorAxisCommError, 1);
                 epicsMutexUnlock(pAxis->mutexId);
                 continue;
@@ -998,13 +1002,32 @@ static asynStatus sendAndReceive(EnsembleController *pController, char *outputBu
      * so we don't expect much latency on read/writes */
     epicsMutexLock(pController->sendReceiveMutex);
 
-    status = pasynOctetSyncIO->writeRead(pController->pasynUser, 
-             outputCopy, nWriteRequested, inputBuff, inputSize, TIMEOUT, &nWrite, &nRead, &eomReason);
+    status = pasynOctetSyncIO->writeRead(pController->pasynUser, outputCopy, nWriteRequested,
+                               inputBuff, inputSize, TIMEOUT, &nWrite, &nRead, &eomReason);
+    
     if (nWrite != nWriteRequested)
         status = asynError;
+    else if (status == asynTimeout)
+    {
+        int retry = 1;
+
+        while (retry <= 3 && status == asynTimeout)
+        {
+            PRINT(pController->pAxis->logParam, TERROR, "drvEnsembleAsyn:sendAndReceive: Retrying read, retry# = %d.\n", retry);
+            status = pasynOctetSyncIO->read(pController->pasynUser, inputBuff, inputSize, TIMEOUT, &nRead, &eomReason);
+            retry++;
+        }
+        if (retry > 3)
+            PRINT(pController->pAxis->logParam, TERROR,
+                  "drvEnsembleAsyn:sendAndReceive: Retries exhausted on response to command = %s.\n", outputCopy);
+        else
+            PRINT(pController->pAxis->logParam, TERROR,
+                  "drvEnsembleAsyn:sendAndReceive: Retry succeeded for command = %s with response = %s\n", outputCopy, inputBuff);
+    }
+
     if (status != asynSuccess)
         asynPrint(pController->pasynUser, ASYN_TRACE_ERROR,
-                  "drvEnsembleAsyn:sendAndReceive error calling write, output=%s status=%d, error=%s\n",
+                  "drvEnsembleAsyn:sendAndReceive writeRead error, output=%s status=%d, error=%s\n",
                   outputCopy, status, pController->pasynUser->errorMessage);
     else
     {

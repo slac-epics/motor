@@ -2,9 +2,9 @@
 FILENAME...     motorUtil.cc
 USAGE...        Motor Record Utility Support.
 
-Version:        $Revision: 9857 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2009-12-09 08:21:24 -0800 (Wed, 09 Dec 2009) $
+Version:        $Revision: 15394 $
+Modified By:    $Author: kpetersn $
+Last Modified:  $Date: 2012-10-24 14:33:44 -0700 (Wed, 24 Oct 2012) $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/MotorSrc/motorUtil.cc $
 */
 
@@ -258,7 +258,10 @@ static void stopAll(chid callback_chid, char *callback_value)
         if (motorMovingCount())
         {
             for(itera=0; itera < numMotors; itera++)
-                ca_put(DBR_SHORT, motorArray[itera].chid_stop, &val);
+	        /* Only stop a motor that is moving.  This should avoid problems caused by trying
+		to stop motor records for which device and driver support have not been loaded.*/
+                if (motorArray[itera].in_motion == 1)
+		    ca_put(DBR_SHORT, motorArray[itera].chid_stop, &val);
             status = ca_flush_io(); 
         }
 

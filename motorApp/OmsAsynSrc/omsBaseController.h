@@ -1,6 +1,14 @@
 /*
- * omsBaseController.h
- *
+FILENAME...     omsBaseController.h
+USAGE...        Pro-Dex OMS asyn motor base controller support
+
+Version:        $Revision$
+Modified By:    $Author$
+Last Modified:  $Date$
+HeadURL:        $URL$
+*/
+
+/*
  *  Created on: 06/2012
  *      Author: eden
  */
@@ -27,10 +35,9 @@
 class omsBaseController : public asynMotorController {
 public:
     omsBaseController(const char *portName, int numAxes, int priority, int stackSize, int extMotorParams);
+    virtual asynStatus readInt32(asynUser *pasynUser, epicsInt32 *value);
     virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
     virtual asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
-//    virtual asynStatus readFloat64(asynUser *pasynUser, epicsFloat64 *value);
-    virtual asynStatus readInt32(asynUser *pasynUser, epicsInt32 *value);
     virtual void report(FILE *fp, int level);
     virtual asynStatus sendReceive(const char*, char*, unsigned int ) = 0;
     virtual asynStatus sendOnly(const char *outputBuff) = 0;
@@ -61,7 +68,6 @@ protected:
     static omsBaseController* findController(const char*);
     static ELLLIST omsControllerList;
     static int omsTotalControllerNumber;
-    // epicsEventId pollEventId;
     char* controllerType;
     int fwMajor, fwMinor, fwRevision;
     epicsTimeStamp now;
@@ -84,6 +90,7 @@ private:
     int sendReceiveIndex;
     int sendIndex;
     int receiveIndex;
+    int pollIndex;
     int priority, stackSize;
 
     friend class omsBaseAxis;

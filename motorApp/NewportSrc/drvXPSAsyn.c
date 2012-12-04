@@ -2,9 +2,9 @@
 FILENAME...     drvXPSasyn.c
 USAGE...        Newport XPS EPICS asyn motor device driver
 
-Version:        $Revision: 13813 $
-Modified By:    $Author: mwpearson $
-Last Modified:  $Date: 2011-10-11 08:08:41 -0700 (Tue, 11 Oct 2011) $
+Version:        $Revision: 14926 $
+Modified By:    $Author: kpetersn $
+Last Modified:  $Date: 2012-08-15 14:05:14 -0700 (Wed, 15 Aug 2012) $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/NewportSrc/drvXPSAsyn.c $
 */
 
@@ -1332,20 +1332,29 @@ static void XPSPoller(XPSController *pController)
 		}
 
 		/*Test for states that mean we cannot move an axis (disabled, uninitialised, etc.) 
-		  and set problem bit in MSTA.*/
+		  and set motorAxisPowerOn (CNEN).*/
 		if ((pAxis->axisStatus < 10) || ((pAxis->axisStatus >= 20) && (pAxis->axisStatus <= 42)) ||
-		    (pAxis->axisStatus == 50) || (pAxis->axisStatus == 64)) {
+		    (pAxis->axisStatus == 50) || (pAxis->axisStatus == 63) || (pAxis->axisStatus == 64)) {
 		  if ( (pAxis->noDisabledError > 0) && (pAxis->axisStatus==20) ) {
-		    motorParam->setInteger(pAxis->params, motorAxisProblem, 0);		    
+		    motorParam->setInteger(pAxis->params, motorAxisPowerOn, 1);		    
 		  } else {
 		    PRINT(pAxis->logParam, FLOW, "XPS Axis %d is uninitialised/disabled/not referenced. XPS State Code: %d\n",
                            pAxis->axis, pAxis->axisStatus);
-		    motorParam->setInteger(pAxis->params, motorAxisProblem, 1);
+		    motorParam->setInteger(pAxis->params, motorAxisPowerOn, 0);
 		  }
+		} else {
+		  motorParam->setInteger(pAxis->params, motorAxisPowerOn, 1);
+		}
+		
+		/*Test for uninitialized states.*/
+		if ((pAxis->axisStatus < 10) || (pAxis->axisStatus == 42) || (pAxis->axisStatus == 50) || (pAxis->axisStatus == 63)) {
+		  PRINT(pAxis->logParam, FLOW, "XPS Axis %d is uninitialised. XPS State Code: %d\n",
+                         pAxis->axis, pAxis->axisStatus);
+		  motorParam->setInteger(pAxis->params, motorAxisProblem, 1);
 		} else {
 		  motorParam->setInteger(pAxis->params, motorAxisProblem, 0);
 		}
-
+		
             }
 
 	    status = GroupPositionSetpointGet(pAxis->pollSocket,

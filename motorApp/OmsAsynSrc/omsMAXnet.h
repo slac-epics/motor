@@ -1,6 +1,14 @@
 /*
- * omsMAXnet.h
- *
+FILENAME...     omsMAXnet.h
+USAGE...        Pro-Dex OMS MAXnet asyn motor controller support
+
+Version:        $Revision$
+Modified By:    $Author$
+Last Modified:  $Date$
+HeadURL:        $URL$
+*/
+
+/*
  *  Created on: 10/2010
  *      Author: eden
  */

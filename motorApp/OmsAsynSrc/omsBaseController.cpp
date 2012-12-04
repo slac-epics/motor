@@ -1,6 +1,14 @@
 /*
- * omsBaseController.cpp
- *
+FILENAME...     omsBaseController.cpp
+USAGE...        Pro-Dex OMS asyn motor base controller support
+
+Version:        $Revision$
+Modified By:    $Author$
+Last Modified:  $Date$
+HeadURL:        $URL$
+*/
+
+/*
  *  Created on: 06/2012
  *      Author: eden
  *
@@ -19,7 +27,8 @@
 #define motorOmsStringSendString        "OMS_STRING_SEND"
 #define motorOmsStringSendRecvString    "OMS_STRING_SENDRECV"
 #define motorOmsStringRecvString        "OMS_STRING_RECV"
-#define MOTOR_OMS_PARAMS_COUNT          3
+#define motorOmsPollString              "OMS_POLL"
+#define MOTOR_OMS_PARAMS_COUNT          4
 
 ELLLIST omsBaseController::omsControllerList;
 int omsBaseController::omsTotalControllerNumber = 0;
@@ -84,6 +93,7 @@ omsBaseController::omsBaseController(const char *portName, int maxAxes, int prio
     else
         stackSize = stackSz;
 
+    createParam(0, motorOmsPollString, asynParamInt32, &pollIndex);
     createParam(0, motorOmsStringSendString, asynParamOctet, &sendIndex);
     createParam(0, motorOmsStringSendRecvString, asynParamOctet, &sendReceiveIndex);
     createParam(0, motorOmsStringRecvString, asynParamOctet, &receiveIndex);
@@ -213,6 +223,37 @@ asynStatus omsBaseController::writeOctet(asynUser *pasynUser, const char *value,
     return status;
 }
 
+asynStatus omsBaseController::readInt32(asynUser *pasynUser, epicsInt32 *value)
+{
+    int function = pasynUser->reason;
+    asynStatus status = asynSuccess;
+    omsBaseAxis *pAxis = getAxis(pasynUser);
+    static const char *functionName = "readInt32";
+    static char outputBuffer[8];
+
+    if (!pAxis) return asynError;
+
+    if (function == motorPosition_) {
+        strcpy(outputBuffer,"A? RP");
+        sendReceiveReplace(pAxis, outputBuffer, inputBuffer, sizeof(inputBuffer));
+        *value = strtol(inputBuffer, NULL, 10);
+     } else if (function == motorEncoderPosition_) {
+         int haveEncoder;
+         getIntegerParam(pAxis->axisNo_, motorStatusHasEncoder_, &haveEncoder);
+         if (haveEncoder){
+             strcpy(outputBuffer,"A? RE");
+             sendReceiveReplace(pAxis, outputBuffer, inputBuffer, sizeof(inputBuffer));
+             *value = strtol(inputBuffer, NULL, 10);
+         }
+     } else {
+          // Call base class
+   	      status = asynMotorController::readInt32(pasynUser, value);
+     }
+
+
+    return status;
+}
+
 asynStatus omsBaseController::writeInt32(asynUser *pasynUser, epicsInt32 value)
 {
     int function = pasynUser->reason;
@@ -230,7 +271,7 @@ asynStatus omsBaseController::writeInt32(asynUser *pasynUser, epicsInt32 value)
             "%s:%s:%s Deferred Move: not yet implemented %s\n",
             driverName, functionName, portName);
     }
-    else if (function == motorSetClosedLoop_)
+    else if (function == motorClosedLoop_)
     {
         if (value) {
             asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s:%s axis %d closed loop enable\n",
@@ -250,6 +291,12 @@ asynStatus omsBaseController::writeInt32(asynUser *pasynUser, epicsInt32 value)
     }
     else if (function == motorMoveToHome_) {
         /* avoid  asynMotorController::writeInt32 to handle this*/
+    }
+    else if (function == pollIndex)
+    {
+    	 if (value) {
+    		 wakeupPoller();
+    	 }
     }
     else {
         return asynMotorController::writeInt32(pasynUser, value);
@@ -293,7 +340,9 @@ asynStatus omsBaseController::writeFloat64(asynUser *pasynUser, epicsFloat64 val
             status = sendReplace(pAxis, inputBuffer);
         }
      }
-     else if (function == motorEncRatio_) {
+/*
+ *   Encoder Mode is currently not supported in motor record
+     else if (function == motorEncoderRatio_) {
          int haveEncoder;
          getIntegerParam(pAxis->axisNo_, motorStatusHasEncoder_, &haveEncoder);
          if (haveEncoder){
@@ -304,11 +353,12 @@ asynStatus omsBaseController::writeFloat64(asynUser *pasynUser, epicsFloat64 val
             status = sendReplace(pAxis, inputBuffer);
         }
      }
+*/
      else if ((function == motorResolution_) || (function == motorLowLimit_) || (function == motorHighLimit_)) {
             // we do nothing
             status = asynSuccess;
      }
-     else if (function == motorPgain_) {
+     else if (function == motorPGain_) {
          if ((0.00 >= value) && (value < 32768.00)){
              asynPrint(pasynUser, ASYN_TRACE_FLOW,
                       "%s:%s:%s axis %d set proportional gain to %f\n",
@@ -322,7 +372,7 @@ asynStatus omsBaseController::writeFloat64(asynUser *pasynUser, epicsFloat64 val
                       driverName, functionName, portName, pAxis->axisNo_, value);
             }
         }
-     else if (function == motorIgain_) {
+     else if (function == motorIGain_) {
          if ((0.00 >= value) && (value < 32768.00)){
                 asynPrint(pasynUser, ASYN_TRACE_FLOW,
                       "%s:%s:%s axis %d set integral gain to %f\n",
@@ -336,7 +386,7 @@ asynStatus omsBaseController::writeFloat64(asynUser *pasynUser, epicsFloat64 val
                       driverName, functionName, portName, pAxis->axisNo_, value);
          }
         }
-     else if (function == motorDgain_)
+     else if (function == motorDGain_)
     {
          if ((0.00 >= value) && (value < 32768.00)){
                  asynPrint(pasynUser, ASYN_TRACE_FLOW,
@@ -368,72 +418,6 @@ asynStatus omsBaseController::writeFloat64(asynUser *pasynUser, epicsFloat64 val
     return status;
 }
 
-asynStatus omsBaseController::readInt32(asynUser *pasynUser, epicsInt32 *value)
-{  
-    int function = pasynUser->reason;
-    asynStatus status = asynSuccess;
-    omsBaseAxis *pAxis = getAxis(pasynUser);
-    bool moving;
-    double dval;
-    static const char *functionName = "readInt32";
-    epicsInt32  posArr[OMS_MAX_AXES];  
-	static char outputBuffer[8];
-
-    if (!pAxis) return asynError;
-
-    if (function == motorPosition_) {
-        strcpy(outputBuffer,"A? RP");
-        sendReceiveReplace(pAxis, outputBuffer, inputBuffer, sizeof(inputBuffer));
-        *value = strtol(inputBuffer, NULL, 10);
-    } else if (function == motorEncoderPosition_) {
-        int haveEncoder;
-        getIntegerParam(pAxis->axisNo_, motorStatusHasEncoder_, &haveEncoder);
-        if (haveEncoder){
-            strcpy(outputBuffer,"A? RE");
-            sendReceiveReplace(pAxis, outputBuffer, inputBuffer, sizeof(inputBuffer));
-            *value = strtol(inputBuffer, NULL, 10);
-        }
-/*
- 	if ((function == motorPosition_) || (function == motorEncoderPosition_)) {
-        //update all values and status
-        pAxis->poll(&moving);
-		//getDoubleParam(pAxis->axisNo_, motorVelocity_, &velocity);		
-        getDoubleParam(pAxis->axisNo_, function, &dval);
-		*value = (int)dval;
-//        asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s:%s axis %d read motor position %f\n", driverName, functionName, portName, pAxis->axisNo_, dval);
-// printf("%s:%s:%s axis %d read motor position dval=%f, value=%d\n", driverName, functionName, portName, pAxis->axisNo_, dval, *value);
-*/
-/*
-    if (function == motorPosition_) {
-          printf("getting motorPosition_ for axis %d\n", pAxis->axisNo_);
-          status = getAxesPositions(posArr);
-          if (status != asynSuccess) {
-               errlogPrintf("%s:%s:%s: error reading axis position\n",
-                    driverName, functionName, this->portName);
-               printf("error getting motorPosition_ for %d\n", pAxis->axisNo_);
-          } else {
-               *value = posArr[pAxis->axisNo_];
-               printf("motor position=%d\n", *value);
-               callParamCallbacks();
-          }
-     } else if (function == motorEncoderPosition_) {
-          printf("getting motorEncoderPosition_ for axis %d\n", pAxis->axisNo_);
-          status = getEncoderPositions(posArr);
-          if (status != asynSuccess) {
-               Debug(1, "%s:%s:%s: error executing get Encoder Positions\n", driverName, functionName, this->portName);
-               printf("error getting motorEncoderPosition_ for %d\n", pAxis->axisNo_);
-          } else {
-               *value = posArr[pAxis->axisNo_];
-               printf("encoder position=%d\n", *value);
-               callParamCallbacks();
-          }
-*/     } else {
-		// Call base class call its method (if we have our parameters check this here)
-		//status = asynPortDriver::readInt32(pasynUser, value);
-		status = asynMotorController::readInt32(pasynUser, value);     		        
-	}
-    return status;	
-}
 
 
 asynStatus omsBaseController::getFirmwareVersion()
@@ -467,6 +451,7 @@ asynStatus omsBaseController::Init(const char* initString, int multiple){
     int totalAxes;
     char axisChrArr[OMS_MAX_AXES] = {'X','Y','Z','T','U','V','R','S'};
     char outputBuffer[10];
+    epicsInt32  axisPosArr[OMS_MAX_AXES];
 
     /* Interrupt clear */
     sendOnlyLock("IC;");
@@ -562,6 +547,10 @@ asynStatus omsBaseController::Init(const char* initString, int multiple){
         else
             errlogPrintf("omsBaseController:Init: error: unknown limit true state!\n");
 
+    }
+    if (getAxesPositions(axisPosArr) == asynSuccess){
+    	for (int axis=0; axis < numAxes; axis++)
+    		(pAxes[axis])->setDoubleParam(motorPosition_, (double) axisPosArr[axis]);
     }
     unlock();
     return asynSuccess;
