@@ -3,9 +3,9 @@ FILENAME...     motordrvCom.cc
 USAGE...        This file contains driver functions that are common
                 to all motor record driver modules.
 
-Version:        $Revision: 15586 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2012-11-30 14:27:08 -0800 (Fri, 30 Nov 2012) $
+Version:        $Revision: 1.1.1.3 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 16:16:40 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/MotorSrc/motordrvCom.cc $
 */
 

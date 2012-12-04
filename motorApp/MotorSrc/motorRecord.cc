@@ -2,9 +2,9 @@
 FILENAME...     motorRecord.cc
 USAGE...        Motor Record Support.
 
-Version:        $Revision: 15373 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2012-10-09 08:49:41 -0700 (Tue, 09 Oct 2012) $
+Version:        $Revision: 1.1.1.4 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 16:16:40 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/MotorSrc/motorRecord.cc $
 */
 

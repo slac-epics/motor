@@ -2,9 +2,9 @@
 FILENAME...     devOmsCom.cc
 USAGE...        Data and functions common to all OMS device level support.
 
-Version:        $Revision: 15587 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2012-11-30 14:57:36 -0800 (Fri, 30 Nov 2012) $
+Version:        $Revision: 1.1.1.3 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 16:16:39 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/OmsSrc/devOmsCom.cc $
 */
 

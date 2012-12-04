@@ -3,9 +3,9 @@ FILENAME...	drvMAXv.h
 USAGE...	OMS driver level "include" information that is specific to OMS
 		model MAXv.
 
-Version:        $Revision: 13925 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2011-11-04 11:20:09 -0700 (Fri, 04 Nov 2011) $
+Version:        $Revision: 1.1.1.2 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/02/09 05:59:47 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/OmsSrc/drvMAXv.h $
 */
 
