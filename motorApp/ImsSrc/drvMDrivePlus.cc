@@ -175,7 +175,7 @@ epicsShareFunc int set_status(int card, int signal)
     /* Message parsing variables */
     char buff[BUFF_SIZE], fmt_str[32];
     int  rtn_state, nval, scan_rtn;
-    int  mvval, stval, puval, ecode, lpval, lmval;
+    int  mvval, stval, puval, ecode, lpval, lmval, eeval;
     long motorData;
     unsigned int mchb;
     bool plusdir, ls_active = false;
@@ -194,7 +194,7 @@ epicsShareFunc int set_status(int card, int signal)
 
     while(1)
     {
-        send_mess( card, "PR \"MV=\",MV,\",P=\",P,\",ST=\",ST", MDrivePlus_axis[signal] );
+        send_mess( card, "PR \"MV=\",MV,\",P=\",P,\",ST=\",ST,\",EE=\",EE", MDrivePlus_axis[signal] );
         rtn_state = recv_mess( card, buff, 1 );
 
         if ( rtn_state <= 0 )                                     // no response
@@ -216,10 +216,10 @@ epicsShareFunc int set_status(int card, int signal)
             continue;
         }
 
-        scan_rtn = sscanf(buff, "MV=%d,P=%ld,ST=%d", &mvval, &motorData, &stval);
+        scan_rtn = sscanf(buff, "MV=%d,P=%ld,ST=%d,EE=%d", &mvval, &motorData, &stval, &eeval);
 
-        if ( (scan_rtn == 3) &&
-             (mvval == 1 || mvval == 0) && (stval == 0 || stval == 1) )
+        if ( (scan_rtn == 4) &&
+             (mvval == 1 || mvval == 0) && (stval == 0 || stval == 1) && (eeval == 0 || eeval == 1) )
         {
             // Parse Position
             if ( motorData == motor_info->position )
@@ -245,6 +245,8 @@ epicsShareFunc int set_status(int card, int signal)
             status.Bits.RA_STALL       = stval;
             status.Bits.CNTRL_COMM_ERR = 0;
             status.Bits.RA_PROBLEM     = 0;
+
+	    status.Bits.EA_PRESENT     = eeval;
             break;
         }
         else                                                     // bad response
