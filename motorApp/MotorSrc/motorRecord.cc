@@ -2909,6 +2909,8 @@ velcheckB:
         MARK(M_UEIP);
         /* Ideally, we should be recalculating speeds, but at the moment */
         /* we don't know whether hardware even has an encoder. */
+	if (pmr->ueip) pmr->res = pmr->eres;
+	else           pmr->res = pmr->mres;
         break;
 
         /* new urip flag */
