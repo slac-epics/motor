@@ -93,6 +93,9 @@ ACRSrc_DEPEND_DIRS = MotorSrc
 DIRS += SmarActMCSSrc
 SmarActMCSSrc_DEPEND_DIRS = MotorSrc
 
+DIRS += OmsAsynSrc
+OmsAsynSrc_DEPEND_DIRS   = MotorSrc
+
 endif
 
 # Install the edl files

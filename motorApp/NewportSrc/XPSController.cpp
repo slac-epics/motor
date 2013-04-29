@@ -2,9 +2,9 @@
 FILENAME...     XPSMotorDriver.cpp
 USAGE...        Newport XPS EPICS asyn motor device driver
 
-Version:        $Revision: 19717 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2009-12-09 10:21:24 -0600 (Wed, 09 Dec 2009) $
+Version:        $Revision: 1.1.1.5 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 16:16:39 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/trunk/support/motor/vstub/motorApp/NewportSrc/XPSMotorDriver.cpp $
 */
  
