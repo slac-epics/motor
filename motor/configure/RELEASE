@@ -12,17 +12,12 @@
 #!GATEWAY=
 #!SUPPORT=
 
-# If any motor controller communication mechanism besides the VME backplane is
-# required, then ASYN must be defined.
-# Recommended ASYN release: R4-13
-ASYN=$(SUPPORT)/asyn/4-13
-
-# Need the sequencer for the MM4005 and XPS trajectory scanning
-# Recommended SNCSEQ release: R2-0-12
-SNCSEQ=$(SUPPORT)/seq/2-0-12
-
 # Recommended EPICS release: R3.14.11
-EPICS_BASE=$(SUPPORT)/../base-3.14.11
+#EPICS_BASE=$(SUPPORT)/../base-3.14.11
+include $(TOP)/../../configure/RELEASE-MODULES-master
+ASYN=$(EPICS_MODULES_TOP)/asyn/asyn-R4-18-spear1
+SNCSEQ=$(EPICS_MODULES_TOP)/seq/seq-R2-0-13-spear1
+include $(TOP)/../../configure/RELEASE-master
 
 # The following must be defined for the MXmotor device driver.
 #!MX=$(SUPPORT)/mx/mx
