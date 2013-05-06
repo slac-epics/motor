@@ -14,8 +14,9 @@
 
 # Recommended EPICS release: R3.14.11
 #EPICS_BASE=$(SUPPORT)/../base-3.14.11
-include $(TOP)/../../configure/RELEASE-MODULES-asyn
-include $(TOP)/../../configure/RELEASE-MODULES-seq
+include $(TOP)/../../configure/RELEASE-MODULES-master
+ASYN=$(EPICS_MODULES_TOP)/asyn/asyn-R4-18-spear1
+SNCSEQ=$(EPICS_MODULES_TOP)/seq/seq-R2-0-13-spear1
 include $(TOP)/../../configure/RELEASE-master
 
 # The following must be defined for the MXmotor device driver.
