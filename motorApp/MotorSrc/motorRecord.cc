@@ -2,9 +2,9 @@
 FILENAME...     motorRecord.cc
 USAGE...        Motor Record Support.
 
-Version:        $Revision: 15373 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2012-10-09 08:49:41 -0700 (Tue, 09 Oct 2012) $
+Version:        $Revision: 1.7 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 16:34:12 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/MotorSrc/motorRecord.cc $
 */
 
@@ -193,7 +193,9 @@ extern "C" {epicsExportAddress(int, motorRecordDebug);}
 /*----------------debugging-----------------*/
 
 static inline void Debug(int level, const char *format, ...) {
+
   #ifdef DEBUG
+
     if (level < motorRecordDebug) {
       va_list pVar;
       va_start(pVar, format);

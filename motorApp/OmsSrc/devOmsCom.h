@@ -4,9 +4,9 @@ FILENAME..	devOmsCom.h
 USAGE... 	This file contains OMS device information that is
 		common to all OMS device support modules.
 
-Version:        $Revision: 10834 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2010-04-29 10:04:39 -0700 (Thu, 29 Apr 2010) $
+Version:        $Revision: 1.1.1.1 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2011/05/11 14:57:30 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/OmsSrc/devOmsCom.h $
 */
 
