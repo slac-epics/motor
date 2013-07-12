@@ -654,7 +654,7 @@ asynStatus XPSController::buildProfile()
                                            &minJerkTime, &maxJerkTime);
     if (status) {
       buildOK = false;
-      sprintf(message, "Error calling positionerSGammaParametersSet, status=%d\n", status);
+      sprintf(message, "Error calling positionerSGammaParametersGet, status=%d\n", status);
       goto done;
     }
 

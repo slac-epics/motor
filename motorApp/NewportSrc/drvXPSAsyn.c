@@ -964,6 +964,8 @@ static int motorAxisMove(AXIS_HDL pAxis, double position, int relative,
         ErrorStringGet(pAxis->pollSocket, status, errorString);
         PRINT(pAxis->logParam, MOTOR_ERROR, " Error performing PositionerSGammaParametersSet[%d,%d] %d: %s\n",
               pAxis->card, pAxis->axis, status, errorString);
+        PRINT(pAxis->logParam, MOTOR_ERROR, "StepSize=%g, maxVel=%g, acc=%g, minJerk=%g, maxJerk=%g\n",
+			  pAxis->stepSize, max_velocity, pAxis->accel, pAxis->minJerkTime, pAxis->maxJerkTime );
         return MOTOR_AXIS_ERROR;
     }
 
