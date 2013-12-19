@@ -1,11 +1,11 @@
 /*
 FILENAME...     devOmsCom.cc
-USAGE... Data and functions common to all OMS device level support.
+USAGE...        Data and functions common to all OMS device level support.
 
-Version:        $Revision: 1.1.1.6 $
+Version:        $Revision: 1.1.1.7 $
 Modified By:    $Author: saa $
-Last Modified:  $Date: 2011/11/04 18:20:09 $
-HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-7-1/motorApp/OmsSrc/devOmsCom.cc $
+Last Modified:  $Date: 2012/11/30 22:57:36 $
+HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-8/motorApp/OmsSrc/devOmsCom.cc $
 */
 
 /*
@@ -68,6 +68,8 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-7
  * .22  11-10-10 rls Error check for valid acceleration rate on STOP command.
  * .23  10-26-11 rls Use MAXv motor type to support MRES and ERES with
  *                   different polarity (signs).
+ * .24  11-29-12 rls Terminate UU command argument with a ';' character.
+ *                   Fixes "Command error" with MAXv ver:1.41 firmware.
  *
  */
 
@@ -511,7 +513,7 @@ errorexit:                  errMessage(-1, "Invalid device directive");
                 if (MAXv == true && parms[0] == parms[1])
                     sprintf(buffer, " UF");
                 else
-                    sprintf(buffer, " UU%f", parms[0]/parms[1]);
+                    sprintf(buffer, " UU%f;", parms[0]/parms[1]);
                 strcat(motor_call->message, buffer);
                 break;
 
