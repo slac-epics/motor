@@ -35,8 +35,8 @@ asynMotorController::asynMotorController(const char *portName, int numAxes, int 
                                          int asynFlags, int autoConnect, int priority, int stackSize)
 
   : asynPortDriver(portName, numAxes, NUM_MOTOR_DRIVER_PARAMS+numParams,
-      interfaceMask | asynOctetMask | asynInt32Mask | asynFloat64Mask | asynFloat64ArrayMask | asynGenericPointerMask | asynDrvUserMask,
-      interruptMask | asynOctetMask | asynInt32Mask | asynFloat64Mask | asynFloat64ArrayMask | asynGenericPointerMask,
+      interfaceMask | asynOctetMask | asynInt32Mask | asynInt32ArrayMask |asynFloat64Mask | asynFloat64ArrayMask | asynGenericPointerMask | asynDrvUserMask,
+      interruptMask | asynOctetMask | asynInt32Mask | asynInt32ArrayMask | asynFloat64Mask | asynFloat64ArrayMask | asynGenericPointerMask,
       asynFlags, autoConnect, priority, stackSize),
     shuttingDown_(0), numAxes_(numAxes)
 

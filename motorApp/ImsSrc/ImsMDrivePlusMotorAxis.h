@@ -19,6 +19,7 @@
 #define MAX_CMD_LEN MAX_BUFF_LEN-10  // leave room for line feeds surrounding command
 #define MAX_NAME_LEN 10
 #define LOCAL_LINE_LEN 256
+#define HOME_TO_INDEX 1
 
 class ImsMDrivePlusMotorController;
 
