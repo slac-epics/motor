@@ -2,9 +2,9 @@
 FILENAME...     omsBaseAxis.cpp
 USAGE...        Pro-Dex OMS asyn motor base axes support
 
-Version:        $Revision$
-Modified By:    $Author$
-Last Modified:  $Date$
+Version:        $Revision: 1.2 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 17:16:52 $
 HeadURL:        $URL$
 */
 
@@ -31,6 +31,7 @@ omsBaseAxis::omsBaseAxis(omsBaseController *pController, int axis, char axisChar
     pC_ = pController;
     stepper = 1;
     invertLimit = 0;
+    setIntegerParam(pC_->motorStatusGainSupport_, 1);
 }
 
 asynStatus omsBaseAxis::move(double position, int relative, double min_velocity, double max_velocity, double acceleration)

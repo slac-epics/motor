@@ -2,9 +2,9 @@
 FILENAME...     motorRecord.cc
 USAGE...        Motor Record Support.
 
-Version:        $Revision: 15373 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2012-10-09 08:49:41 -0700 (Tue, 09 Oct 2012) $
+Version:        $Revision: 1.9 $
+Modified By:    $Author: zoven $
+Last Modified:  $Date: 2014/02/07 18:44:38 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/MotorSrc/motorRecord.cc $
 */
 
@@ -161,7 +161,7 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/mot
  *                    alarms, events and the forward scan link in the same order
  *                    as specified in the "EPICS Application Developer's Guide".
  * .66 09-06-12 rls - Refix of DLY problem (see 64 above). Hold DMOV false until DLY times out.
- * 
+ * .67 01-15-14 md  - Allow motor to move off of soft limit using absolute or relative moves. 
  */
 
 #define VERSION 6.8
@@ -193,7 +193,9 @@ extern "C" {epicsExportAddress(int, motorRecordDebug);}
 /*----------------debugging-----------------*/
 
 static inline void Debug(int level, const char *format, ...) {
+
   #ifdef DEBUG
+
     if (level < motorRecordDebug) {
       va_list pVar;
       va_start(pVar, format);
@@ -319,7 +321,7 @@ typedef union
         unsigned int M_MRES     :1;
         unsigned int M_ERES     :1;
         unsigned int M_UEIP     :1;
-        unsigned int M_STOP     :1;
+        unsigned int M_STOP     :1;  /* M_STOP replaces M_URIP */
         unsigned int M_LVIO     :1;
         unsigned int M_RVAL     :1;
         unsigned int M_RLV      :1;
@@ -328,6 +330,7 @@ typedef union
         unsigned int M_DHLM     :1;
         unsigned int M_DLLM     :1;
         unsigned int M_DRBV     :1;
+    /*  unsigned int M_RDBD     :1;   ---- missing bit ---- */
         unsigned int M_MOVN     :1;
         unsigned int M_HLS      :1;
         unsigned int M_LLS      :1;
@@ -1751,8 +1754,26 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             /* Cancel any operations. */
             if (pmr->mip & MIP_HOME)
                 clear_buttons(pmr);
-            
-            pmr->mip = MIP_STOP;
+
+            if ( (pmr->mip & MIP_DELAY_REQ) )
+            {
+            	/* If someone tries to STOP while we're waiting for
+            	 * being processed by the callback DONT effectively
+            	 * cancel the callback by clearing MIP_DELAY_REQ;
+            	 * this would result in DMOV never being set!
+            	 *
+            	 * Instead, just raise MIP_STOP and wait for the callback
+            	 * to do further work...
+            	 *
+            	 * T.S., 20080915.
+            	 */
+            	pmr->mip |= MIP_STOP;
+            }
+            else
+            {
+                pmr->mip = MIP_STOP;
+            }
+
             MARK(M_MIP);
             INIT_MSG();
             WRITE_MSG(STOP_AXIS, NULL);
@@ -1947,7 +1968,7 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
          * Jog motor.  Move continuously until we hit a software limit or a
          * limit switch, or until user releases button.
          */
-        if (!(pmr->mip & MIP_JOG) && stop_or_pause == false && !pmr->lvio &&
+        if (!(pmr->mip & MIP_JOG) && stop_or_pause == false && 
             (pmr->mip & MIP_JOG_REQ))
         {
             /* check for limit violation */
@@ -2104,6 +2125,16 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
         MARK(M_LVIO);
     if (pmr->lvio)
     {
+        /* if at limit but this move will bring us away from limit */
+        if((old_lvio) & (pmr->dval > pmr->dhlm) & (pmr->dval - pmr->dhlm < pmr->ldvl - pmr->dhlm))
+        {
+        }
+        else if((old_lvio) & (pmr->dval < pmr->dllm) & (pmr->dval - pmr->dllm > pmr->ldvl - pmr->dllm))
+        {
+        }
+        /* otherwise we're trying to move past soft limit */
+        else
+        {
         pmr->val = pmr->lval;
         MARK(M_VAL);
         pmr->dval = pmr->ldvl;
@@ -2116,6 +2147,23 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
             MARK(M_DMOV);
         }
         return(OK);
+    }
+    }
+    /*
+     *  Now pmr->lvio  will be set to false based on pmr->drbv in process() 
+     *  not based on pmr->dval here.
+     *
+     *  workaround since soft limits are checked against pmr->dval in this function 
+     *  but pmr->drbv in process(). A new pmr->val could set pmr->lvio = false.  
+     *  Initially in process() old_lvio = false but when comparing limits 
+     *  to pmr->drbv pmr->lvio could be set to true. This would trigger 
+     *  old_lvio != pmr->lvio which causes a STOP in process().  
+     *
+     */
+    else if(old_lvio == true)
+    {
+        pmr->lvio = true;
+        UNMARK(M_LVIO);
     }
 
     if (stop_or_pause == true)

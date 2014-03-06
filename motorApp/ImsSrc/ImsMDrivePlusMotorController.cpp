@@ -41,8 +41,9 @@
 //!                              set to empty string "" if no device name needed/not using Party Mode
 //! @param[in] movingPollPeriod  Moving polling period in milliseconds
 //! @param[in] idlePollPeriod    Idle polling period in milliseconds
+//! @param[in] homeSwitchIndex   Defines if homing to home switch or homing to index
 ////////////////////////////////////////////////////////
-ImsMDrivePlusMotorController::ImsMDrivePlusMotorController(const char *motorPortName, const char *IOPortName, const char *devName, double movingPollPeriod, double idlePollPeriod)
+ImsMDrivePlusMotorController::ImsMDrivePlusMotorController(const char *motorPortName, const char *IOPortName, const char *devName, double movingPollPeriod, double idlePollPeriod, int homeSwitchIndex)
     : asynMotorController(motorPortName, NUM_AXES, NUM_IMS_PARAMS,
 						  asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask,
 						  asynInt32Mask | asynFloat64Mask | asynUInt32DigitalMask,
@@ -82,7 +83,7 @@ ImsMDrivePlusMotorController::ImsMDrivePlusMotorController(const char *motorPort
 	createParam(ImsMDrivePlusClearMCodeControlString, asynParamOctet, &this->ImsMDrivePlusClearMCode_);
 
 	// Check the validity of the arguments and init controller object
-	initController(devName, movingPollPeriod, idlePollPeriod);
+	initController(devName, movingPollPeriod, idlePollPeriod, homeSwitchIndex);
 
 	// Create axis
 	// Assuming single axis per controller the way drvAsynIPPortConfigure( "M06", "ts-b34-nw08:2101", 0, 0 0 ) is called in st.cmd script
@@ -103,8 +104,9 @@ ImsMDrivePlusMotorController::ImsMDrivePlusMotorController(const char *motorPort
 //! @param[in] devName Name of device (DN) used to identify axis within controller for Party Mode
 //! @param[in] movingPollPeriod  Moving polling period in milliseconds
 //! @param[in] idlePollPeriod    Idle polling period in milliseconds
+//! @param[in] homeSwitchIndex   Defines if homing to home switch or homing to index
 ////////////////////////////////////////
-void ImsMDrivePlusMotorController::initController(const char *devName, double movingPollPeriod, double idlePollPeriod)
+void ImsMDrivePlusMotorController::initController(const char *devName, double movingPollPeriod, double idlePollPeriod, int homeSwitchIndex)
 {
 	strcpy(this->deviceName, devName);
 
@@ -112,6 +114,7 @@ void ImsMDrivePlusMotorController::initController(const char *devName, double mo
 	this->numAxes_ = NUM_AXES;  // only support single axis
 	this->movingPollPeriod_ = movingPollPeriod;
 	this->idlePollPeriod_ = idlePollPeriod;
+	this->homeSwIn = homeSwitchIndex;
 
 	// initialize switch inputs
 	this->homeSwitchInput=-1;
@@ -310,11 +313,12 @@ asynStatus ImsMDrivePlusMotorController::writeReadController(const char *output,
 //                              If not using party mode, config ImsMDrivePlusCreateController() with empty string "" for deviceName
 //! @param[in] movingPollPeriod  time in ms between polls when any axis is moving
 //! @param[in] idlePollPeriod    time in ms between polls when no axis is moving
+//! @param[in] homeSwitchIndex   Defines if homing to  home switch or to set index
 ////////////////////////////////////////////////////////
-extern "C" int ImsMDrivePlusCreateController(const char *motorPortName, const char *IOPortName, char *devName, double movingPollPeriod, double idlePollPeriod)
+extern "C" int ImsMDrivePlusCreateController(const char *motorPortName, const char *IOPortName, char *devName, double movingPollPeriod, double idlePollPeriod, int homeSwitchIndex)
 {
 	ImsMDrivePlusMotorController *pImsController;
-	pImsController = new ImsMDrivePlusMotorController(motorPortName, IOPortName, devName, movingPollPeriod/1000., idlePollPeriod/1000.);
+	pImsController = new ImsMDrivePlusMotorController(motorPortName, IOPortName, devName, movingPollPeriod/1000., idlePollPeriod/1000., homeSwitchIndex);
 	pImsController = NULL; 
 	return(asynSuccess);
 }
@@ -329,21 +333,24 @@ extern "C" int ImsMDrivePlusCreateController(const char *motorPortName, const ch
 //                    : if not using party mode, config ImsMDrivePlusCreateController() with empty string "" for deviceName
 // Moving poll period : time in ms between polls when any axis is moving
 // Idle poll period   : time in ms between polls when no axis is moving
+// Home Switch or Home Index : homing to home switch or homing to set index
 ////////////////////////////////////////////////////////
 static const iocshArg ImsMDrivePlusCreateControllerArg0 = {"Motor port name", iocshArgString};
 static const iocshArg ImsMDrivePlusCreateControllerArg1 = {"IO port name", iocshArgString};
 static const iocshArg ImsMDrivePlusCreateControllerArg2 = {"Device name", iocshArgString};
 static const iocshArg ImsMDrivePlusCreateControllerArg3 = {"Moving poll period (ms)", iocshArgDouble};
 static const iocshArg ImsMDrivePlusCreateControllerArg4 = {"Idle poll period (ms)", iocshArgDouble};
+static const iocshArg ImsMDrivePlusCreateControllerArg5 = {"Home Switch or Home Index", iocshArgInt};
 static const iocshArg * const ImsMDrivePlusCreateControllerArgs[] = {&ImsMDrivePlusCreateControllerArg0,
                                                                      &ImsMDrivePlusCreateControllerArg1,
                                                                      &ImsMDrivePlusCreateControllerArg2,
                                                                      &ImsMDrivePlusCreateControllerArg3,
-                                                                     &ImsMDrivePlusCreateControllerArg4};
-static const iocshFuncDef ImsMDrivePlusCreateControllerDef = {"ImsMDrivePlusCreateController", 5, ImsMDrivePlusCreateControllerArgs};
+                                                                     &ImsMDrivePlusCreateControllerArg4,
+                                                                     &ImsMDrivePlusCreateControllerArg5};
+static const iocshFuncDef ImsMDrivePlusCreateControllerDef = {"ImsMDrivePlusCreateController", 6, ImsMDrivePlusCreateControllerArgs};
 static void ImsMDrivePlusCreateControllerCallFunc(const iocshArgBuf *args)
 {
-	ImsMDrivePlusCreateController(args[0].sval, args[1].sval, args[2].sval, args[3].dval, args[4].dval);
+	ImsMDrivePlusCreateController(args[0].sval, args[1].sval, args[2].sval, args[3].dval, args[4].dval, args[5].ival);
 }
 
 static void ImsMDrivePlusMotorRegister(void)
