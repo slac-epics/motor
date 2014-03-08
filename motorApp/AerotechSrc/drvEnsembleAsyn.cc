@@ -2,9 +2,9 @@
 FILENAME... drvEnsembleAsyn.cc
 USAGE...    Motor record asyn driver level support for Aerotech Ensemble.
 
-Version:        $Revision: 15236 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2012-09-27 12:44:00 -0700 (Thu, 27 Sep 2012) $
+Version:        $Revision: 1.1.1.4 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 16:16:41 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/AerotechSrc/drvEnsembleAsyn.cc $
 */
 
@@ -468,13 +468,19 @@ static int motorAxisMove(AXIS_HDL pAxis, double position, int relative,
     PRINT(pAxis->logParam, FLOW, "Set card %d, axis %d move to %f, min vel=%f, max_vel=%f, accel=%f\n",
           pAxis->card, axis, position, min_velocity, max_velocity, acceleration);
 
+    if (acceleration > 0)
+    { /* only use the acceleration if > 0 */
+        sprintf(outputBuff, "RAMP RATE %.*f", maxDigits, acceleration * fabs(pAxis->stepSize));
+        ret_status = sendAndReceive(pAxis->pController, outputBuff, inputBuff, sizeof(inputBuff));
+    }
+
     if (relative)
     {
         if (position >= 0.0)
             posdir = true;
         else
             posdir = false;
-        moveCommand = "INC";
+        moveCommand = "MOVEINC";
     }
     else
     {
@@ -482,21 +488,10 @@ static int motorAxisMove(AXIS_HDL pAxis, double position, int relative,
             posdir = true;
         else
             posdir = false;
-        moveCommand = "ABS";
+        moveCommand = "MOVEABS";
     }
 
-    sprintf(outputBuff, "%s", moveCommand);
-    ret_status = sendAndReceive(pAxis->pController, outputBuff, inputBuff, sizeof(inputBuff));
-    if (ret_status)
-        return (MOTOR_AXIS_ERROR);
-
-    if (acceleration > 0)
-    { /* only use the acceleration if > 0 */
-        sprintf(outputBuff, "RAMP RATE %.*f", maxDigits, acceleration * fabs(pAxis->stepSize));
-        ret_status = sendAndReceive(pAxis->pController, outputBuff, inputBuff, sizeof(inputBuff));
-    }
-
-    sprintf(outputBuff, "LINEAR @%d %.*f F%.*f", axis, maxDigits, position * fabs(pAxis->stepSize),
+    sprintf(outputBuff, "%s @%d %.*f F%.*f", moveCommand, axis, maxDigits, position * fabs(pAxis->stepSize),
             maxDigits, max_velocity * fabs(pAxis->stepSize));
 
     ret_status = sendAndReceive(pAxis->pController, outputBuff, inputBuff, sizeof(inputBuff));

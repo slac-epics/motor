@@ -2,9 +2,9 @@
 FILENAME...     omsMAXnet.cpp
 USAGE...        Pro-Dex OMS MAXnet asyn motor controller support
 
-Version:        $Revision$
-Modified By:    $Author$
-Last Modified:  $Date$
+Version:        $Revision: 1.2 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 17:16:52 $
 HeadURL:        $URL$
 */
 
@@ -232,7 +232,8 @@ asynStatus omsMAXnet::sendOnly(const char *outputBuff)
     return(status);
 }
 
-asynStatus omsMAXnet::sendReceive(const char *outputBuff, char *inputBuff, unsigned int inputSize)
+//asynStatus omsMAXnet::sendReceive(const char *outputBuff, char *inputBuff, unsigned int inputSize)
+asynStatus omsMAXnet::sendReceive(const char *outputBuff, char *inputBuff, unsigned int inputSize, size_t *nRead_t)
 {
     char localBuffer[MAXnet_MAX_BUFFERLENGTH + 1] = "";
     size_t nRead, nWrite, bufferSize = inputSize;
