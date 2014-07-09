@@ -2,9 +2,9 @@
 FILENAME... drvMM4000Asyn.cc
 USAGE...    Motor record asyn driver level support for Newport MM4000.
 
-Version:        $Revision: 14158 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2011-11-29 14:12:30 -0800 (Tue, 29 Nov 2011) $
+Version:        $Revision: 1.1.1.2 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/02/09 06:00:01 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/NewportSrc/drvMM4000Asyn.c $
 */
 

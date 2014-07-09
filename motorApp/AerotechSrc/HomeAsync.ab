@@ -1,0 +1,78 @@
+' ---------------------------------------------
+' --------------- HomeAsync.ab ----------------
+' ---------------------------------------------
+'
+' This program homes a variable number of axes,
+' based upon the settings of some global variables.
+'
+' This program should be compiled and loaded to
+' the controller file system (HomeAsync.bcx) so
+' that the program can be executed by another program
+' in a different task. By doing this, the home
+' command will not consume the task, and status can
+' be monitored while this home is running.
+'
+' An example of how this program would be executed
+' from another task:
+'
+' IGLOBAL(32) = 3   ' 3 axes
+' IGLOBAL(33) = 0   ' 'X' axis
+' IGLOBAL(34) = 2   ' 'Z' axis
+' IGLOBAL(35) = 5   ' 'B' axis
+'
+' ' run the program on the Auxiliary task (5)
+' PROGRAM RUN 5, "HomeAsync.bcx"
+'
+' -----------------------------------------------
+
+DIM NumAxes AS INTEGER
+DIM Axis1 AS INTEGER
+DIM Axis2 AS INTEGER
+DIM Axis3 AS INTEGER
+DIM Axis4 AS INTEGER
+DIM Axis5 AS INTEGER
+DIM Axis6 AS INTEGER
+DIM Axis7 AS INTEGER
+DIM Axis8 AS INTEGER
+DIM Axis9 AS INTEGER
+DIM Axis10 AS INTEGER
+
+NumAxes = IGLOBAL(32)
+Axis1 = IGLOBAL(33)
+Axis2 = IGLOBAL(34)
+Axis3 = IGLOBAL(35)
+Axis4 = IGLOBAL(36)
+Axis5 = IGLOBAL(37)
+Axis6 = IGLOBAL(38)
+Axis7 = IGLOBAL(39)
+Axis8 = IGLOBAL(40)
+Axis9 = IGLOBAL(41)
+Axis10 = IGLOBAL(42)
+
+IF NumAxes = 1 THEN
+    HOME @Axis1
+ELSEIF NumAxes = 2 THEN
+    HOME @Axis1 @Axis2
+ELSEIF NumAxes = 3 THEN
+    HOME @Axis1 @Axis2 @Axis3
+ELSEIF NumAxes = 4 THEN
+    HOME @Axis1 @Axis2 @Axis3 @Axis4
+ELSEIF NumAxes = 5 THEN
+    HOME @Axis1 @Axis2 @Axis3 @Axis4 @Axis5
+ELSEIF NumAxes = 6 THEN
+    HOME @Axis1 @Axis2 @Axis3 @Axis4 @Axis5 @Axis6
+ELSEIF NumAxes = 7 THEN
+    HOME @Axis1 @Axis2 @Axis3 @Axis4 @Axis5 @Axis6 @Axis7
+ELSEIF NumAxes = 8 THEN
+    HOME @Axis1 @Axis2 @Axis3 @Axis4 @Axis5 @Axis6 @Axis7 @Axis8
+ELSEIF NumAxes = 9 THEN
+    HOME @Axis1 @Axis2 @Axis3 @Axis4 @Axis5 @Axis6 @Axis7 @Axis8 @Axis9
+ELSEIF NumAxes = 10 THEN
+    HOME @Axis1 @Axis2 @Axis3 @Axis4 @Axis5 @Axis6 @Axis7 @Axis8 @Axis9 @Axis10
+ELSE
+    ' If this happens, the wrong number of axes
+    ' was provided. This code does nothing, but
+    ' an error condition could be indicated back
+    ' to the other task with an other global
+    ' variable.
+END IF
