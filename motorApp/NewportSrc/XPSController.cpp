@@ -2,9 +2,9 @@
 FILENAME...     XPSMotorDriver.cpp
 USAGE...        Newport XPS EPICS asyn motor device driver
 
-Version:        $Revision: 19717 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2009-12-09 10:21:24 -0600 (Wed, 09 Dec 2009) $
+Version:        $Revision: 1.11 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 16:34:13 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/trunk/support/motor/vstub/motorApp/NewportSrc/XPSMotorDriver.cpp $
 */
  
@@ -164,6 +164,21 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
   createParam(XPSProfileGroupNameString,         asynParamOctet, &XPSProfileGroupName_);
   createParam(XPSTrajectoryFileString,           asynParamOctet, &XPSTrajectoryFile_);
   createParam(XPSStatusString,                   asynParamInt32, &XPSStatus_);
+  createParam(updateAxisInfoString,              asynParamInt32, &updateAxisInfo_);
+  createParam(XPSVbasString,                     asynParamFloat64, &XPSvbas_);
+  createParam(XPSVeloString,                     asynParamFloat64, &XPSvelo_);
+  createParam(XPSVmaxString,                     asynParamFloat64, &XPSvmax_);
+  createParam(XPSAcclString,                     asynParamFloat64, &XPSaccl_);
+  createParam(XPSMresString,                     asynParamFloat64, &XPSmres_);
+  createParam(XPSHlmString,                      asynParamFloat64, &XPShlm_);
+  createParam(XPSLlmString,                      asynParamFloat64, &XPSllm_);
+  createParam(XPSUnitsString,                    asynParamOctet,   &XPSUnitsString_);
+  createParam(XPSSStatusString,                  asynParamOctet,   &XPSSStatusString_);
+  createParam(XPSStageStringString,              asynParamOctet,   &XPSStageString_);
+  createParam(XPSDriverString,                   asynParamOctet,   &XPSDriverString_);
+  createParam(XPSConnectedString,                asynParamInt32,   &XPSConnected_);
+  createParam(XPSControllerStatusString,         asynParamOctet,   &XPSControllerStatus_);
+  createParam(XPSFirmwareString,                 asynParamOctet,   &XPSFirmwareString_);
 
   // This socket is used for polling by the controller and all axes
   pollSocket_ = TCP_ConnectToServer((char *)IPAddress, IPPort, XPS_POLL_TIMEOUT);
@@ -181,6 +196,7 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
   }
   
   FirmwareVersionGet(pollSocket_, firmwareVersion_);
+  setStringParam(XPSFirmwareString_, firmwareVersion_);
   
   /* Create the poller thread for this controller
    * NOTE: at this point the axis objects don't yet exist, but the poller tolerates this */
@@ -985,9 +1001,30 @@ asynStatus XPSController::poll()
   int executeState;
   int status;
   int number;
+  char pstr[80];
   char fileName[MAX_FILENAME_LEN];
   char groupName[MAX_GROUPNAME_LEN];
+
+  status = ControllerStatusGet(pollSocket_, 
+                          &controllerStatus_);
+
+  if (status ) {
+      asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR, 
+                "%s:poll(): error calling ControllerStatusGet status=%d\n",
+                driverName, status);
+  }
   
+  status = ControllerStatusStringGet( pollSocket_, 
+                                 controllerStatus_,
+                                 pstr);
+  if(status == 0){
+      setStringParam(XPSControllerStatus_, pstr);
+  }
+  else{
+      setStringParam(XPSControllerStatus_, "Unknown Status");
+  }
+  
+
   getIntegerParam(profileExecuteState_, &executeState);
   if (executeState != PROFILE_EXECUTE_EXECUTING) return asynSuccess;
 
@@ -1150,6 +1187,29 @@ asynStatus XPSController::noDisableError()
 {
   noDisableError_ = 1;
   return asynSuccess; 
+}
+
+asynStatus XPSController::writeInt32(asynUser *pasynUser, epicsInt32 value)
+{
+  int function = pasynUser->reason;
+  asynStatus status = asynSuccess;
+  XPSAxis *pAxis = getAxis(pasynUser);
+  static const char *functionName = "writeInt32";
+  
+  /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
+   * status at the end, but that's OK */
+  status = setIntegerParam(pAxis->axisNo_, function, value);
+  if (function == updateAxisInfo_)
+  {
+    pAxis->getInfo();
+  }
+  else 
+  {
+    /* Call base class method */
+    status = asynMotorController::writeInt32(pasynUser, value);
+  }
+  return status;
+
 }
 
 

@@ -7,6 +7,8 @@
 #  CONFIG_SITE.$(EPICS_HOST_ARCH).Common
 #  CONFIG_SITE.Common.$(T_A)
 #  CONFIG_SITE.$(EPICS_HOST_ARCH).$(T_A)
+# Pickup variable definitions to be used below:
+include $(TOP)/RELEASE_SITE
 
 #ifeq ($(EPICS_HOST_ARCH),vl-linux-x86)
 #CROSS_COMPILER_TARGET_ARCHS = RTEMS-uC5282
@@ -16,6 +18,15 @@
 # for a subset of the cross-compiled target architectures
 # that Base is built for.
 #CROSS_COMPILER_TARGET_ARCHS = vxWorks-68040
+#CROSS_COMPILER_TARGET_ARCHS = RTEMS-beatnik RTEMS-mvme3100 vxWorks-mpc8540 vxWorks-ppc604_long
+#CROSS_COMPILER_TARGET_ARCHS = RTEMS-beatnik RTEMS-mvme3100 RTEMS-svgm RTEMS-mvme2307 RTMS-uC5282
+CROSS_COMPILER_TARGET_ARCHS = RTEMS-beatnik RTEMS-mvme3100 RTEMS-svgm
+
+# basicIoOps.h has broken the vxWorks compile
+#CROSS_COMPILER_TARGET_ARCHS = RTEMS-beatnik RTEMS-mvme3100 vxWorks-mpc8540 vxWorks-ppc604_long
+
+#CROSS_COMPILER_TARGET_ARCHS = RTEMS-beatnik RTEMS-mvme3100
+#CROSS_COMPILER_TARGET_ARCHS = $(MY_BUILD_TARGETS)
 
 # Set this when your IOC and the host use different paths
 # to access the application. This will be needed to boot

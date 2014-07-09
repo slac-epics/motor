@@ -2,9 +2,9 @@
 FILENAME...	ImsRegister.cc
 USAGE...	Register IMS motor device driver shell commands.
 
-Version:	$Revision: 1.3 $
-Modified By:	$Author: sluiter $
-Last Modified:	$Date: 2004-07-16 19:10:15 $
+Version:	$Revision: 1.1.1.1 $
+Modified By:	$Author: ernesto $
+Last Modified:	$Date: 2011/05/11 14:57:33 $
 */
 
 /*****************************************************************

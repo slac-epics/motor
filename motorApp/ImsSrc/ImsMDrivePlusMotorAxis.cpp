@@ -311,7 +311,15 @@ asynStatus ImsMDrivePlusMotorAxis::home(double minVelocity, double maxVelocity, 
 		direction = 3;
 	}
 	asynPrint(pController->pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: VBASE=%f, VELO=%f, ACCL=%f, forwards=%d\n", DRIVER_NAME, functionName, minVelocity, maxVelocity, acceleration, forwards);
-	sprintf(cmd, "HM %d", direction);
+
+	// home to home switch or home to index
+	if (pController->homeSwIn == HOME_TO_INDEX)
+		sprintf(cmd, "HI %d", direction);
+	else
+		sprintf(cmd, "HM %d", direction);
+// Debug line
+//printf("\n\nDebug output: writing command\t%s\t to output\n\n", cmd);
+
 	status  = pController->writeController(cmd, IMS_TIMEOUT);
 	if (status) goto bail;
 
