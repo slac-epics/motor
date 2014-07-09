@@ -2,9 +2,9 @@
 FILENAME...     devMM4000.cc
 USAGE...        Motor record device level support for Newport MM4000.
 
-Version:        $Revision: 13022 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2011-07-06 09:15:22 -0700 (Wed, 06 Jul 2011) $
+Version:        $Revision: 1.1.1.2 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2011/07/31 16:23:54 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/NewportSrc/devMM4000.cc $
 */
 

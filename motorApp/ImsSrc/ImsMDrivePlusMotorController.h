@@ -19,7 +19,7 @@ public:
 	/////////////////////////////////////////
 	// Override asynMotorController functions
 	/////////////////////////////////////////
-	ImsMDrivePlusMotorController(const char *motorPortName, const char *IOPortName, const char *deviceName, double movingPollPeriod, double idlePollPeriod);
+	ImsMDrivePlusMotorController(const char *motorPortName, const char *IOPortName, const char *deviceName, double movingPollPeriod, double idlePollPeriod, int homeSwitchIndex);
 	ImsMDrivePlusMotorAxis* getAxis(asynUser *pasynUser);
 	ImsMDrivePlusMotorAxis* getAxis(int axisNo);
 	//void report(FILE *fp, int level);
@@ -61,7 +61,10 @@ private:
 	int posLimitSwitchInput;
 	int negLimitSwitchInput;
 
-	void initController(const char *devName, double movingPollPeriod, double idlePollPeriod);
+	// added for defining Home Switch or Index
+	int homeSwIn;
+
+	void initController(const char *devName, double movingPollPeriod, double idlePollPeriod, int homeSwitchIndex);
 	int readHomeAndLimitConfig();  // read home, positive limit, and neg limit switch configuration from controller (S1-S4 settings)
 
 	friend class ImsMDrivePlusMotorAxis;

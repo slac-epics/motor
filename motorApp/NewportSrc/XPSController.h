@@ -25,6 +25,21 @@ USAGE...        Newport XPS EPICS asyn motor device driver
 #define XPSProfileGroupNameString       "XPS_PROFILE_GROUP_NAME"
 #define XPSTrajectoryFileString         "XPS_TRAJECTORY_FILE"
 #define XPSStatusString                 "XPS_STATUS"
+#define updateAxisInfoString            "UPDATE_AXIS_INFO"
+#define XPSVbasString                   "XPS_VBAS"
+#define XPSVeloString                   "XPS_VELO"
+#define XPSVmaxString                   "XPS_VMAX"
+#define XPSAcclString                   "XPS_ACCL"
+#define XPSMresString                   "XPS_MRES"
+#define XPSHlmString                    "XPS_HLM"
+#define XPSLlmString                    "XPS_LLM"
+#define XPSUnitsString                  "XPS_EGU"
+#define XPSSStatusString                "XPS_SSTATUS"
+#define XPSStageStringString            "XPS_STAGE"
+#define XPSDriverString                 "XPS_DRIVER"
+#define XPSConnectedString              "XPS_CONNECTED"
+#define XPSControllerStatusString       "XPS_CONTROLLER_STATUS"
+#define XPSFirmwareString               "FIRMWARE_VERSION"
 
 class XPSController : public asynMotorController {
 
@@ -39,6 +54,7 @@ class XPSController : public asynMotorController {
   XPSAxis* getAxis(int axisNo);
   asynStatus poll();
   asynStatus setDeferredMoves(bool deferMoves);
+  asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
 
   /* These are the functions for profile moves */
   asynStatus initializeProfile(size_t maxPoints, const char* ftpUsername, const char* ftpPassword);
@@ -73,7 +89,22 @@ class XPSController : public asynMotorController {
   int XPSProfileGroupName_;
   int XPSTrajectoryFile_;
   int XPSStatus_;
-  #define LAST_XPS_PARAM XPSStatus_
+  int updateAxisInfo_;
+  int XPSvbas_;
+  int XPSvelo_;
+  int XPSvmax_;
+  int XPSaccl_;
+  int XPSmres_;
+  int XPShlm_;
+  int XPSllm_;
+  int XPSUnitsString_;
+  int XPSSStatusString_;
+  int XPSStageString_;
+  int XPSDriverString_;
+  int XPSConnected_;
+  int XPSControllerStatus_;
+  int XPSFirmwareString_;
+  #define LAST_XPS_PARAM XPSFirmwareString_
 
   private:
   bool enableSetPosition_;          /**< Enable/disable setting the position from EPICS */ 
@@ -89,6 +120,7 @@ class XPSController : public asynMotorController {
   epicsEventId profileExecuteEvent_;
   int autoEnable_;
   int noDisableError_;
+  int controllerStatus_;
   
   friend class XPSAxis;
 };

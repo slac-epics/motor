@@ -11,9 +11,9 @@
  * Notwithstanding the above, explicit permission is granted for APS to 
  * redistribute this software.
  *
- * Version: $Revision: 1.32 $
- * Modified by: $Author: rivers $
- * Last Modified: $Date: 2009-09-01 14:05:38 $
+ * Version: $Revision: 1.7 $
+ * Modified by: $Author: mdewart $
+ * Last Modified: $Date: 2014/03/31 17:12:17 $
  *
  * Original Author: Peter Denison
  * Current Author: Peter Denison
@@ -107,6 +107,7 @@ typedef enum motorCommand {
     motorSetClosedLoop,
     motorStatus,
     motorUpdateStatus,
+    motorDeferMoves,
     lastMotorCommand
 } motorCommand;
 #define NUM_MOTOR_COMMANDS lastMotorCommand
@@ -300,7 +301,8 @@ static long init_record(struct motorRecord * pmr )
     if (findDrvInfo(pmr, pasynUser, motorClosedLoopString,             motorSetClosedLoop)) goto bad;
     if (findDrvInfo(pmr, pasynUser, motorStatusString,                 motorStatus)) goto bad;
     if (findDrvInfo(pmr, pasynUser, motorUpdateStatusString,           motorUpdateStatus)) goto bad;
-    
+    if (findDrvInfo(pmr, pasynUser, motorDeferMovesString,             motorDeferMoves)) goto bad;
+   
     /* Get the asynFloat64Array interface */
     pasynInterface = pasynManager->findInterface(pasynUser,
                                                  asynFloat64ArrayType, 1);

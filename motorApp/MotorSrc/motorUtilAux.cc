@@ -2,9 +2,9 @@
 FILENAME...     motorUtilAux.cc
 USAGE...        Motor Record Utility Support.
 
-Version:        $Revision: 15395 $
-Modified By:    $Author: kpetersn $
-Last Modified:  $Date: 2012-10-24 15:30:31 -0700 (Wed, 24 Oct 2012) $
+Version:        $Revision: 1.1.1.2 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 16:16:40 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/MotorSrc/motorUtilAux.cc $
 */
 
