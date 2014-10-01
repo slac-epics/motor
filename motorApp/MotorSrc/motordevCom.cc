@@ -6,7 +6,7 @@ USAGE... This file contains device functions that are common to all motor
 Version:        $Revision: 11146 $
 Modified By:    $Author: sluiter $
 Last Modified:  $Date: 2010-06-09 13:34:44 -0500 (Wed, 09 Jun 2010) $
-HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/tags/R6-7-1/motorApp/MotorSrc/motordevCom.cc $
+HeadURL:        $URL: https://subversion.xray.aps.anl.gov/synApps/motor/tags/R6-8-1/motorApp/MotorSrc/motordevCom.cc $
 */
 
 /*
@@ -472,28 +472,23 @@ epicsShareFunc RTN_STATUS motor_end_trans_com(struct motorRecord *mr, struct dri
 {
     struct motor_trans *trans = (struct motor_trans *) mr->dpvt;
     struct mess_node *motor_call;
-    RTN_STATUS rc=OK;
+    RTN_STATUS rc;
 
-    msta_field msta;
-    msta.All = mr->msta;
-
+    rc = OK;
     motor_call = &(trans->motor_call);
     if ((*trans->tabptr->card_array)[motor_call->card] == NULL)
     {
+        msta_field msta;
+
         /* If the controller does not exits, then set "done moving"
          * and the Hardware Problem bit TRUE.
          */
         mr->dmov = TRUE;
         db_post_events(mr, &mr->dmov, DBE_VAL_LOG);
-
+        msta.All = mr->msta;
         msta.Bits.RA_PROBLEM = 1;
         mr->msta = msta.All;
         return(rc = ERROR);
-    }
-    else
-    {
-        msta.Bits.CNTRL_COMM_ERR = 0;
-        mr->msta = msta.All;
     }
 
     switch (trans->state)

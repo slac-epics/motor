@@ -21,6 +21,9 @@ SoftMotorSrc_DEPEND_DIRS = MotorSrc
 # All the following modules require ASYN.
 ifdef ASYN
 
+#DIRS += OmsAsynSrc
+#OmsAsynSrc_DEPEND_DIRS   = MotorSrc
+
 DIRS += MotorSimSrc
 MotorSimSrc_DEPEND_DIRS = MotorSrc
 
@@ -28,7 +31,7 @@ DIRS += NewportSrc
 NewportSrc_DEPEND_DIRS = MotorSrc
 
 DIRS += PerfMaxUSBSrc
-PerfMaxUSBSrc_DEPEND_DIRS	= MotorSrc
+PerfMaxUSBSrc_DEPEND_DIRS = MotorSrc
 
 DIRS += ImsSrc
 ImsSrc_DEPEND_DIRS = MotorSrc
@@ -41,6 +44,9 @@ ImsSrc_DEPEND_DIRS = MotorSrc
 
 #DIRS += PiSrc
 #PiSrc_DEPEND_DIRS = MotorSrc
+
+#DIRS += PIGCS2Src
+#PIGCS2Src_DEPEND_DIRS = MotorSrc
 
 #DIRS += MicroMoSrc
 #MicroMoSrc_DEPEND_DIRS = MotorSrc
@@ -86,6 +92,12 @@ HytecSrc_DEPEND_DIRS = MotorSrc
 
 DIRS += ACRSrc
 ACRSrc_DEPEND_DIRS = MotorSrc
+
+#DIRS += SmarActMCSSrc
+#SmarActMCSSrc_DEPEND_DIRS = MotorSrc
+
+#DIRS += NPointSrc
+#NPointSrc_DEPEND_DIRS = MotorSrc
 
 endif
 

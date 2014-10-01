@@ -14,6 +14,9 @@ SRCS += ImsRegister.cc
 SRCS += devIM483SM.cc drvIM483SM.cc
 SRCS += devIM483PL.cc drvIM483PL.cc
 SRCS += devMDrive.cc  drvMDrive.cc
+# model3 driver
+#SRCS += ImsMDrivePlusMotorController.cpp ImsMDrivePlusMotorAxis.cpp
+# PCDS MDrivePlus driver
 SRCS += devMDrivePlus.cc  drvMDrivePlus.cc
 
 Ims_LIBS += motor asyn
