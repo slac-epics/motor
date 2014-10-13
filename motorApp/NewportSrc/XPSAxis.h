@@ -51,6 +51,9 @@ class XPSAxis : public asynMotorAxis
 
   virtual asynStatus defineProfile(double *positions, size_t numPoints);
   virtual asynStatus readbackProfile();
+
+  asynStatus getInfo();
+  asynStatus initializeParam();
   
   private:
   XPSController *pC_;
@@ -76,6 +79,8 @@ class XPSAxis : public asynMotorAxis
   double encoderPosition_;
   double currentVelocity_;
   double velocity_;
+  double vBas_;
+  double encResolution_;
   double accel_;
   double highLimit_;
   double lowLimit_;
@@ -91,7 +96,9 @@ class XPSAxis : public asynMotorAxis
   double deferredPosition_;
   int deferredMove_;
   int deferredRelative_;
+  int connected_;
 
+  
   friend class XPSController;
 };
 

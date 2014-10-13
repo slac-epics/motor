@@ -2,9 +2,9 @@
 FILENAME...     omsBaseAxis.cpp
 USAGE...        Pro-Dex OMS asyn motor base axes support
 
-Version:        $Revision$
-Modified By:    $Author$
-Last Modified:  $Date$
+Version:        $Revision: 1.3 $
+Modified By:    $Author: zoven $
+Last Modified:  $Date: 2014/02/07 18:44:38 $
 HeadURL:        $URL$
 */
 
@@ -31,6 +31,7 @@ omsBaseAxis::omsBaseAxis(omsBaseController *pController, int axis, char axisChar
     pC_ = pController;
     stepper = 1;
     invertLimit = 0;
+    setIntegerParam(pC_->motorStatusGainSupport_, 1);
 }
 
 asynStatus omsBaseAxis::move(double position, int relative, double min_velocity, double max_velocity, double acceleration)
@@ -42,6 +43,18 @@ asynStatus omsBaseAxis::move(double position, int relative, double min_velocity,
     epicsInt32 minvelo, velo, acc, rela, pos;
     char *relabs[2] = {(char *) "MA", (char *) "MR"};
     char buff[100];
+
+    int closedLoop;
+    pC_->getIntegerParam(this->axisNo_, pC_->motorStatusPowerOn_, &closedLoop);
+
+    if(isStepper() == 0 && closedLoop == 0){
+        //servo motor, closed loop NOT enabeld, enable now
+        setClosedLoop(1);
+        //servo motor, closed loop NOT enabled, return
+        //return status;
+    }
+
+    
 
     if (relative)
         rela = 1;
@@ -188,6 +201,34 @@ asynStatus omsBaseAxis::setPosition(double position)
 
   return status;
 }
+
+/** Set the closed loop status of the motor.
+ * \param[in] value.  Enables/disables a servo motor.  Enables/disables position correction for stepper.
+ */
+asynStatus omsBaseAxis::setClosedLoop(bool closedLoop)
+{
+    static const char *functionName = "setClosedLoop";
+    asynStatus status = asynError;
+    char buff[20];
+    if (closedLoop) {
+            asynPrint(pasynUser_, ASYN_TRACE_FLOW, "%s:%s:%s axis %d closed loop enable\n",
+                  driverName, functionName, pC_->portName, axisNo_);
+            if (pC_->firmwareMin(1,30,0))
+                sprintf(buff,"A%1c CL1", axisChar);
+            else
+                sprintf(buff,"A%1c HN", axisChar);
+        } else {
+            asynPrint(pasynUser_, ASYN_TRACE_FLOW, "%s:%s:%s SetInteger axis %d closed loop disable\n",
+                  driverName, functionName, pC_->portName, axisNo_);
+            if (pC_->firmwareMin(1,30,0))
+                sprintf(buff,"A%1c CL0", axisChar);
+            else
+                sprintf(buff,"A%1c HF", axisChar);
+        }
+    status = pC_->sendOnlyLock(buff);
+    return status;
+}
+
 
 /** we need to implement this, because we need to use the motorUpdateStatus_ function
  * in asynMotorController, because we cannot access statusChanged_ (shouldn't be private)

@@ -1,0 +1,112 @@
+07/09/2014
+motor-R6-8-RC1_1-8:
+           Enhancements to animatics smart motor
+motor-R6-8-RC1_1-7:
+           Modified XPSAxis.* to fix axis not showing moving state 
+07/09/2014
+motor-R6-8-RC1_1-6:
+           Modified XPSAxis.* and XPSController.* with additional asyn parameters for XPS axis info
+07/02/2014
+motor-R6-8-RC1_1-5:
+           Added axis queue monitoring to OmsAsyn omsBaseController poller task.  Flush axis queue
+           if it goes below threshold.
+           Added check before omsBaseAxis.cpp::move()  to check if servo, if so make sure clsoed loop
+           is set.
+03/07/2013
+motor-R6-8-RC1_1-4:
+           Rearrange basicIoOps.h -don't need to include miscutils to build
+           motorRecord.cc - updated jog near soft limits - use jvel not velo to determine overrun
+           omsMAXv.cpp - flush multiple responses in sendOnly()
+           omsBaseController.cpp - increase timeout while waiting for controller response
+                                 - add wait prior to sending Init string - fixes boot config problems 
+motor-R6-8-RC1_1-3:
+02/28/2014 OmsAsynSrc: Adding miscUtils module for basicIoOps.h and removing local 
+           copy of the header, modifying OmsAsynSrc/Makefile so it now compiles 
+           with metods described in basicIoOps.h (Ziga Oven)
+motor-R6-8-SLAC_merge:
+02/06/2014 Merged motor versions from SPEAR and LCLS. This are the changes:
+           Form SPEAR side:
+           - Till's hack for problem with stoping the motor DMOV and URIP 
+           - Added memset in motordevCom.cc (this needs to be revised and maybe there is better solution)
+           From LCLS side:
+           - Added SmartMotorAsynSrc for SmartMotor Class4 and Class5 (Mitch D'Ewart)
+           - Added change in AerotechSrc, to move multiple motors (Mitch D'Ewart)
+           - Fixes in OmsAsynSrc for absolute encoder, PID settings and analog inputs
+           - Added option to move away form Softlimit violation (Mitch D'Ewart)
+
+motor-R6-8-RC1_1-2:
+07/03/2013 Fix omsMAXv register read/write operations with additional functions
+           In ImsMDrivePlusMotor add home type configuration paramter to iocsh 
+           In MotorSrc add support for asynInt32Array
+
+motor-R6-8-RC1_1-1: Build against ASYN_MODULE_VERSION=asyn-R4-20_1-1; 
+                    build all architectures;
+                    Update support for the Newport SMC100 Motion
+                    Controller. Brought in patch from Argonne SVN Repo    
+
+motor-R6-8-RC1_1-0: Merge in new Release Candidate for motor version 6-8;
+                    This version will have support for the MaxV OMS VME card
+                    Plus many other bug fixes in the motor softwre. Refer to:
+                    "documentation/motor_release.html"
+
+motor-R6-7-RC5_1-2: 
+03/28/2012 Remove trajectoryScan functions that depend on sequencer from devNewport.dbd
+           Fix XPS_STATUS_STRING DTYP to use octet (asynOctetRead/asynParamOctet) waveform instead of int8 waveform
+
+motor-R6-7-RC5_1-1:
+03/23/2012 Just build against asyn-R4-18-lcls2 to remove dependency on sequencer
+
+motor-R6-7-RC5_1-0:
+02/21/2012 Merge in changes from ANL main trunk from 2/17/2012.
+             Remove XPS Reconnect and use Mark Rivers fix in NewportSrc/asynOctetSocket.cpp
+             for reconnect if power lossed.
+           Add XPS_STATUS_STRING PV (not yet in ANL trunk).
+
+motor-R6-7-RC4_2-0:
+02/10/2012 Merge changes from motor-R6-7-RC3_2-2
+             Compile SmarActMCSSrc
+             Newport XPS TCP reconnect
+           Remove IMS version from IMSMDrivePlus
+
+motor-R6-7-RC4_1-0:
+02/08/2012 Mark Rivers Fixed error in TRAJECTORY_DIRECTORY; initialize movesDeferred to 0; 
+           improved report() function
+           Merged in other changes/fixes from the SVN main trunk from Argonne National Labs
+           Mark Rivers has also added a dependency to the busy record used by Trajectory 
+           moves
+
+motor-R6-7-RC3_2-2:
+01/19/2012 Fix XPS_STATUS_STRING type to be asynInt8ArrayIn and use doCallbacksInt8Array() to update it.
+
+motor-R6-7-RC3_2-1:
+01/12/2012 Add Newport XPS_STATUS_STRING pv
+
+motor-R6-7-RC3_2-0:
+01/11/2012 Add Newport TCP reconnect functionality if error polling for XPSAxis, XPSController, and drvXPSAsynAux model 3 driver.
+           Update Newport XPS_STATUS XPSAxis status if error polling for more information from controller.
+
+motor-R6-7-RC3_1-2:
+01/04/2012 Upgrade to asyn-R4-18-lcls1 & seq-R2-1-3-lcls1 to compile on testfac-srv01
+
+motor-R6-7-RC3_1-1:
+Change tag name since Release 6-7 still in beta mode.
+
+motor-R6-7_1-0:
+Update comm and problem motor status bits if polling is successful for IMS module.
+
+motor-R6-6-RC2_1-1:
+Add home, pos limit switch, and neg limit switch support for IMS model3 driver.
+
+motor-R6-6-RC2_1-0:
+Added support for SmarActMCS (model 3).
+Added model3 driver for IMS.
+(Initial versions for self-seeding.)
+
+motor-R6-6-RC2-lcls1: 
+From Mark Rivers: Fixes to Hytec and 64-bit linux
+From Matt Pearson: Add asyn Model2 support back in for Newport suport
+
+
+motor-R6-6-RC1-lcls1:
+From Jim Chen: Changes to make Hytec Driver Solid
+See documentation directory for other changes

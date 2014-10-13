@@ -2,9 +2,9 @@
 FILENAME...     XPSMotorDriver.cpp
 USAGE...        Newport XPS EPICS asyn motor device driver
 
-Version:        $Revision: 19717 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2009-12-09 10:21:24 -0600 (Wed, 09 Dec 2009) $
+Version:        $Revision: 1.13 $
+Modified By:    $Author: mdewart $
+Last Modified:  $Date: 2014/07/09 23:31:50 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/trunk/support/motor/vstub/motorApp/NewportSrc/XPSMotorDriver.cpp $
 */
 
@@ -144,6 +144,7 @@ XPSAxis::XPSAxis(XPSController *pC, int axisNo, const char *positionerName, doub
   char *index;
   int status;
   double minJerkTime, maxJerkTime;
+  char par[80], pstr[80];
 
   moveSocket_ = TCP_ConnectToServer(pC_->IPAddress_, pC->IPPort_, XPS_POLL_TIMEOUT);
   if (moveSocket_ < 0) {
@@ -185,22 +186,32 @@ XPSAxis::XPSAxis(XPSController *pC, int axisNo, const char *positionerName, doub
   if (index != NULL) *index = '\0';  /* Terminate group name at place of '.' */
 
   stepSize_ = stepSize;
+  initializeParam();
   /* Read some information from the controller for this axis */
-  status = PositionerSGammaParametersGet(pollSocket_,
-                                         positionerName_,
-                                         &velocity_,
-                                         &accel_,
-                                         &minJerkTime,
-                                         &maxJerkTime);
-   setDoubleParam(pC_->XPSMinJerk_, minJerkTime);
-   setDoubleParam(pC_->XPSMaxJerk_, maxJerkTime);
-
-  /* NOTE: this will require PID to be allowed to be set greater than 1 in motor record. */
-  /* And we need to implement this in Asyn layer. */
-  getPID();
-
-  /* Wake up the poller task which will make it do a poll, 
-   * updating values for this axis to use the new resolution (stepSize_) */   
+  status = GroupStatusGet(pollSocket_,
+                          groupName_,
+                          &axisStatus_);
+  if (status ) {
+      asynPrint(pasynUser_, ASYN_TRACE_ERROR,
+                "%s:%s: [%s,%d]: error calling GroupStatusGet status = %d\n",
+                driverName, functionName, pC_->portName, axisNo_, status);
+      if(status == -18){
+        asynPrint(pasynUser_, ASYN_TRACE_ERROR,
+                "%s:%s: [%s,%d]: AXIS not connected %d\n",
+                driverName, functionName, pC_->portName, axisNo_);
+      }
+      pC_->setStringParam(axisNo_, pC_->XPSSStatusString_, "Axis Not Connected");
+      connected_ = 0;
+      setIntegerParam(pC_->XPSConnected_, 0);
+ 
+    goto done;
+  }
+  setIntegerParam(pC_->XPSConnected_, 1);
+  connected_ = 1;
+  getInfo();
+  /* Wake up the poller task which will make it do a poll,
+   * updating values for this axis to use the new resolution (stepSize_) */
+  done:
   pC_->wakeupPoller();
 
 }
@@ -314,7 +325,6 @@ asynStatus XPSAxis::home(double min_velocity, double max_velocity, double accele
   int groupStatus;
   char errorBuffer[100];
   static const char *functionName = "home";
-
   /* Find out if any axes are in the same group, and set referencing mode for them all.*/
   XPSAxis *pTempAxis = NULL;
   for (int axis=0; axis<pC_->numAxes_; axis++) {
@@ -347,6 +357,7 @@ asynStatus XPSAxis::home(double min_velocity, double max_velocity, double accele
       return asynError;
     }
   }
+  epicsThreadSleep(0.1);
   status = GroupHomeSearch(moveSocket_, groupName_);
   if (status) {
     asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
@@ -354,6 +365,7 @@ asynStatus XPSAxis::home(double min_velocity, double max_velocity, double accele
               driverName, functionName, pC_->portName, axisNo_, getXPSError(status, errorBuffer));
     return asynError;
   }
+  moving_ = true;
 
   return asynSuccess;
 }
@@ -552,38 +564,72 @@ asynStatus XPSAxis::stop(double acceleration)
 asynStatus XPSAxis::poll(bool *moving)
 {
   int status;
-  int axisDone;
   char readResponse[25];
+  char pstr[80];
   static const char *functionName = "poll";
-
   status = GroupStatusGet(pollSocket_, 
                           groupName_, 
                           &axisStatus_);
-  if (status) {
-    asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
-              "%s:%s: [%s,%d]: error calling GroupStatusGet status=%d\n",
-              driverName, functionName, pC_->portName, axisNo_, status);
+  if (status ) {
+    if(connected_ == 1){
+      asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
+                "%s:%s: [%s,%d]: error calling GroupStatusGet status=%d\n",
+                driverName, functionName, pC_->portName, axisNo_, status);
+      pC_->setStringParam(axisNo_, pC_->XPSSStatusString_, "Axis Not Connected");
+      connected_ = 0;
+      setIntegerParam(pC_->XPSConnected_, 0);
+      initializeParam();
+      }
     goto done;
   }
   asynPrint(pasynUser_, ASYN_TRACE_FLOW, 
             "%s:%s: [%s,%d]: %s axisStatus=%d\n",
             driverName, functionName, pC_->portName, axisNo_, positionerName_, axisStatus_);
-  /* Set done flag by default */
-  axisDone = 1;
-  if (axisStatus_ >= 10 && axisStatus_ <= 18) {
-    /* These states mean ready from move/home/jog etc */
-  }
-  if (axisStatus_ >= 43 && axisStatus_ <= 48) {
-    /* These states mean it is moving/homeing/jogging etc*/
-    axisDone = 0;
-  }
   /* Set the status */
   setIntegerParam(pC_->XPSStatus_, axisStatus_);
+  connected_ = 1;
+  setIntegerParam(pC_->XPSConnected_, 1);
+
+  status = GroupStatusStringGet( pollSocket_, 
+                                 axisStatus_,
+                                 pstr);
+  if(status == 0){
+      pC_->setStringParam(axisNo_, pC_->XPSSStatusString_, pstr);
+  }
+
+  /* Previously we set the motion done flag by seeing if axisStatus_ was >=43 && <= 48, which means moving,
+   * homing, jogging, etc.  However, this information is about the group, not the axis, so if one
+   * motor in the group was moving, then they all appeared to be moving.  This is not what we want, because
+   * the EPICS motor record required the first motor to stop before the second motor could be moved. 
+   * Instead we look for a response on the moveSocket_ to see when the motor motion was complete */
+   
+  /* If the group is not moving then the axis is not moving */
+  if ((axisStatus_ < 43) || (axisStatus_ > 48)) moving_ = false;
+  else moving_ = true; 
+  /* If the axis is moving then read from the moveSocket to see if it is done 
+   * We currently assume the move is complete if we get any response, we don't
+   * check the actual response. */
+  if (moving_) {
+    status = ReadXPSSocket(moveSocket_, readResponse, sizeof(readResponse), 0);
+    if (status < 0) {
+      asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
+                "%s:%s: [%s,%d]: error calling ReadXPSSocket status=%d\n",
+                driverName, functionName, pC_->portName, axisNo_,  status);
+      goto done;
+    }
+    if (status > 0) {
+      asynPrint(pasynUser_, ASYN_TRACE_FLOW, 
+        "%s:%s: [%s,%d]: readXPSSocket returned nRead=%d, [%s]\n",
+        driverName, functionName, pC_->portName, axisNo_,  status, readResponse);
+      status = 0;
+      moving_ = false;
+    }
+  }
+
   /* Set the axis done parameter */
-  /* AND the done flag with the inverse of deferred_move.*/
-  axisDone &= !deferredMove_;
-  *moving = axisDone ? false : true;
-  setIntegerParam(pC_->motorStatusDone_, axisDone);
+  *moving = moving_;
+  if (deferredMove_) *moving = true;
+  setIntegerParam(pC_->motorStatusDone_, *moving?0:1);
 
   /*Read the controller software limits in case these have been changed by a TCL script.*/
   status = PositionerUserTravelLimitsGet(pollSocket_, positionerName_, &lowLimit_, &highLimit_);
@@ -592,7 +638,7 @@ asynStatus XPSAxis::poll(bool *moving)
     setDoubleParam(pC_->motorLowLimit_, (lowLimit_/stepSize_));
   }
 
-  /*Set the ATHM signal.*/
+  /* Set the ATHM signal.*/
   if (axisStatus_ == 11) {
     if (referencingMode_ == 0) {
       setIntegerParam(pC_->motorStatusHome_, 1);
@@ -701,33 +747,22 @@ asynStatus XPSAxis::poll(bool *moving)
   }
   setIntegerParam(pC_->motorStatusDirection_, (currentVelocity_ > XPS_VELOCITY_DEADBAND));
   setIntegerParam(pC_->motorStatusMoving_,    (fabs(currentVelocity_) > XPS_VELOCITY_DEADBAND));
-  
-  status = ReadXPSSocket(moveSocket_, readResponse, sizeof(readResponse), 0);
-  if (status < 0) {
-    asynPrint(pasynUser_, ASYN_TRACE_ERROR, 
-              "%s:%s: [%s,%d]: error calling ReadXPSSocket status=%d\n",
-              driverName, functionName, pC_->portName, axisNo_,  status);
-    goto done;
-  }
-  if (status > 0) {
-    asynPrint(pasynUser_, ASYN_TRACE_FLOW, 
-              "%s:%s: [%s,%d]: readXPSSocket returned nRead=%d, [%s]\n",
-              driverName, functionName, pC_->portName, axisNo_,  status, readResponse);
-    status = 0;
-  }
-    
   done:
   setIntegerParam(pC_->motorStatusCommsError_, status ? 1 : 0);
   callParamCallbacks();
   return status ? asynError : asynSuccess;
 }
 
+
 asynStatus XPSAxis::setLowLimit(double value)
 {
   double deviceValue;
   int status;
   static const char *functionName = "setLowLimit";
-  
+  if(!connected_){
+    status = 0;
+    goto done;
+  } 
   deviceValue = value*stepSize_;
   /* We need to read the current highLimit because otherwise we could be setting it to an invalid value */
   status = PositionerUserTravelLimitsGet(pollSocket_,
@@ -763,7 +798,10 @@ asynStatus XPSAxis::setHighLimit(double value)
   double deviceValue;
   int status;
   static const char *functionName = "setHighLimit";
-  
+  if(!connected_){
+    status = 0;
+    goto done;
+  } 
   deviceValue = value*stepSize_;
   /* We need to read the current highLimit because otherwise we could be setting it to an invalid value */
   status = PositionerUserTravelLimitsGet(pollSocket_,
@@ -1494,6 +1532,144 @@ asynStatus XPSAxis::doMoveToHome(void)
 
   return asynSuccess;
 
+}
+
+asynStatus XPSAxis::getInfo()
+{
+   asynStatus s=asynSuccess;
+   int status;
+   double minJerkTime, maxJerkTime;
+   char par[80];
+   char pstr[80];
+   if(connected_ == 0){
+     goto done;
+   }
+
+   pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &encResolution_);
+   sprintf( par,  "DisplacementPerFullStep"     );
+   status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+   status |= ( sscanf( pstr, "%lf", &encResolution_ ) != 1 );
+   if (status == 0){
+       setDoubleParam(pC_->XPSmres_, encResolution_);
+       stepSize_ = encResolution_;
+   }
+   else{
+       sprintf( par,  "EncoderResolution"     );
+       status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+       status |= ( sscanf( pstr, "%lf", &encResolution_ ) != 1 );
+       if (status == 0){
+           setDoubleParam(pC_->XPSmres_, encResolution_);
+           stepSize_ = encResolution_;
+       }
+       else {  /* couldn't get step size from controller, not that important just need to be consistent w/motor record */
+           encResolution_ = 10000;
+           stepSize_ = encResolution_;
+           setDoubleParam(pC_->XPSmres_, encResolution_);
+       }
+   }
+  
+   /* get base velocity */
+   sprintf( par,  "HomeSearchMaximumVelocity"     );
+   status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+   status |= ( sscanf( pstr, "%lf", &vBas_ ) != 1 );
+   if (status == 0){
+       setDoubleParam(pC_->XPSvbas_, vBas_);
+   }
+/* get max velocity */
+   sprintf( par,  "MaximumVelocity"     );
+   status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+   status |= ( sscanf( pstr, "%lf", &velocity_ ) != 1 );
+   if (status == 0){
+       setDoubleParam(pC_->XPSvelo_, velocity_);
+       setDoubleParam(pC_->XPSvmax_, velocity_);
+   }
+/* get base velocity */
+   sprintf( par,  "MaximumAcceleration"     );
+   status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+   status |= ( sscanf( pstr, "%lf", &accel_ ) != 1 );
+   if (status == 0){
+       setDoubleParam(pC_->XPSaccl_, velocity_/accel_);
+   }
+
+/* get min jerk time */
+   sprintf( par,  "MinimumJerkTime"     );
+   status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+   status |= ( sscanf( pstr, "%lf", &minJerkTime ) != 1 );
+   if (status == 0){
+       setDoubleParam(pC_->XPSMinJerk_, minJerkTime);
+   }
+
+/* get max jerk time */
+   sprintf( par,  "MaximumJerkTime"     );
+   status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+   status |= ( sscanf( pstr, "%lf", &maxJerkTime ) != 1 );
+   if (status == 0){
+       setDoubleParam(pC_->XPSMaxJerk_, maxJerkTime);
+   }
+
+
+//   status = PositionerUserTravelLimitsGet(pollSocket_, positionerName_, &lowLimit_, &highLimit_);
+//   if (status == 0) {
+//     setDoubleParam(pC_->motorHighLimit_, (highLimit_));
+//     setDoubleParam(pC_->motorLowLimit_, (lowLimit_));
+//   }
+   sprintf( par,  "MaximumTargetPosition"     );
+   status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+   status |= ( sscanf( pstr, "%lf", &highLimit_ ) != 1 );
+   if (status == 0){
+       setDoubleParam(pC_->XPShlm_, highLimit_);
+   }
+
+   sprintf( par,  "MinimumTargetPosition"     );
+   status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+   status |= ( sscanf( pstr, "%lf", &lowLimit_ ) != 1 );
+   if (status == 0){
+       setDoubleParam(pC_->XPSllm_, lowLimit_);
+   }
+
+   sprintf( par,  "SmartStageName"     );
+   status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+   if (status == 0){    
+       pC_->setStringParam(axisNo_,pC_->XPSStageString_, pstr);
+   }
+   
+   sprintf( par,  "DriverName"     );
+   status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+   if (status == 0){    
+       pC_->setStringParam(axisNo_,pC_->XPSDriverString_, pstr);
+   }
+
+   sprintf( par,  "Unit"    );
+   status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+   if (status == 0){    
+       pC_->setStringParam(axisNo_,pC_->XPSUnitsString_, pstr);
+   }
+
+   getPID();
+   callParamCallbacks();
+   if (status != 0)
+     s = asynSuccess;
+done:
+   return s;
+}
+
+asynStatus XPSAxis::initializeParam(){
+       setDoubleParam(pC_->XPSmres_, stepSize_);
+       setDoubleParam(pC_->XPSvbas_, 0);
+       setDoubleParam(pC_->XPSvelo_, 0);
+       setDoubleParam(pC_->XPSvmax_, 0);
+       setDoubleParam(pC_->XPSaccl_, 0);
+       setDoubleParam(pC_->XPSMinJerk_, 0);
+       setDoubleParam(pC_->XPSMaxJerk_, 0);
+       setDoubleParam(pC_->XPShlm_, 0);
+       setDoubleParam(pC_->XPSllm_, 0);
+       setDoubleParam(pC_->motorPosition_, 0);
+       setIntegerParam(pC_->XPSStatus_, 0);
+       pC_->setStringParam(axisNo_,pC_->XPSStageString_, "Not present");
+       pC_->setStringParam(axisNo_,pC_->XPSDriverString_, "");
+       pC_->setStringParam(axisNo_,pC_->XPSUnitsString_, "");
+
+       return asynSuccess;
 }
 
 
