@@ -24,7 +24,7 @@ CHECK_RELEASE = WARN
 #   for a subset of the cross-compiled target architectures
 #   that Base is built for.
 #CROSS_COMPILER_TARGET_ARCHS = vxWorks-68040
-CROSS_COMPILER_TARGET_ARCHS = linux-x86
+CROSS_COMPILER_TARGET_ARCHS = linux-x86 linux-x86_64
 BUILD_FOR_HOST_ARCH =
 
 # To install files into a location other than $(TOP) define
