@@ -2,9 +2,9 @@
 FILENAME...	NewportRegister.cc
 USAGE...	Register Newport motor device driver shell commands.
 
-Version:	$Revision: 1.13 $
-Modified By:	$Author: rivers $
-Last Modified:	$Date: 2006-06-15 19:02:59 $
+Version:	$Revision: 1.1.1.1 $
+Modified By:	$Author: ernesto $
+Last Modified:	$Date: 2011/05/11 14:57:33 $
 */
 
 /*****************************************************************

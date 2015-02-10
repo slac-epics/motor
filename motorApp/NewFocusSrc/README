@@ -114,3 +114,73 @@ iocBoot/iocxxx/motor.substitutions
 {xxx:, 2      m$(N),  "PMNC87xx",     0,      1,      "motor $(N)",   degrees,        Pos,    60,             0.,             1.5,            0,              1,              .2,             1e-3,   3,              100,    -100,   ""}
 {xxx:, 3,     m$(N),  "PMNC87xx",     0,      2,      "motor $(N)",   degrees,        Pos,    60,             0.,             1.,             0,              1,              .2,             1e-3,   3,              100,    -100,   ""}
 
+
+
+=============================
+Pico8742 CONFIGURATION NOTES
+=============================
+
+
+-------------------------------
+8742 Ethernet Setup
+-------------------------------
+
+IPMODE          (STAT, DHCP)  - IP Mode (Static IP, Use DHCP Server)
+IPADDR 		IP Setting
+NETMASK		Network Mask 
+MACADDR		MAC Address
+GATEWAY	        Network Gateway
+SM		Save Configuration Settings
+
+After setting up ethernet parameters and SAV(ing) reset the controller. 
+The IPMODE and IPADDR do not take effect untill after a reboot.
+
+Example:
+>IPMODE=STAT
+>IPADDR=164.54.9.33
+>NETMASK=255.255.252.0
+>GATEWAY=164.54.8.1
+>SM
+<power cycle>
+
+-------------------------------
+8742 EPICS Setup
+-------------------------------
+
+- Database definition (*.dbd) requirements.
+<App>DBD += devNewFocus.dbd
+
+- Startup command file (st.cmd) requirements.
+("#"  is used to denote st.cmd comment lines.)
+("#!" is used to denote st.cmd command lines.)
+
+Configure an asyn communications port driver for the NewFocus 8742.  This is
+done using telnet to the device, port 23. For example,
+
+## Connect to NewFocus 8742
+## portName, ipAddress:port, priority, disable auto-connect, noProcessEos
+#!drvAsynIPPortConfigure( "L0", "moc-b34-mc01:23", 0, 0, 0 )
+
+See asyn documentation for details.
+
+# Pico8742 Create
+#     (1) portName           The name of the asyn port that will be created for this driver
+#     (2) SmartPortName      The name of the drvAsynIPPPort that was created previously to connect to the NewFocus 8742
+#     (3) Number of axes     The number of axes that this controller supports
+#     (4) Moving poll period (ms)    The time between polls when any axis is moving
+#     (5) Idle poll period (ms)      The time between polls when no axis is moving
+#!Pico8742CreateController(S0,L0,2,500,1000)
+
+
+# Load records
+#!dbLoadRecords("db/asynRecord.db","P=MOTR:B34:,R=ASYN,PORT=L0,ADDR=0,IMAX=100,OMAX=100")
+#!dbLoadRecords("db/basic_asyn_motor.db","PORT=S0,ADDR=0")
+#!dbLoadRecords("db/basic_asyn_motor.db","PORT=S0,ADDR=1")
+
+
+-------------------
+asyn model 3 driver
+-------------------
+Pico8742Driver.cpp
+Pico8742Driver.h
+SmartMotorSupport.dbd

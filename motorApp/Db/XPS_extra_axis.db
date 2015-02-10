@@ -1,0 +1,174 @@
+# Database for XPS axis
+
+record(ao, "$(P)$(R):XPS_GETINFO") {
+  field(DESC, "Update XPS Info")
+  field(DTYP, "asynInt32")
+  field(PINI, "YES")
+  field(PREC, "0")
+  field(OUT, "@asyn($(PORT),$(ADDR))UPDATE_AXIS_INFO")
+  field(FLNK, "$(P)$(R):XPS_MRES_RBK")
+}
+
+record(waveform, "$(P)$(R):XPS_AXIS_STATUS") {
+  field(DESC, "XPS Stage Status")
+  field(DTYP, "asynOctetRead")
+  field(FTVL, "CHAR")
+  field(NELM, "100")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_SSTATUS")
+  field(SCAN, "I/O Intr")
+}
+
+record(stringin, "$(P)$(R):XPS_EGU") {
+  field(DESC, "XPS EGU")
+  field(DTYP, "asynOctetRead")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_EGU")
+  field(SCAN, "Passive")
+}
+
+record(stringin, "$(P)$(R):XPS_NAME") {
+  field(DESC, "XPS Stage Name")
+  field(DTYP, "asynOctetRead")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_STAGE")
+  field(SCAN, "I/O Intr")
+}
+
+record(ai, "$(P)$(R):XPS_VBAS_RBK") {
+  field(DESC, "XPS Base Velocity")
+  field(PREC, "$(PREC)")
+  field(DTYP, "asynFloat64")
+  field(PINI, "YES")
+  field(SCAN, "Passive")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_VBAS")
+}
+
+record(ai, "$(P)$(R):XPS_VELO_RBK") {
+  field(DESC, "XPS Max Velocity")
+  field(PREC, "$(PREC)")
+  field(DTYP, "asynFloat64")
+  field(PINI, "YES")
+  field(SCAN, "Passive")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_VELO")
+}
+
+record(ai, "$(P)$(R):XPS_MRES_RBK") {
+  field(DESC, "XPS MRES")
+  field(PREC, "$(PREC)")
+  field(DTYP, "asynFloat64")
+  field(PINI, "YES")
+  field(SCAN, "Passive")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_MRES")
+  field(FLNK, "$(P)$(R):MRES_PUSH")
+}
+
+record(ai, "$(P)$(R):XPS_LLM_RBK") {
+  field(DESC, "XPS Low Limit")
+  field(PREC, "$(PREC)")
+  field(DTYP, "asynFloat64")
+  field(PINI, "YES")
+  field(SCAN, "Passive")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_LLM")
+}
+
+record(ai, "$(P)$(R):XPS_HLM_RBK") {
+  field(DESC, "XPS High Limit")
+  field(PREC, "$(PREC)")
+  field(DTYP, "asynFloat64")
+  field(PINI, "YES")
+  field(SCAN, "Passive")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_HLM")
+}
+
+record(ai, "$(P)$(R):XPS_ACCL_RBK") {
+  field(DESC, "XPS Acceleration (sec)")
+  field(PREC, "$(PREC)")
+  field(DTYP, "asynFloat64")
+  field(PINI, "YES")
+  field(SCAN, "Passive")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_ACCL")
+}
+
+record(ao, "$(P)$(R):VBAS_PUSH") {
+  field(DESC, "Push XPS base velocity to motorRecord")
+  field(OUT, "$(MOTOR).VBAS")
+  field(DOL, "$(P)$(R):XPS_VBAS_RBK PP")
+  field(OMSL, "closed_loop")
+}
+
+record(ao, "$(P)$(R):VELO_PUSH") {
+  field(DESC, "Push XPS velocity to motorRecord")
+  field(OUT, "$(MOTOR).VELO")
+  field(DOL, "$(P)$(R):XPS_VELO_RBK PP")
+  field(OMSL, "closed_loop")
+}
+
+record(ao, "$(P)$(R):ACCL_PUSH") {
+  field(DESC, "Push XPS acceleration to motorRecord")
+  field(OUT, "$(MOTOR).ACCL")
+  field(DOL, "$(P)$(R):XPS_ACCL_RBK PP")
+  field(OMSL, "closed_loop")
+}
+
+record(ao, "$(P)$(R):MRES_PUSH") {
+  field(DESC, "Push XPS motor resolution to motorRecord")
+  field(FLNK, "$(P)$(R):PUSH_FAN")
+  field(OUT, "$(MOTOR).MRES PP")
+  field(DOL, "$(P)$(R):XPS_MRES_RBK")
+  field(OMSL, "closed_loop")
+}
+
+record(ao, "$(P)$(R):LLM_PUSH") {
+  field(DESC, "Push XPS low limit to motorRecord")
+  field(OUT, "$(MOTOR).LLM")
+  field(DOL, "$(P)$(R):XPS_LLM_RBK PP")
+  field(OMSL, "closed_loop")
+}
+
+record(ao, "$(P)$(R):HLM_PUSH") {
+  field(DESC, "Push XPS high limit to motorRecord")
+  field(OUT, "$(MOTOR).HLM")
+  field(DOL, "$(P)$(R):XPS_HLM_RBK PP")
+  field(OMSL, "closed_loop")
+}
+
+record(fanout, "$(P)$(R):PUSH_FAN") {
+  field(DESC, "Start data push to motorRecord")
+  field(SELM, "All")
+  field(LNK1, "$(P)$(R):VBAS_PUSH")
+  field(LNK2, "$(P)$(R):VELO_PUSH")
+  field(LNK3, "$(P)$(R):ACCL_PUSH")
+  field(LNK4, "$(P)$(R):LLM_PUSH")
+  field(LNK5, "$(P)$(R):HLM_PUSH")
+  field(LNK6, "$(P)$(R):EGU_PUSH")
+  field(FLNK, "$(P)$(R):STUP_PUSH")
+}
+
+record(waveform, "$(P)$(R):XPS_DRIVER") {
+  field(DESC, "XPS Firmware Version")
+  field(DTYP, "asynOctetRead")
+  field(FTVL, "CHAR")
+  field(NELM, "100")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_DRIVER")
+  field(SCAN, "I/O Intr")
+}
+
+record(bi, "$(P)$(R):XPS_AXIS_CONNECTED") {
+  field(DESC, "XPS Axis Status ")
+  field(SCAN, "I/O Intr")
+  field(DTYP, "asynInt32")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_CONNECTED")
+  field(ZNAM, "Disconnected")
+  field(ONAM, "Connected")
+}
+
+record(stringout, "$(P)$(R):EGU_PUSH") {
+  field(DESC, "Push of EGU to motorRecord")
+  field(DOL, "$(P)$(R):XPS_EGU PP")
+  field(OMSL, "closed_loop")
+  field(OUT, "$(MOTOR).EGU")
+}
+
+record(ao, "$(P)$(R):STUP_PUSH") {
+  field(DESC, "Push to update motorRecord")
+  field(VAL, "1")
+  field(OUT, "$(MOTOR).STUP")
+}

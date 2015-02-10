@@ -26,6 +26,11 @@ DB += XPSAuxBo.db
 DB += XPSAuxLi.db
 DB += XPSAuxLo.db
 DB += XPS_extra.db
+DB += XPS_extra_axis.db
+DB += XPS_extra_controller.db
+DB += OmsAsyn_extra.db
+DB += OmsAsyn_aux.db
+DB += OmsAsyn_gpio.db
 DB += ACRAux.template
 DB += ACRAuxRead.template
 DB += ACRAuxLi.template
@@ -39,6 +44,7 @@ DB += profileMoveController.template
 DB += profileMoveAxis.template
 DB += profileMoveControllerXPS.template
 DB += profileMoveAxisXPS.template
+DB += smart_extra.db
 
 #----------------------------------------------------
 # Declare template files which do not show up in DB
