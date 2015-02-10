@@ -1,3 +1,6 @@
+02/10/2015
+motor-R6-8-RC1_1-7-BR: Branch out from the motor-R6-8-RC1_1-7
+
 07/09/2014
 motor-R6-8-RC1_1-7:
            Modified XPSAxis.* to fix axis not showing moving state 
