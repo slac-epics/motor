@@ -1,0 +1,20 @@
+# Database for XPS controller
+
+record(waveform, "$(P)$(R):XPS_FIRMWARE") {
+  field(DESC, "XPS Firmware Version")
+  field(DTYP, "asynOctetRead")
+  field(FTVL, "CHAR")
+  field(NELM, "100")
+  field(INP, "@asyn($(PORT),$(ADDR))FIRMWARE_VERSION")
+  field(SCAN, "I/O Intr")
+}
+
+record(waveform, "$(P)$(R):XPS_CONTROLLER_STATUS") {
+  field(DESC, "XPS Controller Status")
+  field(DTYP, "asynOctetRead")
+  field(FTVL, "CHAR")
+  field(NELM, "100")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_CONTROLLER_STATUS")
+  field(SCAN, "I/O Intr")
+}
+

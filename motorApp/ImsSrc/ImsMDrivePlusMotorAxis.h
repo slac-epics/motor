@@ -15,10 +15,11 @@
 #define DEFAULT_NUM_CARDS 32
 #define MAX_MESSAGES 100
 #define IMS_TIMEOUT 2
-#define MAX_BUFF_LEN 80
+#define MAX_BUFF_LEN 90
 #define MAX_CMD_LEN MAX_BUFF_LEN-10  // leave room for line feeds surrounding command
 #define MAX_NAME_LEN 10
 #define LOCAL_LINE_LEN 256
+#define HOME_TO_INDEX 1
 
 class ImsMDrivePlusMotorController;
 
@@ -61,7 +62,10 @@ private:
 	////////////////////////////////////////////////////
 	asynStatus configAxis();
 	asynStatus setAxisMoveParameters(double min_velocity, double max_velocity, double acceleration);
-	void handleAxisError(char *errMsg);
+	asynStatus handleAxisError();
+	asynStatus clearError();
+
+	int axisError_;  /* cached copy of axis error */
 
 friend class ImsMDrivePlusMotorController;
 };
