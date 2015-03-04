@@ -2,9 +2,9 @@
 FILENAME...     XPSMotorDriver.cpp
 USAGE...        Newport XPS EPICS asyn motor device driver
 
-Version:        $Revision: 19717 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2009-12-09 10:21:24 -0600 (Wed, 09 Dec 2009) $
+Version:        $Revision: 1.13 $
+Modified By:    $Author: mdewart $
+Last Modified:  $Date: 2014/12/03 21:33:30 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/trunk/support/motor/vstub/motorApp/NewportSrc/XPSMotorDriver.cpp $
 */
  
@@ -164,23 +164,31 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
   createParam(XPSProfileGroupNameString,         asynParamOctet, &XPSProfileGroupName_);
   createParam(XPSTrajectoryFileString,           asynParamOctet, &XPSTrajectoryFile_);
   createParam(XPSStatusString,                   asynParamInt32, &XPSStatus_);
+  createParam(updateAxisInfoString,              asynParamInt32, &updateAxisInfo_);
+  createParam(XPSVbasString,                     asynParamFloat64, &XPSvbas_);
+  createParam(XPSVeloString,                     asynParamFloat64, &XPSvelo_);
+  createParam(XPSVmaxString,                     asynParamFloat64, &XPSvmax_);
+  createParam(XPSAcclString,                     asynParamFloat64, &XPSaccl_);
+  createParam(XPSMresString,                     asynParamFloat64, &XPSmres_);
+  createParam(XPSHlmString,                      asynParamFloat64, &XPShlm_);
+  createParam(XPSLlmString,                      asynParamFloat64, &XPSllm_);
+  createParam(XPSUnitsString,                    asynParamOctet,   &XPSUnitsString_);
+  createParam(XPSSStatusString,                  asynParamOctet,   &XPSSStatusString_);
+  createParam(XPSStageStringString,              asynParamOctet,   &XPSStageString_);
+  createParam(XPSDriverString,                   asynParamOctet,   &XPSDriverString_);
+  createParam(XPSConnectedString,                asynParamInt32,   &XPSConnected_);
+  createParam(XPSControllerStatusString,         asynParamOctet,   &XPSControllerStatus_);
+  createParam(XPSFirmwareString,                 asynParamOctet,   &XPSFirmwareString_);
 
-  // This socket is used for polling by the controller and all axes
-  pollSocket_ = TCP_ConnectToServer((char *)IPAddress, IPPort, XPS_POLL_TIMEOUT);
+  /* connect to the controller */
+  pollSocket_ = TCP_ConnectToServer(IPAddress_, IPPort_, XPS_POLL_TIMEOUT);
   if (pollSocket_ < 0) {
-    printf("%s:%s: error calling TCP_ConnectToServer for pollSocket\n",
-           driverName, functionName);
+      asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+              "%s:%s: error calling TCP_ConnectToServer for pollSocket\n", 
+              driverName, functionName);
   }
+  connectController();
   
-  // This socket is used for moving motors during profile moves
-  // Each axis also has its own moveSocket
-  moveSocket_ = TCP_ConnectToServer((char *)IPAddress, IPPort, XPS_MOVE_TIMEOUT);
-  if (moveSocket_ < 0) {
-    printf("%s:%s: error calling TCP_ConnectToServer for moveSocket\n",
-           driverName, functionName);
-  }
-  
-  FirmwareVersionGet(pollSocket_, firmwareVersion_);
   
   /* Create the poller thread for this controller
    * NOTE: at this point the axis objects don't yet exist, but the poller tolerates this */
@@ -985,18 +993,44 @@ asynStatus XPSController::poll()
   int executeState;
   int status;
   int number;
+  char pstr[80];
   char fileName[MAX_FILENAME_LEN];
   char groupName[MAX_GROUPNAME_LEN];
-  
-  getIntegerParam(profileExecuteState_, &executeState);
-  if (executeState != PROFILE_EXECUTE_EXECUTING) return asynSuccess;
 
-  getStringParam(XPSTrajectoryFile_, (int)sizeof(fileName), fileName);
-  getStringParam(XPSProfileGroupName_, (int)sizeof(groupName), groupName);
-  status = MultipleAxesPVTParametersGet(pollSocket_, groupName, fileName, &number);
-  if (status) return asynError;
-  setIntegerParam(profileCurrentPoint_, number);
-  callParamCallbacks();
+  if ( pollSocket_ < 0 || connected_ == 0 ) {
+    /* if disconnected attempt to reconnect */
+    connectController();
+  }
+  else {
+	status = ControllerStatusGet(pollSocket_, 
+				&controllerStatus_);
+	
+	if (status ) {
+		asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR, 
+				"%s:poll(): error calling ControllerStatusGet status=%d\n",
+				driverName, status);
+		/* close sockets, disconnect from controller */
+		disconnectController();
+		setStringParam(XPSControllerStatus_, "Disconnected");
+	}
+	else {
+		status = ControllerStatusStringGet( pollSocket_, 
+						controllerStatus_,
+						pstr);
+		if(status == 0){
+			setStringParam(XPSControllerStatus_, pstr);
+		}	
+		getIntegerParam(profileExecuteState_, &executeState);
+		if (executeState != PROFILE_EXECUTE_EXECUTING) return asynSuccess;
+		
+		getStringParam(XPSTrajectoryFile_, (int)sizeof(fileName), fileName);
+		getStringParam(XPSProfileGroupName_, (int)sizeof(groupName), groupName);
+		status = MultipleAxesPVTParametersGet(pollSocket_, groupName, fileName, &number);
+		if (status) return asynError;
+		setIntegerParam(profileCurrentPoint_, number);
+	}
+	callParamCallbacks();
+  }
   return asynSuccess;
 }
 
@@ -1152,6 +1186,97 @@ asynStatus XPSController::noDisableError()
   return asynSuccess; 
 }
 
+asynStatus XPSController::writeInt32(asynUser *pasynUser, epicsInt32 value)
+{
+  int function = pasynUser->reason;
+  asynStatus status = asynSuccess;
+  XPSAxis *pAxis = getAxis(pasynUser);
+  static const char *functionName = "writeInt32";
+  
+  /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
+   * status at the end, but that's OK */
+  status = setIntegerParam(pAxis->axisNo_, function, value);
+  if (function == updateAxisInfo_)
+  {
+    pAxis->getInfo();
+  }
+  else 
+  {
+    /* Call base class method */
+    status = asynMotorController::writeInt32(pasynUser, value);
+  }
+  return status;
+
+}
+
+asynStatus XPSController::connectController() {
+  int status = 0;
+  char *pstr;
+  XPSAxis *pAxis;
+  static const char *functionName = "connectController";
+   
+  connected_ = 0;
+  // This socket is used for polling by the controller and all axes
+  
+  if (pollSocket_ < 0) {
+    pollSocket_ = TCP_ConnectToServer(IPAddress_, IPPort_, XPS_POLL_TIMEOUT);
+    if (pollSocket_ < 0) {
+      asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+              "%s:%s: error calling TCP_ConnectToServer for pollSocket\n", 
+              driverName, functionName);
+    }
+  }
+  else {
+    status = ControllerStatusGet(pollSocket_, 
+				&controllerStatus_);
+    if(status != 0) {
+    }
+    else {
+        connected_ = 1;
+        FirmwareVersionGet(pollSocket_, firmwareVersion_);
+	setStringParam(XPSFirmwareString_, firmwareVersion_);
+
+	// This socket is used for moving motors during profile moves
+	// Each axis also has its own moveSocket
+	moveSocket_ = TCP_ConnectToServer(IPAddress_, IPPort_, XPS_MOVE_TIMEOUT);
+	if (moveSocket_ < 0) {
+	asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+		"%s:%s: error calling TCP_ConnectToServer for moveSocket\n", 
+		driverName, functionName);
+	}
+	FirmwareVersionGet(pollSocket_, firmwareVersion_);
+	setStringParam(XPSFirmwareString_, firmwareVersion_);
+	/* connect to each axis */
+	for (int i=0; i<numAxes_; i++) {
+		pAxis=getAxis(i);
+		if (!pAxis) continue;
+		pAxis->connectAxis();
+	}
+    }
+  }
+  return (asynStatus) status;
+}
+
+asynStatus XPSController::disconnectController() {
+  asynStatus status = asynSuccess;
+  XPSAxis *pAxis;
+  static const char *functionName = "disconnectController";
+
+  connected_ = 0;
+  /* disconnect each axis */
+  for (int i=0; i<numAxes_; i++) {
+        pAxis=getAxis(i);
+        if (!pAxis) continue;
+        pAxis->disconnectAxis();
+  }
+/*
+  TCP_CloseSocket(pollSocket_);
+  pollSocket_ = -1;
+  TCP_CloseSocket(moveSocket_);
+  moveSocket_ = -1;
+*/
+  return status;
+}
 
 
 
