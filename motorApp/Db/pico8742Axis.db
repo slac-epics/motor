@@ -1,0 +1,15 @@
+# Database for Pico8742 axis
+record(mbbi, "$(P)$(R):MOTOR_TYPE") {
+  field(DESC, "Motor type")
+  field(DTYP, "asynInt32")
+  field(INP, "@asyn($(PORT),$(ADDR))MOTOR_TYPE")
+  field(ZRVL, "0")
+  field(ZRST, "No motor")
+  field(ONVL, "1")
+  field(ONST, "Unknown motor")
+  field(TWVL, "2")
+  field(TWST, "Tiny motor")
+  field(THVL, "3")
+  field(THST, "Standard motor")
+  field(SCAN, "I/O Intr")
+}

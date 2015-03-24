@@ -2,9 +2,9 @@
 FILENAME...	drvOms58.cc
 USAGE...	Motor record driver level support for OMS model VME58.
 
-Version:        $Revision: 14914 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2012-07-26 12:04:55 -0700 (Thu, 26 Jul 2012) $
+Version:        $Revision: 1.1.1.3 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 16:16:39 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/OmsSrc/drvOms58.cc $
 */
 

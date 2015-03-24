@@ -3,9 +3,9 @@ FILENAME...     drvOms58.h
 USAGE...        OMS driver level "include" information that is specific to OMS
                 model VME58.
 
-Version:        $Revision: 12209 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2011-01-26 11:13:47 -0800 (Wed, 26 Jan 2011) $
+Version:        $Revision: 1.1.1.1 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2011/05/11 14:57:31 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/OmsSrc/drvOms58.h $
 */
 
