@@ -84,14 +84,22 @@ AttocubeSrc_DEPEND_DIRS = MotorSrc
 DIRS += AerotechSrc
 AerotechSrc_DEPEND_DIRS = MotorSrc
 
+DIRS += MicronixSrc
+MicronixSrc_DEPEND_DIRS = MotorSrc
+
+ifdef IPAC 
 DIRS += HytecSrc
 HytecSrc_DEPEND_DIRS = MotorSrc
+endif 
 
 DIRS += ACRSrc
 ACRSrc_DEPEND_DIRS = MotorSrc
 
 DIRS += SmarActMCSSrc
 SmarActMCSSrc_DEPEND_DIRS = MotorSrc
+
+DIRS += SmartMotorAsynSrc
+SmartMotorAsynSrc_DEPEND_DIRS = MotorSrc
 
 endif
 

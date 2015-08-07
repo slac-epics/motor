@@ -3,9 +3,9 @@ FILENAME...     drvOms.h
 USAGE... This file contains OMS driver "include" information that is
                 specific to OMS models VME8 and VME44.
 
-Version:        $Revision: 14915 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2012-07-26 12:18:18 -0700 (Thu, 26 Jul 2012) $
+Version:        $Revision: 1.1.1.2 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 16:16:39 $
 */
 
 /*

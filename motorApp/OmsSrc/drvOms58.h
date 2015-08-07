@@ -3,9 +3,9 @@ FILENAME...     drvOms58.h
 USAGE...        OMS driver level "include" information that is specific to OMS
                 model VME58.
 
-Version:        $Revision: 12209 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2011-01-26 11:13:47 -0800 (Wed, 26 Jan 2011) $
+Version:        $Revision: 1.6 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 16:34:14 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/OmsSrc/drvOms58.h $
 */
 
@@ -49,6 +49,9 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/mot
  * .11  03-21-05 rls replace VxWorks specific "uint16_t" with "epicsUInt16".
  * .12  01-26-11 rls added reboot flag in DPRAM R/W reserved area.
  *  
+ * SLAC Modification Log:
+ *      03-Aug-2015: scondam: Include changes from Spear: Replace epicsInt16 with epicsUInt16 for readReg16(...)
+ *                            for basic IOOPS support
  */
 
 #ifndef INCdrvOms58h
@@ -250,17 +253,19 @@ typedef struct
 /* OMS VME dual port memory map */
 struct vmex_motor
 {                                               /* Offset */
-    epicsInt16 inPutIndex;                      /* 0x0000 */
-    epicsInt16 outGetIndex;                     /* 0x0002 */
-    epicsInt16 inBuffer[BUFFER_SIZE];           /* 0x0004 */
-    epicsInt16 reserved0[254];                  /* 0x0204 */
-    MOTOR_DATA_REGS data[OMS_NUM_CHANNELS];     /* 0x0400 */
-    epicsInt16 outPutIndex;                     /* 0x0800 */
-    epicsInt16 inGetIndex;                      /* 0x0802 */
-    epicsInt16 outBuffer[BUFFER_SIZE];          /* 0x0804 */
-    epicsInt16 rebootind;                       /* 0x0A04 - used by driver to
+	/* 8-Aug-2015: Replace epicsInt16 with epicsUInt16 for readReg16(...) per changes in Spear module:
+	               error: invalid conversion from 'volatile epicsInt16*' to 'volatile epicsUInt16*'*/
+    /* epicsInt16 */ epicsUInt16 inPutIndex;                      /* 0x0000 */
+    /* epicsInt16 */ epicsUInt16 outGetIndex;                     /* 0x0002 */
+    /* epicsInt16 */ epicsUInt16 inBuffer[BUFFER_SIZE];           /* 0x0004 */
+    /* epicsInt16 */ epicsUInt16 reserved0[254];                  /* 0x0204 */
+    MOTOR_DATA_REGS data[OMS_NUM_CHANNELS];     				  /* 0x0400 */
+    /* epicsInt16 */ epicsUInt16 outPutIndex;                     /* 0x0800 */
+    /* epicsInt16 */ epicsUInt16 inGetIndex;                      /* 0x0802 */
+    /* epicsInt16 */ epicsUInt16 outBuffer[BUFFER_SIZE];          /* 0x0804 */
+    /* epicsInt16 */ epicsUInt16 rebootind;                       /* 0x0A04 - used by driver to
                                                  * test for board reboot. */
-    epicsInt16 reserved1[749];                  /* 0x0A06 */
+    /* epicsInt16 */ epicsUInt16 reserved1[749];                  /* 0x0A06 */
     MOTOR_CNTRL_REGS control;                   /* 0x0FE0 */
 };
 

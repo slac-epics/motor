@@ -2,9 +2,9 @@
 FILENAME...     omsMAXnet.h
 USAGE...        Pro-Dex OMS MAXnet asyn motor controller support
 
-Version:        $Revision$
-Modified By:    $Author$
-Last Modified:  $Date$
+Version:        $Revision: 1.3 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2013/07/09 15:27:30 $
 HeadURL:        $URL$
 */
 
@@ -26,8 +26,10 @@ public:
     int notificationCounter;
     epicsMutex* notificationMutex;
     epicsEventWaitStatus waitInterruptible(double);
-    asynStatus sendReceive(const char *, char *, unsigned int );
+//    asynStatus sendReceive(const char *, char *, unsigned int);
+    asynStatus sendReceive(const char *, char *, unsigned int , size_t *);
     asynStatus sendOnly(const char *);
+    virtual asynStatus flushQueues() {return asynSuccess;};
 
 private:
     int isNotification (char *);

@@ -9,6 +9,11 @@ This driver is based on "model 3" motor asyn port driver defined by Mark Rivers.
 The driver assumes:
   1) each controller is configured for a single axis
   2) the motor is set up for Party Mode (PY=1) and Echo Mode 2 (EM=2)
+
+Additional features: 
+
+- 07/03/2013: Added input parameter to iocsh config function to set homing type [home to HOME_SWITCH | home to HOME_INDEX]
+
 =======================================
 
 =======================
@@ -73,6 +78,7 @@ To configure the motor from the iocsh or a C/C++ application
                          See README file for more information.
        movingPollPeriod: time in milliseconds between polls when axis is moving
        idlePollPeriod:   time in milliseconds between polls when axis is not moving
+       homeSwitchIndex   Defines if homing to home switch [0] or to set index [1]
 
 =========================
 Example iocsh st.cmd file
@@ -90,7 +96,7 @@ dbLoadTemplate "db/motor.mdriveplus.substitutions"
 drvAsynIPPortConfigure("M06", "ts-b34-nw08:2101", 0, 0, 0 )
 
 # Configure one controller per motor, each controller just has 1 axis
-ImsMDrivePlusCreateController("IMS1", "M06", "1", 200, 5000)
+ImsMDrivePlusCreateController("IMS1", "M06", "1", 200, 5000, 0)
 
 # Optional: Enable tracing
 asynSetTraceIOMask("IMS1",0,2)

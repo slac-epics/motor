@@ -132,7 +132,7 @@ asynStatus ImsMDrivePlusMotorAxis::setAxisMoveParameters(double minVelocity, dou
 
 	// set accceleration
 	if (acceleration != 0) {
-		sprintf(cmd, "A=%ld", (long)maxVelocity);
+		sprintf(cmd, "A=%ld", (long)acceleration);
 		status = pController->writeController(cmd, IMS_TIMEOUT);
 		if (status) goto bail;
 	}
@@ -141,7 +141,6 @@ asynStatus ImsMDrivePlusMotorAxis::setAxisMoveParameters(double minVelocity, dou
 	if (status) {
 		char buff[LOCAL_LINE_LEN];
 		sprintf(buff, "%s:%s: ERROR setting motor velocity and acceleration", DRIVER_NAME, functionName);
-		handleAxisError(buff);
 	}
 
 	callParamCallbacks();
@@ -165,6 +164,10 @@ asynStatus ImsMDrivePlusMotorAxis::move(double position, int relative, double mi
 	char cmd[MAX_CMD_LEN];
 	static const char *functionName = "move()";
 
+        // clear any error
+        if ( axisError_ )
+        	clearError();
+
 	// sent commands to motor to set velocities and acceleration
 	status = setAxisMoveParameters(minVelocity, maxVelocity, acceleration);
 	if (status) goto bail;
@@ -183,7 +186,6 @@ asynStatus ImsMDrivePlusMotorAxis::move(double position, int relative, double mi
 	if (status) {
 		char buff[LOCAL_LINE_LEN];
 		sprintf(buff, "%s:%s: ERROR moving motor", DRIVER_NAME, functionName);
-		handleAxisError(buff);
 	}
 
 	callParamCallbacks();
@@ -206,6 +208,10 @@ asynStatus ImsMDrivePlusMotorAxis::moveVelocity(double minVelocity, double maxVe
 	char cmd[MAX_CMD_LEN];
 	static const char *functionName = "moveVelocity()";
 
+        // clear any error
+        if ( axisError_ )
+        	clearError();
+
 	// sent commands to motor to set velocities and acceleration
 	status = setAxisMoveParameters(minVelocity, maxVelocity, acceleration);
 	if (status) goto bail;
@@ -220,7 +226,6 @@ asynStatus ImsMDrivePlusMotorAxis::moveVelocity(double minVelocity, double maxVe
 	if (status) {
 		char buff[LOCAL_LINE_LEN];
 		sprintf(buff, "%s:%s: ERROR jogging motor", DRIVER_NAME, functionName);
-		handleAxisError(buff);
 	}
 
 	callParamCallbacks();
@@ -256,7 +261,6 @@ asynStatus ImsMDrivePlusMotorAxis::stop(double acceleration)
 	if (status) {
 		char buff[LOCAL_LINE_LEN];
 		sprintf(buff, "%s:%s: ERROR stopping motor", DRIVER_NAME, functionName);
-		handleAxisError(buff);
 	}
 
 	callParamCallbacks();
@@ -283,26 +287,14 @@ asynStatus ImsMDrivePlusMotorAxis::home(double minVelocity, double maxVelocity, 
 	char resp[MAX_BUFF_LEN];
 	size_t nread;
 	int direction = 1;  // direction to home, initialize homing in minus direction
-	double baseVelocity=0;
 	static const char *functionName = "home()";
+
+	if ( axisError_ )
+		clearError();
 
 	// check if using base velocity (VI)
 	// for MDrivePlus initial velocity must be below max_velocity
-	if (minVelocity > 0) { // base velocity being configured
-		if (minVelocity > maxVelocity) { // illegal state
-			asynPrint(pController->pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: base velocity=%f cannot be greater than max velocity=%f\n", DRIVER_NAME, functionName, minVelocity, maxVelocity);
-			goto bail;
-		}
-	} else { // base velocity needs to be set because creeping back to home switch at base velocity, so make sure it's nonzero
-		sprintf(cmd, "PR VI");  // get base velocity setting
-		status = pController->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
-		if (status) goto bail;
-		baseVelocity = atof(resp);
-		if (baseVelocity == 0) { // set to factory default of 1000
-			baseVelocity=1000;
-		}
-	}
-
+	minVelocity = ( minVelocity > 0 && minVelocity < maxVelocity ) ? minVelocity : ( maxVelocity - 1 );
 	// sent commands to motor to set velocities and acceleration
 	if (status = setAxisMoveParameters(minVelocity, maxVelocity, acceleration)) goto bail;
 
@@ -311,7 +303,15 @@ asynStatus ImsMDrivePlusMotorAxis::home(double minVelocity, double maxVelocity, 
 		direction = 3;
 	}
 	asynPrint(pController->pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: VBASE=%f, VELO=%f, ACCL=%f, forwards=%d\n", DRIVER_NAME, functionName, minVelocity, maxVelocity, acceleration, forwards);
-	sprintf(cmd, "HM %d", direction);
+
+	// home to home switch or home to index
+	if (pController->homeSwIn == HOME_TO_INDEX)
+		sprintf(cmd, "HI %d", direction);
+	else
+		sprintf(cmd, "HM %d", direction);
+// Debug line
+//printf("\n\nDebug output: writing command\t%s\t to output\n\n", cmd);
+
 	status  = pController->writeController(cmd, IMS_TIMEOUT);
 	if (status) goto bail;
 
@@ -319,7 +319,6 @@ asynStatus ImsMDrivePlusMotorAxis::home(double minVelocity, double maxVelocity, 
 	if (status) {
 		char buff[LOCAL_LINE_LEN];
 		sprintf(buff, "%s:%s: ERROR homing motor", DRIVER_NAME, functionName);
-		handleAxisError(buff);
 	}
 
 	callParamCallbacks();
@@ -349,7 +348,6 @@ asynStatus ImsMDrivePlusMotorAxis::setPosition(double position)
 	if (status) {
 		char buff[LOCAL_LINE_LEN];
 		sprintf(buff, "%s:%s: ERROR setting motor position", DRIVER_NAME, functionName);
-		handleAxisError(buff);
 	}
 
 	callParamCallbacks();
@@ -402,6 +400,8 @@ asynStatus ImsMDrivePlusMotorAxis::poll(bool *moving)
 */
 	// update motor record status done with moving status
 	setIntegerParam(pController->motorStatusDone_, ! *moving );
+	if ( ! *moving && axisError_ )
+		clearError();
 
 /*
 	// if position has changed and moving stopped for over 30sec, update NVM with current position so the motor will remember
@@ -447,19 +447,19 @@ asynStatus ImsMDrivePlusMotorAxis::poll(bool *moving)
 		val = atoi(resp);
 		setIntegerParam(pController->motorStatusLowLimit_, val);
 	}
+	
+	//check for errors
+	handleAxisError();
 
 	// error polling
 	bail:
 	if (status) {
 		char buff[LOCAL_LINE_LEN];
 		sprintf(buff, "%s:%s: ERROR polling motor", DRIVER_NAME, functionName);
-		handleAxisError(buff);
 	}
-
 	// update motor status if polling was successful
-	if (status == 0) {
+	else {
 		setIntegerParam(pController->motorStatusCommsError_, 0);  // reset COMM error
-		setIntegerParam(pController->motorStatusProblem_, 0);     // reset problem error, bit 10
 	}
 
 	// update motor record
@@ -494,7 +494,6 @@ asynStatus ImsMDrivePlusMotorAxis::saveToNVM()
 	if (status) {
 		char buff[LOCAL_LINE_LEN];
 		sprintf(buff, "%s:%s: ERROR saving to NVM", DRIVER_NAME, functionName);
-		handleAxisError(buff);
 	}
 
 	callParamCallbacks(); //FIXME is this necessary??
@@ -503,13 +502,13 @@ asynStatus ImsMDrivePlusMotorAxis::saveToNVM()
 
 ////////////////////////////////////////////////////////
 //! handleAxisError()
-//! Set motorStatusProblem_
+//! Check for errors, set motorStatusProblem_
 //! Then try to get and print error code
 //
-////! @param[in] errMsg pointer to error message from calling function
 ////////////////////////////////////////////////////////
-void ImsMDrivePlusMotorAxis::handleAxisError(char *errMsg)
+asynStatus ImsMDrivePlusMotorAxis::handleAxisError()
 {
+	asynStatus status = asynSuccess;
 	char cmd[MAX_CMD_LEN];
 	char resp[MAX_BUFF_LEN];
 	size_t nread=0;
@@ -517,12 +516,12 @@ void ImsMDrivePlusMotorAxis::handleAxisError(char *errMsg)
 	char errCodeString[MAX_BUFF_LEN];
 	static const char *functionName = "handleAxisError()";
 
-	// set motorStatusProblem_ bit
-	setIntegerParam(pController->motorStatusProblem_, 1);
+
 
 	// read error code
 	sprintf(cmd, "PR ER");
-	pController->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
+	status = pController->writeReadController(cmd, resp, sizeof(resp), &nread, IMS_TIMEOUT);
+        if( status )  goto bail;
 	errCode = atoi(resp);
 
 	switch (errCode) {
@@ -587,5 +586,38 @@ void ImsMDrivePlusMotorAxis::handleAxisError(char *errMsg)
 	case 93: strcpy(errCodeString, "MR or MA not allowed while correcting position"); break;
 	}
 
-	asynPrint(pController->pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s: %s, %d:'%s'\n", DRIVER_NAME, functionName, errMsg, errCode, errCodeString);
+	pController->setStringParam(axisNo_, pController->ImsMDrivePlusErrorString_, errCodeString);
+	setIntegerParam(pController->ImsMDrivePlusErrorCode_, errCode);
+	if( errCode == 0 || errCode == 83 || errCode == 84 || errCode == 86 ) {
+		axisError_ = 0;	
+	}
+	else {
+		asynPrint(pController->pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s: Error Code %d:'%s'\n", DRIVER_NAME, functionName, errCode, errCodeString);
+		axisError_ = 1;
+	}
+	setIntegerParam(pController->motorStatusProblem_, axisError_);
+	
+	bail:
+	setIntegerParam(pController->motorStatusCommsError_, status ? 1:0);
+	callParamCallbacks();
+	return status;
+}
+////////////////////////////////////////////////////////
+//! clearError()
+//! check for error, try to clear it
+//! 
+//
+////////////////////////////////////////////////////////
+asynStatus ImsMDrivePlusMotorAxis::clearError()
+{
+	asynStatus status = asynSuccess;
+	char cmd[MAX_CMD_LEN];
+	static const char *functionName = "clearError()";
+
+	if( axisError_ ) {
+		sprintf(cmd, "ER 0");
+		status = pController->writeController(cmd, IMS_TIMEOUT);
+	}
+	
+	return status;
 }

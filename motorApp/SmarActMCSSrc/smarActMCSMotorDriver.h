@@ -50,7 +50,7 @@ public:
 	asynStatus  stop(double acceleration);
 	asynStatus  setPosition(double position);
 	asynStatus  moveVelocity(double min_vel, double max_vel, double accel);
-
+        asynStatus  setClosedLoop(bool closedLoop);
 	virtual asynStatus getVal(const char *parm, int *val_p);
 	virtual asynStatus moveCmd(const char *cmd, ...);
 	virtual int        getClosedLoop();

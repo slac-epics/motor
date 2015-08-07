@@ -1,0 +1,87 @@
+# RELEASE - Location of external products
+#
+# Note: This file will be scanned to automatically generate
+#       include path definitions etc.
+#       The order of the following declarations will be retained
+#       within those definitions.
+#
+# Note that "#!" marks lines that can be uncommented.
+#
+
+# Pickup variable definitions to be used below:
+#include $(TOP)/RELEASE_SITE
+
+# =============================================================
+# If you don't want to install into $(TOP) then
+# define INSTALL_LOCATION_APP here
+# =============================================================
+#INSTALL_LOCATION_APP=<fullpathname>
+
+# =============================================================
+# Define location of module tree with respect to
+# EPICS_SITE_TOP -- comes from RELEASE_SITE
+# =============================================================
+include $(TOP)/../../configure/RELEASE-MODULES-master
+EPICS_MODULES=$(EPICS_MODULES_TOP)
+#EPICS_MODULES=$(MODULES_SITE_TOP)
+
+# If any motor controller communication mechanism besides the VME backplane is
+# required, then ASYN must be defined.
+# Recommended ASYN release: R4-13 or higher
+#ASYN_MODULE_VERSION=asyn-R4-26_0
+#ASYN_MODULE_VERSION=asyn-R4-25_1-0
+ASYN_MODULE_VERSION=asyn-R4-25-spear1
+#=======
+#ASYN_MODULE_VERSION=asyn-trunk_Sept_17_2013
+#ASYN_MODULE_VERSION=asyn-R4-21_1-0 (change for cvs version 1.17)
+
+# The following support modules are required for the Hytec driver
+# Recommended IPAC release: R2-10 or higher
+#IPAC_MODULE_VERSION=ipac-R2-11_1-2
+
+# Following support module is for Oms driver to use recommended primitevs from
+# miscUtils folder
+MISCUTILS_MODULE_VERSION=miscUtils-R0-0-0
+
+# Need the sequencer and busy record for the 
+# MM4005 and XPS trajectory scanning
+# Recommended SNCSEQ release: R2-0-12 or higher
+# New motor package from Mark Rivers no longer requires this
+# dependency
+#SEQ_MODULE_VERSION=seq-R2-1-6_1-0
+#BUSY_MODULE_VERSION=busy-R1-4_1-2
+
+# The following must be defined for the MXmotor device driver.
+#!MX=$(SUPPORT)/mx/mx
+
+# The following support modules are required ONLY if the examples in
+# <motor>/motorExApp are built.  To build examples, the top Makefile,
+# <motor>/Makefile must also be edited.
+
+# The following is only needed for the motor examples in iocBoot.
+#!MOTOR=$(TOP)
+
+# ==============================================================
+# Define the version of EPICS BASE that you will use
+# =============================================================
+# Recommended EPICS release: R3.14.12.x
+#BASE_MODULE_VERSION=$(EPICS_BASE_VER)
+
+# ============================================================
+# External Support
+# ============================================================
+#IPAC=$(EPICS_MODULES)/ipac/$(IPAC_MODULE_VERSION)
+ASYN=$(EPICS_MODULES)/asyn/$(ASYN_MODULE_VERSION)
+MISCUTILS=$(EPICS_MODULES)/miscUtils/$(MISCUTILS_MODULE_VERSION)
+#SNCSEQ=$(EPICS_MODULES)/seq/$(SEQ_MODULE_VERSION)
+#BUSY=$(EPICS_MODULES)/busy/$(BUSY_MODULE_VERSION)
+
+# =================================================================
+# Define EPICS_BASE
+# EPICS_BASE usually appears last so other apps can override stuff:
+# =================================================================
+#EPICS_BASE=$(EPICS_SITE_TOP)/base/$(BASE_MODULE_VERSION)
+include $(TOP)/../../configure/RELEASE-master
+
+# End of file
+

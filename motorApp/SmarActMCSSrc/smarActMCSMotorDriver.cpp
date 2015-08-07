@@ -330,7 +330,11 @@ enum SmarActMCSStatus status;
 		 * the 'move' command incomplete until the holding time expires.
 		 */
 		case Holding:
-			*moving_p = HOLD_FOREVER == holdTime_ ? false : true;
+		/* The motor record can get stuck with an MIP 0x8000 - external motion 
+		 * if this is initiated with a 'infinite' hold outside of motor record
+		 */
+	//		*moving_p = HOLD_FOREVER == holdTime_ ? false : true;
+			*moving_p = false;
 		break;
 
 		case Stepping:
@@ -397,6 +401,19 @@ bail:
 #endif
 
 	return comStatus_;
+}
+
+asynStatus
+SmarActMCSAxis::setClosedLoop(bool closedLoop)
+{
+asynStatus status =  asynSuccess;
+		c_p_->setIntegerParam(axisNo_, c_p_->motorClosedLoop_, closedLoop ? 1:0);
+		/* set motorStatusPowerOn_ for the .CNEN field */
+		c_p_->setIntegerParam(axisNo_,c_p_->motorStatusPowerOn_, closedLoop ? 1:0);
+		holdTime_ = closedLoop ? HOLD_FOREVER:0;
+		callParamCallbacks();
+
+	return status;
 }
 
 asynStatus

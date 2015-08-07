@@ -2,9 +2,9 @@
 FILENAME...	drvOms58.cc
 USAGE...	Motor record driver level support for OMS model VME58.
 
-Version:        $Revision: 14914 $
-Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2012-07-26 12:04:55 -0700 (Thu, 26 Jul 2012) $
+Version:        $Revision: 1.7 $
+Modified By:    $Author: ernesto $
+Last Modified:  $Date: 2012/12/04 16:34:14 $
 HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/motorApp/OmsSrc/drvOms58.cc $
 */
 
@@ -116,12 +116,23 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/mot
  *                     after VME58 reboot.
  * .42  07-26-12 rls - Added reboot test to send_mess().
  *
+  * SLAC Modification Log:
+ *      03-Aug-2015: scondam:	(1) basicIoOps support: Added functions:
+ *									writeReg8, readReg8, writeReg16, readReg16,writeReg32, readReg32 
+ *								(2) Oms58Register to expose oms58Setup(..) to RTEMS IOC shell	
+ *								(3) motor_init() and motorIsrSetup(): 
+ *									use DEVLIB for both vxWorks and rtems
+ * 									Comment out #ifdef vxWorks to get this driver to work for RTEMS as well	
+ *								(4) Replaced Debug() with compiler directives that uses errlogPrintf()
+ *								(5) Discontinued support for PPC 603/604 for Spear per saa
+ *                            
  */
 
 #include	<string.h>
 #include	<stdio.h>
 #include	<dbCommon.h>
 #include	<drvSup.h>
+#include    <iocsh.h>	/* 03-Aug-2015: scondam: added for exposing oms58Setup() to RTEMS c shell */
 #include	<epicsVersion.h>
 #include	<epicsString.h>
 #include	<devLib.h>
@@ -137,10 +148,20 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/mot
 
 #include	"epicsExport.h"
 
+/* 03-Aug-2015: scondam: */
+#ifdef HAS_IOOPS_H
+#include        <basicIoOps.h>
+#endif
+
 #define PRIVATE_FUNCTIONS 1	/* normal:1, debug:0 */
 
 /* Define for return test on devNoResponseProbe() */
 #define PROBE_SUCCESS(STATUS) ((STATUS)==S_dev_addressOverlap)
+
+/* 03-Aug-2015: scondam:: Are we using VME-Bus/devLib */
+#if (defined(vxWorks) || defined(__rtems__))
+    #define USE_DEVLIB
+#endif
 
 /* jps: INFO messages - add RV and move QA to top */
 #define	ALL_INFO	"QA EA"
@@ -151,10 +172,24 @@ HeadURL:        $URL: https://subversion.xor.aps.anl.gov/synApps/motor/trunk/mot
 #define	PID_QUERY	"KK2 ID"
 
 
+
 /*----------------debugging-----------------*/
+
+#ifdef __GNUG__
+    #ifdef      DEBUG
+        #define Debug(l, f, args...) {if (l & drvOms58debug) \
+                                  errlogPrintf(f, ## args);}
+    #else
+        #define Debug(l, f, args...)
+    #endif
+#else
+    #define Debug
+#endif
+
 volatile int drvOms58debug = 0;
 extern "C" {epicsExportAddress(int, drvOms58debug);}
-static inline void Debug(int level, const char *format, ...) {
+/* 03-Aug-2015: scondam: Replaced with Debug(...) as above */
+/*static inline void Debug(int level, const char *format, ...) {
   #ifdef DEBUG
     if (level < drvOms58debug) {
       va_list pVar;
@@ -164,8 +199,10 @@ static inline void Debug(int level, const char *format, ...) {
     }
   #endif
 }
-
-#define pack2x16(p)      ((epicsUInt32)(((p[0])<<16)|(p[1])))
+*/
+/* 03-Aug-2015: scondam: */
+/* #define pack2x16(p)      ((epicsUInt32)(((p[0])<<16)|(p[1]))) */
+#define pack2x16(p) ((epicsUInt32)(readReg16(&(p[0]))<<16)|readReg16(&(p[1]))) 
 
 /* Global data. */
 int oms58_num_cards = 0;
@@ -180,7 +217,13 @@ static volatile unsigned omsInterruptVector = 0;
 static volatile epicsUInt8 omsInterruptLevel = OMS_INT_LEVEL;
 static volatile int max_io_tries = MAX_COUNT;
 static volatile int motionTO = 10;
-static char *oms58_axis[] = {"X", "Y", "Z", "T", "U", "V", "R", "S"};
+
+/* 03-Aug-2015: scondam: gets rid of annoying "warning: deprecated conversion from string constant to 'char*'" */
+/* #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wwrite-strings" */
+static char *oms58_axis[] = {"X", "Y", "Z", "T", "U", "V", "R", "S"};  /* no diagnostic for this one */
+/* #pragma GCC diagnostic pop */
+
 static double quantum;
 
 /*----------------functions-----------------*/
@@ -232,6 +275,9 @@ struct drvOms58_drvet
 
 extern "C" {epicsExportAddress(drvet, drvOms58);}
 
+/* 03-Aug-2015: scondam: add the following prototype so we have an unmangled name to call at the Cexp prompt */
+extern "C" { RTN_STATUS oms58Setup(int num_cards,void *addrs,unsigned vector,int  int_level,int scan_rate); }
+
 static char rebootmsg[] = "\n\n*** VME58 card #%d Disabled *** Reboot Detected.\n\n";
 
 static struct thread_args targs = {SCAN_RATE, &oms58_access, 0.000};
@@ -241,9 +287,10 @@ static struct thread_args targs = {SCAN_RATE, &oms58_access, 0.000};
 static long report(int level)
 {
     int card;
+    const char* functionName = "oms58";	
 
     if (oms58_num_cards <= 0)
-        printf("    No VME58 controllers configured.\n");
+        errlogPrintf("%s: No VME58 controllers configured.\n", functionName);		
     else
     {
         for (card = 0; card < oms58_num_cards; card++)
@@ -251,10 +298,10 @@ static long report(int level)
             struct controller *brdptr = motor_state[card];
 
             if (brdptr == NULL)
-                printf("    Oms Vme58 motor card #%d not found.\n", card);
+                errlogPrintf("%s: Oms Vme58 motor card #%d not found.\n", functionName, card);					
             else
-                printf("    Oms Vme58 motor card #%d @ %p, id: %s \n", card,
-                       brdptr->localaddr, brdptr->ident);
+                errlogPrintf("%s: Oms Vme58 motor card #%d @ 0x%X, id: %s \n", functionName, card,
+                       /* (epicsUInt32) */ brdptr->localaddr, brdptr->ident);							   
         }
     }
     return(0);
@@ -266,6 +313,77 @@ static long init()
     (void) motor_init();
     return((long) 0);
 }
+/* 03-Aug-2015: scondam: Aded IOOPS functions for reading/writing to motor registers */
+static void writeReg8(volatile epicsUInt8 *a8, epicsUInt8 value)
+{
+#ifdef HAS_IOOPS_H
+    out_8(a8, value);
+#else
+    *a8 = value;
+#endif
+}
+
+static epicsUInt8 readReg8(volatile epicsUInt8 *a8)
+{
+#ifdef HAS_IOOPS_H
+    return in_8(a8);
+#else
+    epicsUInt8 value;
+
+    value = *a8;
+    return(value);
+#endif
+}
+
+static void writeReg16(volatile epicsUInt16 *a16, epicsUInt16 value)
+{
+#ifdef HAS_IOOPS_H
+    out_be16(a16, value);
+#else
+    *a16 = value;
+#endif
+}
+
+static epicsUInt16 readReg16(volatile epicsUInt16 *a16)
+{
+#ifdef HAS_IOOPS_H
+    return in_be16(a16);
+#else
+    epicsUInt16 value;
+
+    value = *a16;
+    return(value);
+#endif
+}
+
+static void writeReg32(volatile epicsUInt32 *a32, epicsUInt32 value)
+{
+#ifdef HAS_IOOPS_H
+    out_be32(a32, value);
+#else
+    *a32 = value;
+#endif
+}
+
+static epicsUInt32 readReg32(volatile epicsUInt32 *a32)
+{
+#ifdef HAS_IOOPS_H
+    return in_be32(a32);
+#else
+    epicsUInt32 value;
+
+    value = *a32;
+    return(value);
+#endif
+}
+
+static void readRegMem(char *bufptr, volatile char *memptr, int size)
+{
+    memcpy(bufptr, (const void *)memptr, size);
+#ifdef HAS_IOOPS_H
+    iobarrier_r();
+#endif
+}
 
 
 static void query_done(int card, int axis, struct mess_node *nodeptr)
@@ -274,6 +392,14 @@ static void query_done(int card, int axis, struct mess_node *nodeptr)
 
     send_mess(card, DONE_QUERY, oms58_axis[axis]);
     recv_mess(card, buffer, 1);
+
+/* 03-Aug-2015: scondam: No need to continue to support PPC 603/604 for Spear per saa */	
+/* #if (CPU == PPC604 || CPU == PPC603)  */
+/* #if  (defined(mpc604)||defined(mpc7455)) */
+    /*if (strcmp(motor_state[card]->ident, "VME58 ver 2.35-8") == 0)
+	epicsThreadSleep(quantum * 2.0); */ /* Work around for intermittent wrong LS status. */
+/*#endif */
+	
     if (nodeptr->status.Bits.RA_PROBLEM)
         send_mess(card, AXIS_STOP, oms58_axis[axis]);
 }
@@ -297,24 +423,25 @@ static void start_status(int card)
             (pmotor = (struct vmex_motor *) motor_state[card]->localaddr) != NULL)
         {
             /* Wait Forever for controller to update. */
-            cntrlReg.All = pmotor->control.cntrlReg;
+			cntrlReg.All = readReg8(&(pmotor->control.cntrlReg));
+			
             while (cntrlReg.Bits.update != 0)
             {
                 Debug(1, "start_status(): Update Wait: card #%d\n", card);
                 epicsThreadSleep(quantum);
-                cntrlReg.All = pmotor->control.cntrlReg;
+				cntrlReg.All = readReg8(&(pmotor->control.cntrlReg));
             };
 
             cntrlReg.Bits.update = 1;
-            pmotor->control.cntrlReg = cntrlReg.All;
+			writeReg8(&(pmotor->control.cntrlReg), cntrlReg.All);
 
             /* Wait Forever for controller to update. */
-            cntrlReg.All = pmotor->control.cntrlReg;
+			cntrlReg.All = readReg8(&(pmotor->control.cntrlReg));
             while (cntrlReg.Bits.update != 0)
             {
                 Debug(1, "start_status: DPRAM delay.\n");
                 epicsThreadSleep(quantum);
-                cntrlReg.All = pmotor->control.cntrlReg;
+				cntrlReg.All = readReg8(&(pmotor->control.cntrlReg));
             }
         }
     }
@@ -327,16 +454,16 @@ static void start_status(int card)
                 (pmotor = (struct vmex_motor *) motor_state[index]->localaddr) != NULL)
             {
                 /* Wait Forever for controller to update. */
-                cntrlReg.All = pmotor->control.cntrlReg;
+				cntrlReg.All = readReg8(&(pmotor->control.cntrlReg));
                 while (cntrlReg.Bits.update != 0)
                 {
                     Debug(1, "start_status(): Waiting to start update: card #%d\n", index);
                     epicsThreadSleep(quantum);
-                    cntrlReg.All = pmotor->control.cntrlReg;
+					cntrlReg.All = readReg8(&(pmotor->control.cntrlReg));
                 };
 
                 cntrlReg.Bits.update = 1;
-                pmotor->control.cntrlReg = cntrlReg.All;
+				writeReg8(&(pmotor->control.cntrlReg), cntrlReg.All);
             }
         }
         /* Wait for all cards to complete update. */
@@ -346,12 +473,12 @@ static void start_status(int card)
                 (pmotor = (struct vmex_motor *) motor_state[index]->localaddr) != NULL)
             {
                 /* Wait Forever for controller to update. */
-                cntrlReg.All = pmotor->control.cntrlReg;
+				cntrlReg.All = readReg8(&(pmotor->control.cntrlReg));				
                 while (cntrlReg.Bits.update != 0)
                 {
                     Debug(1, "start_status: DPRAM delay.\n");
                     epicsThreadSleep(quantum);
-                    cntrlReg.All = pmotor->control.cntrlReg;
+					cntrlReg.All = readReg8(&(pmotor->control.cntrlReg));
                 }
             }
         }
@@ -504,13 +631,13 @@ static int set_status(int card, int signal)
     cntrlReg.Bits.update = 1;
 
     /* Wait for data area update to complete on card */
-    while (cntrlReg.All & pmotor->control.cntrlReg)
+	while (cntrlReg.All & readReg8(&(pmotor->control.cntrlReg)))
     {
         Debug(5, "set_status: DPRAM delay.\n");
         epicsThreadSleep(quantum);
     }
 
-    pmotorData = &pmotor->data[signal];
+    pmotorData = &(pmotor->data[signal]);
 
     /* Get motor position - word access only */
     motorData = pack2x16(pmotorData->cmndPos);
@@ -556,7 +683,7 @@ static int set_status(int card, int signal)
         if (trans->dpm == true)
         {
             unsigned char bitselect;
-            unsigned char inputs = pmotor->control.ioLowReg;
+			unsigned char inputs = readReg8(&(pmotor->control.ioLowReg));
             bitselect = (1 << signal);
             if ((inputs & bitselect) == 0)
             {
@@ -675,6 +802,7 @@ static RTN_STATUS send_mess(int card, char const *com, char *name)
     }
 
     pmotor = (struct vmex_motor *) motor_state[card]->localaddr;
+    Debug(9, "send_mess: pmotor = %x\n", (epicsUInt32) pmotor);	
 
     if (pmotor->rebootind != 0x4321)    /* Test if board has rebooted. */
     {
@@ -692,7 +820,7 @@ static RTN_STATUS send_mess(int card, char const *com, char *name)
 /* Debug(1, "Command error detected! 0x%02x on send_mess\n", status.All); */
 
     /* see if junk at input port - should not be any data available */
-    if (pmotor->inGetIndex != pmotor->inPutIndex)
+	if (readReg16(&(pmotor->inGetIndex)) != readReg16(&(pmotor->inPutIndex)))
     {
         Debug(1, "send_mess - clearing data in buffer\n");
         recv_mess(card, NULL, -1);
@@ -711,25 +839,25 @@ static RTN_STATUS send_mess(int card, char const *com, char *name)
     strcat(outbuf, "\n");       /* Add the command line terminator. */
 
     Debug(9, "send_mess: ready to send message.\n");
-    putIndex = pmotor->outPutIndex;
+	putIndex = readReg16(&(pmotor->outPutIndex));
     for (p = outbuf; *p != '\0'; p++)
     {
-        pmotor->outBuffer[putIndex++] = *p;
+		writeReg16(&(pmotor->outBuffer[putIndex++]), *p);
         if (putIndex >= BUFFER_SIZE)
             putIndex = 0;
     }
 
     Debug(4, "send_mess: sent card %d message:", card);
     Debug(4, "%s\n", outbuf);
+   
+	writeReg16(&(pmotor->outPutIndex), putIndex);	/* Message Sent */
 
-    pmotor->outPutIndex = putIndex; /* Message Sent */
-
-    for (count = 0; (putIndex != pmotor->outGetIndex) && (count < 1000); count++)
+    for (count = 0; (putIndex != (readReg16(&(pmotor->outPutIndex)))) && (count < 1000); count++)
     {
 #ifdef	DEBUG
         epicsInt16 deltaIndex, delta;
 
-        deltaIndex = pmotor->outPutIndex - pmotor->outGetIndex;
+		deltaIndex = readReg16(&(pmotor->outPutIndex)) - readReg16(&(pmotor->outGetIndex));
         delta = (deltaIndex < 0) ? BUFFER_SIZE + deltaIndex : deltaIndex;
         Debug(5, "send_mess(): buffer wait; index delta=%d\n", delta);
 #endif
@@ -796,12 +924,12 @@ static int recv_mess(int card, char *com, int amount)
     if (amount == -1)
     {
         Debug(7, "-------------");
-        getIndex = pmotor->inGetIndex;
+		getIndex = readReg16(&(pmotor->inGetIndex));
         for (i = 0, trys = 0; trys < max_io_tries; trys++)
         {
-            while (getIndex != pmotor->inPutIndex)
+			while (getIndex != readReg16(&(pmotor->inPutIndex)))
             {
-                junk = pmotor->inBuffer[getIndex++];
+				junk = readReg16(&(pmotor->inBuffer[getIndex++]));
                 /* handle circular buffer */
                 if (getIndex >= BUFFER_SIZE)
                     getIndex = 0;
@@ -811,7 +939,7 @@ static int recv_mess(int card, char *com, int amount)
                 i++;
             }
         }
-        pmotor->inGetIndex = getIndex;
+		writeReg16(&(pmotor->inGetIndex), getIndex);
 
         Debug(7, "-------------");
         Debug(1, "\nrecv_mess - cleared %d error data\n", i);
@@ -824,13 +952,13 @@ static int recv_mess(int card, char *com, int amount)
         head_size = 0;
         tail_size = 0;
 
-        getIndex = pmotor->inGetIndex;
+		getIndex = readReg16(&(pmotor->inGetIndex));
 
         for (piece = 0, trys = 0; piece < 3 && trys < max_io_tries; trys++)
         {
-            if (getIndex != pmotor->inPutIndex)
+			if (getIndex != readReg16(&(pmotor->inPutIndex)))
             {
-                inchar = pmotor->inBuffer[getIndex++];
+				inchar = readReg16(&(pmotor->inBuffer[getIndex++]));
                 if (getIndex >= BUFFER_SIZE)
                     getIndex = 0;
 
@@ -866,7 +994,7 @@ static int recv_mess(int card, char *com, int amount)
                 trys = 0;
             }
         }
-        pmotor->inGetIndex = getIndex;
+		writeReg16(&(pmotor->inGetIndex), getIndex);
 
         Debug(7, "-------------\n");
         if (trys >= max_io_tries)
@@ -994,35 +1122,36 @@ static void motorIsr(int card)
         errmsg1[47-2] = '0' + card%10;
         errmsg1[47-3] = '0' + (card/10)%10;
         epicsInterruptContextMessage(errmsg1);
+
         return;
     }
 
     pmotor = (struct vmex_motor *) (pmotorState->localaddr);
 
     /* Status register - clear irqs on read. */
-    statusBuf.All = pmotor->control.statusReg;
+	statusBuf.All = readReg8(&(pmotor->control.statusReg));
 
     /* Done register - clears on read */
-    doneFlags = pmotor->control.doneReg;
+	doneFlags = readReg8(&(pmotor->control.doneReg));
 
     /* UserIO register - clears on read */
-    userIO = pmotor->control.ioLowReg;
+	userIO = readReg8(&(pmotor->control.ioLowReg));
 
 /* Questioniable Fix for undefined problem Starts Here. The following
  * code is meant to fix a problem that exhibted "spurious" interrupts
  * and "stuck in the Oms ISR" behavior.
 */
     /* Slip detection  - clear on read */
-    slipFlags = pmotor->control.slipReg;
+	slipFlags = readReg8(&(pmotor->control.slipReg));
 
     /* Overtravel - clear on read */
-    limitFlags = pmotor->control.limitReg;
+	limitFlags = readReg8(&(pmotor->control.limitReg));	
 
     /* Only write control register if update bit is false. */
     /* Assure proper control register settings  */
-    cntrlReg = pmotor->control.cntrlReg;
+	cntrlReg = readReg8(&(pmotor->control.cntrlReg));
     if ((cntrlReg & 0x01) == 0)
-        pmotor->control.cntrlReg = (epicsUInt8) 0x90;
+		writeReg8(&(pmotor->control.cntrlReg), 0x90);
 /* Questioniable Fix for undefined problem Ends Here. */
 
     /* Motion done handling */
@@ -1040,7 +1169,7 @@ static void motorIsr(int card)
 
 static int motorIsrSetup(int card)
 {
-#ifdef vxWorks
+
     volatile struct vmex_motor *pmotor;
     long status;
     CNTRL_REG cntrlBuf;
@@ -1048,7 +1177,9 @@ static int motorIsrSetup(int card)
     Debug(5, "motorIsrSetup: Entry card#%d\n", card);
 
     pmotor = (struct vmex_motor *) (motor_state[card]->localaddr);
-
+	
+/* 03-Aug-2015: scondam: works for vxworks and RTEMS */	
+#ifdef USE_DEVLIB	
     status = pdevLibVirtualOS->pDevConnectInterruptVME(omsInterruptVector + card,
 #if LT_EPICSBASE(3,14,8)
         (void (*)()) motorIsr,
@@ -1062,7 +1193,7 @@ static int motorIsrSetup(int card)
         errPrintf(status, __FILE__, __LINE__, "Can't connect to vector %d\n", omsInterruptVector + card);
         omsInterruptVector = 0; /* Disable interrupts */
         cntrlBuf.All = 0;
-        pmotor->control.cntrlReg = cntrlBuf.All;
+		writeReg8(&(pmotor->control.cntrlReg), cntrlBuf.All);
         return(ERROR);
     }
 
@@ -1073,20 +1204,21 @@ static int motorIsrSetup(int card)
         errPrintf(status, __FILE__, __LINE__, "Can't enable enterrupt level %d\n", omsInterruptLevel);
         omsInterruptVector = 0; /* Disable interrupts */
         cntrlBuf.All = 0;
-        pmotor->control.cntrlReg = cntrlBuf.All;
+		writeReg8(&(pmotor->control.cntrlReg), cntrlBuf.All);
         return(ERROR);
     }
 
+#endif
+
     /* Setup card for interrupt-on-done */
-    pmotor->control.intVector = omsInterruptVector + card;
+	writeReg8(&(pmotor->control.intVector), omsInterruptVector + card);
 
     /* enable interrupt-when-done irq */
     cntrlBuf.All = 0;
     cntrlBuf.Bits.doneIntEna = 1;
     cntrlBuf.Bits.intReqEna = 1;
 
-    pmotor->control.cntrlReg = cntrlBuf.All;
-#endif
+	writeReg8(&(pmotor->control.cntrlReg), cntrlBuf.All);
     return(OK);
 }
 
@@ -1140,9 +1272,9 @@ static int motor_init()
         startAddr = (epicsInt8 *) probeAddr;
         endAddr = startAddr + OMS_BRD_SIZE;
 
-        Debug(9, "motor_init: devNoResponseProbe() on addr %p\n", probeAddr);
-        /* Scan memory space to assure card id */
-#ifdef vxWorks
+        Debug(9, "motor_init: devNoResponseProbe() on addr %p\n", (epicsUInt32) probeAddr);
+        /* Scan memory space to assure card id */		
+#ifdef USE_DEVLIB
         do
         {
             status = devNoResponseProbe(OMS_ADDRS_TYPE, (unsigned int) startAddr, 2);
@@ -1150,8 +1282,8 @@ static int motor_init()
         } while (PROBE_SUCCESS(status) && startAddr < endAddr);
 #endif
         if (PROBE_SUCCESS(status))
-        {
-#ifdef vxWorks
+        {			
+#ifdef USE_DEVLIB
             status = devRegisterAddress(__FILE__, OMS_ADDRS_TYPE,
                                         (size_t) probeAddr, OMS_BRD_SIZE,
                                         (volatile void **) &localaddr);
@@ -1173,7 +1305,8 @@ static int motor_init()
             pmotorState->motor_in_motion = 0;
             pmotorState->cmnd_response = false;
 
-            pmotor->control.cntrlReg = 0;   /* Disable all interrupts */
+            /* Disable all interrupts */
+			writeReg8(&(pmotor->control.cntrlReg), 0);
             pmotor->rebootind = 0x4321;     /* Set reboot indicator (before send_mess call). */
 
             send_mess(card_index, "EF", (char) NULL);
@@ -1197,17 +1330,19 @@ static int motor_init()
             Debug(3, "motor_init: Total axis = %d\n", total_axis);
             pmotorState->total_axis = total_axis;
 
-            /* Assure done is cleared */
-            statusReg.All = pmotor->control.statusReg;
-            omsReg = pmotor->control.doneReg;
+            /* Assure done is cleared */ 
+			statusReg.All = readReg8(&(pmotor->control.statusReg));
+	        omsReg = readReg8(&(pmotor->control.doneReg));
+			
             for (total_encoders = total_pidcnt = 0, motor_index = 0; motor_index < total_axis; motor_index++)
             {
                 /* Test if motor has an encoder. */
                 send_mess(card_index, ENCODER_QUERY, oms58_axis[motor_index]);
-                while (!pmotor->control.doneReg)    /* Wait for command to complete. */
+                /* Wait for command to complete. */
+				while (!readReg8(&(pmotor->control.doneReg)))
                     epicsThreadSleep(quantum * 2.0);
 
-                statusReg.All = pmotor->control.statusReg;
+				statusReg.All = readReg8(&(pmotor->control.statusReg));
 
                 if (statusReg.Bits.cmndError)
                 {
@@ -1226,7 +1361,7 @@ static int motor_init()
                 do  /* Wait for command to complete. */
                 {
                     epicsThreadSleep(quantum);
-                    statusReg.All = pmotor->control.statusReg;
+					statusReg.All = readReg8(&(pmotor->control.statusReg));
                 } while (statusReg.Bits.done == 0);
 
 
@@ -1290,9 +1425,10 @@ static int motor_init()
     Debug(3, "Motors initialized\n");
 
 
-#if (CPU == PPC604 || CPU == PPC603)
+/* 03-Aut-2015: scondam: No need to continue to support PPC 603/604 for Spear per SAA */	
+/* #if (CPU == PPC604 || CPU == PPC603) */
     /* Work around for intermittent wrong LP data. */
-    for (card_index = 0; card_index < oms58_num_cards; card_index++)
+/*     for (card_index = 0; card_index < oms58_num_cards; card_index++)
     {
         char *ident_ptr = motor_state[card_index]->ident;
         if (strncmp(ident_ptr, "VME58 ver 2.35", 14) == 0)
@@ -1300,14 +1436,15 @@ static int motor_init()
 
         if (strncmp(ident_ptr, "VME58 ver 2.24-8S", 17) == 0)
         {
-            double delay = 0.002;   /* Set update delay > 2 ms. */
+            double delay = 0.002;  */ /* Set update delay > 2 ms. */
+/*			
             if (quantum * 2.0 > delay)
                 delay = quantum * 2.0;
             targs.update_delay = delay;
         }
     }
 #endif
-
+*/
     epicsThreadCreate((char *) "Oms58_motor", epicsThreadPriorityMedium,
                       epicsThreadGetStackSize(epicsThreadStackMedium),
                       (EPICSTHREADFUNC) motor_task, (void *) &targs);
@@ -1330,12 +1467,45 @@ static void oms_reset(void *arg)
         if (motor_state[card] != NULL)
         {
             pmotor = (struct vmex_motor *) motor_state[card]->localaddr;
-            cntrlBuf.All = pmotor->control.cntrlReg;
+			cntrlBuf.All = readReg8(&(pmotor->control.cntrlReg));
             cntrlBuf.Bits.intReqEna = 0;
-            pmotor->control.cntrlReg = cntrlBuf.All;
+			writeReg8(&(pmotor->control.cntrlReg), cntrlBuf.All);
         }
     }
 }
 
+/* scondam: Register setupOms58 */
+extern "C"
+{
 
+// Setup arguments
+    static const iocshArg setupArg0 = {"Maximum # of cards", iocshArgInt};
+    static const iocshArg setupArg1 = {"Base Address", iocshArgInt};
+    static const iocshArg setupArg2 = {"interrupt vector", iocshArgInt};
+    static const iocshArg setupArg3 = {"interrupt level", iocshArgInt};	
+    static const iocshArg setupArg4 = {"Polling rate (HZ)", iocshArgInt};	
+
+    static const iocshArg *const SetupArgs[5]  = {&setupArg0, &setupArg1, &setupArg2, &setupArg3,  &setupArg4};
+
+    static const iocshFuncDef setupOms58  = {"oms58Setup", 5, SetupArgs};
+	
+/* oms58Setup(...) int num_cards, args[0] - maximum number of cards in rack */
+            /* void *addrs,   args[1] - Base Address(0x0-0xb000 on 4K boundary) */
+            /* unsigned vector,args[2] - noninterrupting(0), valid vectors(64-255) */
+            /* int int_level,  args[3] - interrupt level (1-6) */
+            /* int scan_rate)  args[4] - polling rate - 1-60 Hz */	
+
+    static void setupOms58CallFunc(const iocshArgBuf *args)
+    {	
+        oms58Setup((int) args[0].ival, (void *) args[1].ival, (unsigned) args[2].ival, (int) args[3].ival, (int) args[4].ival);
+    }
+
+    static void Oms58Register(void)
+    {
+        iocshRegister(&setupOms58, setupOms58CallFunc);
+    }
+
+    epicsExportRegistrar(Oms58Register);
+
+} // extern "C"
 /*---------------------------------------------------------------------*/

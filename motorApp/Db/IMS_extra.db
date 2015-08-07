@@ -11,3 +11,24 @@ record(bo,"$(DEV):$(AREA):$(LOC):IMS_S") {
     field(ONAM, "Yes")
 }
 
+# get IMS error code
+record(ai,"$(DEV):$(AREA):$(LOC):IMS_ERR") {
+    field(DESC, "Ims Error Code")
+    field(PINI, "NO")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR))IMS_ERROR")
+    field(SCAN, "I/O Intr")
+    field(HIGH, "1")
+    field(HSV, "Minor")
+    field(HHSV, "Minor")
+}
+
+# get IMS Error String 
+record(waveform, "$(DEV):$(AREA):$(LOC):IMS_ERRS") {
+  field(DESC, "Ims Error String")
+  field(DTYP, "asynOctetRead")
+  field(FTVL, "CHAR")
+  field(NELM, "100")
+  field(INP, "@asyn($(PORT),$(ADDR))IMS_ERROR_STRING")
+  field(SCAN, "I/O Intr")
+}
