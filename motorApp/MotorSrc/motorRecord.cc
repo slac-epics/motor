@@ -3583,8 +3583,8 @@ static void
             clear_buttons(pmr);
             if (msta.Bits.RA_PROBLEM)
             {
-                pmr->stop = 1;
-                MARK(M_STOP);
+            //    pmr->stop = 1;
+            //    MARK(M_STOP);
             }
         }
     }
