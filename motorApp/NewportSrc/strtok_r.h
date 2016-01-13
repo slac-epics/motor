@@ -1,6 +1,7 @@
 /* strtok_r prototype */
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #if !defined(__rtems__)

@@ -11,10 +11,13 @@ DBD += devNewFocus.dbd
 
 LIBRARY_IOC = NewFocus
 
-SRCS += NewFocusRegister.cc
+NewFocus_SRCS += NewFocusRegister.cc
 
 # PMNC87xx (i.e., PMNC87xx) device driver.
-SRCS += devPMNC87xx.cc drvPMNC87xx.cc
+NewFocus_SRCS += devPMNC87xx.cc drvPMNC87xx.cc
+
+# 874x device driver
+NewFocus_SRCS += Pico8742Driver.cpp
 
 NewFocus_LIBS += motor asyn
 NewFocus_LIBS += $(EPICS_BASE_IOC_LIBS)

@@ -215,7 +215,6 @@ int __stdcall ControllerStatusStringGet (int SocketIndex, int ControllerStatusCo
  *            int SocketIndex
  *            double *ElapsedTime
  *     - Return :
-
  *            int errorCode
  ***********************************************************************/ 
 int __stdcall ElapsedTimeGet (int SocketIndex, double * ElapsedTime) 

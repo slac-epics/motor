@@ -80,7 +80,7 @@
 #include "HytecMotorDriver.h"
 #include <epicsExport.h>
 
-static void ISR_8601(void *pDrv);
+static void ISR_8601(int pDrv);
 static void intQueuedTask( void *pDrv );
 
 #define MAX_MESSAGES  100           /* maximum number of messages */
@@ -197,7 +197,7 @@ asynStatus HytecMotorController::SetupCard()
 			 this->ipslot,
 			 this->vector,
 			 &ISR_8601,
-			 this);
+			 (long)this);
       
     /* If Interrupts NOT Setup OK */
     if (st!=OK) 
@@ -259,8 +259,6 @@ Revision History
 
 Date            By      Version     Descripition
 ----            --      -------     ------------
-2014-10-01      klg                 Changed ISR_8601 argument to void*
-                                    to build against ipac/R3.0.0-0.5.0
 29-MAR-2011     JSC     1.1.1.0     Intial Version.
     
 **********************************************************/
@@ -522,7 +520,7 @@ asynStatus HytecMotorController::writeFloat64(asynUser *pasynUser, epicsFloat64 
 }
 
 // ISR8601 Routines to handle interrupts
-static void ISR_8601(void *pDrv)
+static void ISR_8601(int pDrv)
 {
     HytecMotorController *pController = (HytecMotorController*) pDrv;
 	HytecMotorAxis * pAxis;

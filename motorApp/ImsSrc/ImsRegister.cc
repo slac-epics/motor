@@ -103,4 +103,3 @@ static void IMSmotorRegister(void)
 epicsExportRegistrar(IMSmotorRegister);
 
 } // extern "C"
-

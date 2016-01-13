@@ -14,6 +14,7 @@
         <string>
 
 QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
+QPushButton::menu-indicator {image: url(none.png); width: 0}
 
 </string>
     </property>
@@ -21,14 +22,6 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
         <widget class="caLabel" name="caLabel_0">
             <property name="frameShape">
                 <enum>QFrame::NoFrame</enum>
-            </property>
-            <property name="geometry">
-                <rect>
-                    <x>0</x>
-                    <y>0</y>
-                    <width>30</width>
-                    <height>14</height>
-                </rect>
             </property>
             <property name="foreground">
                 <color alpha="255">
@@ -48,7 +41,15 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 <string>Card</string>
             </property>
             <property name="fontScaleMode">
-                <enum>ESimpleLabel::Height</enum>
+                <enum>ESimpleLabel::WidthAndHeight</enum>
+            </property>
+            <property name="geometry">
+                <rect>
+                    <x>0</x>
+                    <y>0</y>
+                    <width>33</width>
+                    <height>14</height>
+                </rect>
             </property>
             <property name="alignment">
                 <set>Qt::AlignAbsolute|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -64,7 +65,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M1).CARD</string>
@@ -112,14 +113,6 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
             <property name="frameShape">
                 <enum>QFrame::NoFrame</enum>
             </property>
-            <property name="geometry">
-                <rect>
-                    <x>60</x>
-                    <y>0</y>
-                    <width>75</width>
-                    <height>14</height>
-                </rect>
-            </property>
             <property name="foreground">
                 <color alpha="255">
                     <red>0</red>
@@ -138,7 +131,15 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 <string>($(M1)..$(M8))</string>
             </property>
             <property name="fontScaleMode">
-                <enum>ESimpleLabel::Height</enum>
+                <enum>ESimpleLabel::WidthAndHeight</enum>
+            </property>
+            <property name="geometry">
+                <rect>
+                    <x>60</x>
+                    <y>0</y>
+                    <width>117</width>
+                    <height>14</height>
+                </rect>
             </property>
             <property name="alignment">
                 <set>Qt::AlignAbsolute|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -154,7 +155,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M1).DTYP</string>
@@ -1810,7 +1811,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M7).DESC</string>
@@ -1861,7 +1862,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M6).DESC</string>
@@ -1912,7 +1913,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M5).DESC</string>
@@ -1963,7 +1964,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M4).DESC</string>
@@ -2014,7 +2015,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M3).DESC</string>
@@ -2065,7 +2066,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M2).DESC</string>
@@ -2116,7 +2117,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M1).DESC</string>
@@ -2167,7 +2168,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M8).DESC</string>
@@ -2554,7 +2555,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M1).VAL</string>
@@ -2608,7 +2609,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M2).VAL</string>
@@ -2662,7 +2663,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M3).VAL</string>
@@ -2716,7 +2717,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M4).VAL</string>
@@ -2770,7 +2771,7 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M5).VAL</string>
@@ -2824,270 +2825,11 @@ QWidget#centralWidget {background: rgba(200, 200, 200, 255);}
                 </rect>
             </property>
             <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
+                <enum>caLineEdit::WidthAndHeight</enum>
             </property>
             <property name="channel">
                 <string>$(P)$(M6).VAL</string>
             </property>
             <property name="foreground">
                 <color alpha="255">
-                    <red>10</red>
-                    <green>0</green>
-                    <blue>184</blue>
-                </color>
-            </property>
-            <property name="background">
-                <color alpha="255">
-                    <red>200</red>
-                    <green>200</green>
-                    <blue>200</blue>
-                </color>
-            </property>
-            <property name="limitsMode">
-                <enum>caLineEdit::Channel</enum>
-            </property>
-            <property name="limitsMode">
-                <enum>caLineEdit::Channel</enum>
-            </property>
-            <property name="precisionMode">
-                <enum>caLineEdit::Channel</enum>
-            </property>
-            <property name="minValue">
-                <double>0.0</double>
-            </property>
-            <property name="maxValue">
-                <double>1.0</double>
-            </property>
-            <property name="alignment">
-                <set>Qt::AlignAbsolute|Qt::AlignLeft|Qt::AlignVCenter</set>
-            </property>
-            <property name="formatType">
-                <enum>decimal</enum>
-            </property>
-            <property name="colorMode">
-                <enum>caLineEdit::Static</enum>
-            </property>
-        </widget>
-        <widget class="caLineEdit" name="caLineEdit_8">
-            <property name="geometry">
-                <rect>
-                    <x>150</x>
-                    <y>145</y>
-                    <width>90</width>
-                    <height>20</height>
-                </rect>
-            </property>
-            <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
-            </property>
-            <property name="channel">
-                <string>$(P)$(M7).VAL</string>
-            </property>
-            <property name="foreground">
-                <color alpha="255">
-                    <red>10</red>
-                    <green>0</green>
-                    <blue>184</blue>
-                </color>
-            </property>
-            <property name="background">
-                <color alpha="255">
-                    <red>200</red>
-                    <green>200</green>
-                    <blue>200</blue>
-                </color>
-            </property>
-            <property name="limitsMode">
-                <enum>caLineEdit::Channel</enum>
-            </property>
-            <property name="limitsMode">
-                <enum>caLineEdit::Channel</enum>
-            </property>
-            <property name="precisionMode">
-                <enum>caLineEdit::Channel</enum>
-            </property>
-            <property name="minValue">
-                <double>0.0</double>
-            </property>
-            <property name="maxValue">
-                <double>1.0</double>
-            </property>
-            <property name="alignment">
-                <set>Qt::AlignAbsolute|Qt::AlignLeft|Qt::AlignVCenter</set>
-            </property>
-            <property name="formatType">
-                <enum>decimal</enum>
-            </property>
-            <property name="colorMode">
-                <enum>caLineEdit::Static</enum>
-            </property>
-        </widget>
-        <widget class="caLineEdit" name="caLineEdit_9">
-            <property name="geometry">
-                <rect>
-                    <x>150</x>
-                    <y>165</y>
-                    <width>90</width>
-                    <height>20</height>
-                </rect>
-            </property>
-            <property name="fontScaleMode">
-                <enum>caLineEdit::Height</enum>
-            </property>
-            <property name="channel">
-                <string>$(P)$(M8).VAL</string>
-            </property>
-            <property name="foreground">
-                <color alpha="255">
-                    <red>10</red>
-                    <green>0</green>
-                    <blue>184</blue>
-                </color>
-            </property>
-            <property name="background">
-                <color alpha="255">
-                    <red>200</red>
-                    <green>200</green>
-                    <blue>200</blue>
-                </color>
-            </property>
-            <property name="limitsMode">
-                <enum>caLineEdit::Channel</enum>
-            </property>
-            <property name="limitsMode">
-                <enum>caLineEdit::Channel</enum>
-            </property>
-            <property name="precisionMode">
-                <enum>caLineEdit::Channel</enum>
-            </property>
-            <property name="minValue">
-                <double>0.0</double>
-            </property>
-            <property name="maxValue">
-                <double>1.0</double>
-            </property>
-            <property name="alignment">
-                <set>Qt::AlignAbsolute|Qt::AlignLeft|Qt::AlignVCenter</set>
-            </property>
-            <property name="formatType">
-                <enum>decimal</enum>
-            </property>
-            <property name="colorMode">
-                <enum>caLineEdit::Static</enum>
-            </property>
-        </widget>
-        <widget class="caRelatedDisplay" name="caRelatedDisplay_9">
-            <property name="geometry">
-                <rect>
-                    <x>145</x>
-                    <y>185</y>
-                    <width>50</width>
-                    <height>20</height>
-                </rect>
-            </property>
-            <property name="foreground">
-                <color alpha="255">
-                    <red>255</red>
-                    <green>255</green>
-                    <blue>255</blue>
-                </color>
-            </property>
-            <property name="background">
-                <color alpha="255">
-                    <red>40</red>
-                    <green>147</green>
-                    <blue>21</blue>
-                </color>
-            </property>
-            <property name="label">
-                <string>-More</string>
-            </property>
-            <property name="stackingMode">
-                <enum>Menu</enum>
-            </property>
-            <property name="labels">
-                <string>motor-parameter table</string>
-            </property>
-            <property name="files">
-                <string>8motor_form.adl</string>
-            </property>
-            <property name="args">
-                <string>P=$(P),M1=$(M1),M2=$(M2),M3=$(M3),M4=$(M4),M5=$(M5),M6=$(M6),M7=$(M7),M8=$(M8)</string>
-            </property>
-            <property name="removeParent">
-                <string>false</string>
-            </property>
-        </widget>
-        <zorder>caLabel_0</zorder>
-        <zorder>caLabel_1</zorder>
-        <zorder>caRectangle_0</zorder>
-        <zorder>caRectangle_1</zorder>
-        <zorder>caRectangle_2</zorder>
-        <zorder>caRectangle_3</zorder>
-        <zorder>caRectangle_4</zorder>
-        <zorder>caRectangle_5</zorder>
-        <zorder>caRectangle_6</zorder>
-        <zorder>caRectangle_7</zorder>
-        <zorder>caRectangle_8</zorder>
-        <zorder>caRectangle_9</zorder>
-        <zorder>caRectangle_10</zorder>
-        <zorder>caRectangle_11</zorder>
-        <zorder>caRectangle_12</zorder>
-        <zorder>caRectangle_13</zorder>
-        <zorder>caRectangle_14</zorder>
-        <zorder>caRectangle_15</zorder>
-        <zorder>caRectangle_16</zorder>
-        <zorder>caRectangle_17</zorder>
-        <zorder>caRectangle_18</zorder>
-        <zorder>caRectangle_19</zorder>
-        <zorder>caRectangle_20</zorder>
-        <zorder>caRectangle_21</zorder>
-        <zorder>caRectangle_22</zorder>
-        <zorder>caRectangle_23</zorder>
-        <zorder>caRectangle_24</zorder>
-        <zorder>caRectangle_25</zorder>
-        <zorder>caRectangle_26</zorder>
-        <zorder>caRectangle_27</zorder>
-        <zorder>caRectangle_28</zorder>
-        <zorder>caRectangle_29</zorder>
-        <zorder>caRectangle_30</zorder>
-        <zorder>caRectangle_31</zorder>
-        <zorder>caRectangle_32</zorder>
-        <zorder>caRectangle_33</zorder>
-        <zorder>caRectangle_34</zorder>
-        <zorder>caRectangle_35</zorder>
-        <zorder>caRectangle_36</zorder>
-        <zorder>caRectangle_37</zorder>
-        <zorder>caRectangle_38</zorder>
-        <zorder>caRectangle_39</zorder>
-        <zorder>caLineEdit_0</zorder>
-        <zorder>caLineEdit_1</zorder>
-        <zorder>caRelatedDisplay_0</zorder>
-        <zorder>caTextEntry_0</zorder>
-        <zorder>caTextEntry_1</zorder>
-        <zorder>caTextEntry_2</zorder>
-        <zorder>caTextEntry_3</zorder>
-        <zorder>caTextEntry_4</zorder>
-        <zorder>caTextEntry_5</zorder>
-        <zorder>caTextEntry_6</zorder>
-        <zorder>caTextEntry_7</zorder>
-        <zorder>caRelatedDisplay_1</zorder>
-        <zorder>caRelatedDisplay_2</zorder>
-        <zorder>caRelatedDisplay_3</zorder>
-        <zorder>caRelatedDisplay_4</zorder>
-        <zorder>caRelatedDisplay_5</zorder>
-        <zorder>caRelatedDisplay_6</zorder>
-        <zorder>caRelatedDisplay_7</zorder>
-        <zorder>caRelatedDisplay_8</zorder>
-        <zorder>caLineEdit_2</zorder>
-        <zorder>caLineEdit_3</zorder>
-        <zorder>caLineEdit_4</zorder>
-        <zorder>caLineEdit_5</zorder>
-        <zorder>caLineEdit_6</zorder>
-        <zorder>caLineEdit_7</zorder>
-        <zorder>caLineEdit_8</zorder>
-        <zorder>caLineEdit_9</zorder>
-        <zorder>caRelatedDisplay_9</zorder>
-    </widget>
-</widget>
-</ui>
+                    <r

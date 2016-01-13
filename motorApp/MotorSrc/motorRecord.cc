@@ -2,10 +2,10 @@
 FILENAME...     motorRecord.cc
 USAGE...        Motor Record Support.
 
-Version:        $Revision: 17450 $
+Version:        $Revision: 17843 $
 Modified By:    $Author: sluiter $
-Last Modified:  $Date: 2014-05-27 11:39:49 -0500 (Tue, 27 May 2014) $
-HeadURL:        $URL: https://subversion.xray.aps.anl.gov/synApps/motor/tags/R6-8-1/motorApp/MotorSrc/motorRecord.cc $
+Last Modified:  $Date: 2014-09-11 10:37:22 -0500 (Thu, 11 Sep 2014) $
+HeadURL:        $URL: https://subversion.xray.aps.anl.gov/synApps/motor/tags/R6-9/motorApp/MotorSrc/motorRecord.cc $
 */
 
 /*
@@ -176,9 +176,16 @@ HeadURL:        $URL: https://subversion.xray.aps.anl.gov/synApps/motor/tags/R6-
  * .69 05-19-14 rls - Set "stop" field true if driver returns RA_PROBLEM true. (Motor record
  *                    stops motion when controller signals error but does not stop motion; e.g.,
  *                    maximum velocity exceeded.)
- */
+ * .70 07-30-14 rls - Removed postProcess flag (pp) from LOAD_POS. Fixes bug where target positions
+ *                    were not updating.
+ *                  - Removed redundant postings of RMP and REP by moving them to device support's
+ *                    motor_update_values() and update_values().
+ *                  - Fix for LOAD_POS not posting RVAL.
+ *                  - Reversed order of issuing SET_VEL_BASE and SET_VELOCITY commands. Fixes MAXv
+ *                    command errors.
+ */                                                          
 
-#define VERSION 6.81
+#define VERSION 6.9
 
 #include    <stdlib.h>
 #include    <string.h>
@@ -831,8 +838,8 @@ static long postProcess(motorRecord * pmr)
             pmr->rcnt = 0;
             MARK(M_RCNT);
             INIT_MSG();
-            WRITE_MSG(SET_VEL_BASE, &vbase);
             WRITE_MSG(SET_VELOCITY, &hvel);
+            WRITE_MSG(SET_VEL_BASE, &vbase);
             if (acc > 0.0)  /* Don't SET_ACCEL to zero. */
                 WRITE_MSG(SET_ACCEL, &acc);
             
@@ -901,10 +908,10 @@ static long postProcess(motorRecord * pmr)
             {
                 double acc = (vel - vbase) / pmr->accl;
 
-                WRITE_MSG(SET_VEL_BASE, &vbase);
                 if (vel <= vbase)
                     vel = vbase + 1;
                 WRITE_MSG(SET_VELOCITY, &vel);
+                WRITE_MSG(SET_VEL_BASE, &vbase);
                 if (acc > 0.0)  /* Don't SET_ACCEL if vel = vbase. */
                     WRITE_MSG(SET_ACCEL, &acc);
                 if (use_rel == true)
@@ -1019,7 +1026,6 @@ static void maybeRetry(motorRecord * pmr)
     {
         /* No, we're not close enough.  Try again. */
         Debug(1, "maybeRetry: not close enough; diff = %f\n", pmr->diff);
-
         /* If max retry count is zero, retry is disabled */
         if (pmr->rtry == 0)
             pmr->mip &= MIP_JOG_REQ; /* Clear everything, except jog request;
@@ -2086,8 +2092,8 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 hpos = 0;
 
                 INIT_MSG();
-                WRITE_MSG(SET_VEL_BASE, &vbase);
                 WRITE_MSG(SET_VELOCITY, &hvel);
+                WRITE_MSG(SET_VEL_BASE, &vbase);
                 if (acc > 0.0)  /* Don't SET_ACCEL to zero. */
                     WRITE_MSG(SET_ACCEL, &acc);
 
@@ -2530,8 +2536,8 @@ static RTN_STATUS do_work(motorRecord * pmr, CALLBACK_VALUE proc_ind)
                 }
 
                 pmr->cdir = (pmr->rdif < 0.0) ? 0 : 1;
-                WRITE_MSG(SET_VEL_BASE, &vbase);
                 WRITE_MSG(SET_VELOCITY, &velocity);
+                WRITE_MSG(SET_VEL_BASE, &vbase);
                 if (accel > 0.0)        /* Don't SET_ACCEL = 0.0 */
                     WRITE_MSG(SET_ACCEL, &accel);
                 if (use_rel == true)
@@ -3406,6 +3412,8 @@ static long get_alarm_double(const DBADDR  *paddr, struct dbr_alDouble * pad)
 		on what all the changes do, but have left it in its modified state.
 		If things with the alarm handler go wrong, check here first.
 		--klg@slac 2014-10-01
+		Still true for R6-9
+		--klg@slac 2015-12-16
 *******************************************************************************/
 static void alarm_sub(motorRecord * pmr)
 {
@@ -3846,7 +3854,9 @@ static void load_pos(motorRecord * pmr)
 
     pmr->ldvl = pmr->dval;
     pmr->lval = pmr->val;
-    pmr->lrvl = pmr->rval = (long) newpos;
+    if (pmr->rval != (epicsInt32) NINT(newpos))
+        MARK(M_RVAL);
+    pmr->lrvl = pmr->rval = (epicsInt32) NINT(newpos);
 
     if (pmr->foff)
     {

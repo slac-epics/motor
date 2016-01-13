@@ -60,8 +60,8 @@ ImsSrc_DEPEND_DIRS = MotorSrc
 #DIRS += PC6KSrc
 #PC6KSrc_DEPEND_DIRS = MotorSrc
 
-#DIRS += NewFocusSrc
-#NewFocusSrc_DEPEND_DIRS = MotorSrc
+DIRS += NewFocusSrc
+NewFocusSrc_DEPEND_DIRS = MotorSrc
 
 #DIRS += AcsTech80Src
 #AcsTech80Src_DEPEND_DIRS = MotorSrc
@@ -98,6 +98,12 @@ ACRSrc_DEPEND_DIRS = MotorSrc
 
 #DIRS += NPointSrc
 #NPointSrc_DEPEND_DIRS = MotorSrc
+
+DIRS += MicronixSrc
+MicronixSrc_DEPEND_DIRS = MotorSrc
+
+DIRS += PhytronSrc
+PhytronSrc_DEPEND_DIRS = MotorSrc
 
 endif
 
