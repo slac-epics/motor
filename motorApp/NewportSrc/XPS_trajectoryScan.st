@@ -25,7 +25,8 @@ program XPS_trajectoryScan("P=13BMC:,R=traj1,IPADDR=164.54.160.34,PORT=5001,"
 %% #include "Socket.h"
 %% #include "xps_ftp.h"
 
-#include <seq_release.h> /* definition of MAGIC */
+/* #include <seq_release.h> /* definition of MAGIC for SEQ R2.1.6+ */
+#include <seqVersion.h> /* definition of MAGIC for SEQ R2.1.2 */
 #define VERSION_INT(MAJ,MIN) ((MAJ)*1000000+(MIN)*1000)
 #define LT_SEQ_VERSION(MAJ,MIN) ((MAGIC) < VERSION_INT(MAJ,MIN))
 

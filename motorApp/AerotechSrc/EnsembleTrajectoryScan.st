@@ -30,7 +30,8 @@ program EnsembleTrajectoryScan("P=13IDC:,R=traj1,M1=M1,M2=M2,M3=M3,M4=M4,M5=M5,M
 %% #include <epicsStdio.h>
 %% #include <asynOctetSyncIO.h>
 
-#include <seq_release.h> /* definition of MAGIC */
+/* #include <seq_release.h> /* definition of MAGIC for SEQ R2.1.6+ */
+#include <seqVersion.h> /* definition of MAGIC for SEQ 2.1.2 */
 #define VERSION_INT(MAJ,MIN) ((MAJ)*1000000+(MIN)*1000)
 #define LT_SEQ_VERSION(MAJ,MIN) ((MAGIC) < VERSION_INT(MAJ,MIN))
 
