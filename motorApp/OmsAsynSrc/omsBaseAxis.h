@@ -31,6 +31,7 @@ public:
     virtual asynStatus stop(double acceleration);
     virtual asynStatus doMoveToHome();
     virtual asynStatus setPosition(double position);
+    virtual asynStatus setClosedLoop(bool closedLoop);
     virtual asynStatus poll(bool *moving);
 
     int getAxis(){return axisNo_;};

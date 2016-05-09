@@ -102,6 +102,15 @@ MicronixSrc_DEPEND_DIRS = MotorSrc
 DIRS += PhytronSrc
 PhytronSrc_DEPEND_DIRS = MotorSrc
 
+DIRS += SmartMotorAsynSrc
+SmartMotorAsynSrc_DEPEND_DIRS = MotorSrc
+
+DIRS += linmotSrc
+linmotSrc_DEPEND_DIRS = MotorSrc
+
+DIRS += EtherCATSrc
+EtherCATSrc_DEPEND_DIRS = MotorSrc
+
 endif
 
 # Install the edl files

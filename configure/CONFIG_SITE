@@ -20,7 +20,7 @@ include $(TOP)/RELEASE_SITE
 #CROSS_COMPILER_TARGET_ARCHS = vxWorks-68040
 #CROSS_COMPILER_TARGET_ARCHS = RTEMS-beatnik RTEMS-mvme3100 vxWorks-mpc8540 vxWorks-ppc604_long
 #CROSS_COMPILER_TARGET_ARCHS = RTEMS-beatnik RTEMS-mvme3100 RTEMS-svgm RTEMS-mvme2307 RTMS-uC5282
-CROSS_COMPILER_TARGET_ARCHS = RTEMS-beatnik RTEMS-mvme3100 RTEMS-svgm linuxRT-x86
+CROSS_COMPILER_TARGET_ARCHS = RTEMS-beatnik RTEMS-mvme3100 RTEMS-svgm linuxRT-x86 linuxRT_glibc-x86_64
 
 # basicIoOps.h has broken the vxWorks compile
 #CROSS_COMPILER_TARGET_ARCHS = RTEMS-beatnik RTEMS-mvme3100 vxWorks-mpc8540 vxWorks-ppc604_long
