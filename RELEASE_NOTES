@@ -1,0 +1,10 @@
+motorR6-9
+  merge in SLAC SmartMotorAsynSrc
+                NewFocusSrc/Pico8742
+  new motor support:
+     motorApp/linmotSrc
+       Linmot Ethercat support.  Connects to
+       DLS ethercat driver asyn ports to communicate
+       with device PDOs
+     motorApp/EtherCATSrc
+       Beckhoff EL7041 ethercat support
