@@ -1,0 +1,10 @@
+RELEASE_SITE
+*O.RTEMS*
+*O.linux*
+*O.Common*
+bin
+db
+dbd
+lib
+include
+

@@ -1,3 +1,9 @@
+motor-R6-9_0-1 (zoven)
+        Adding files in motorApp/SmartMotorAsynSrc: SmartCommands.h, VirtualAxis.h, VirtualAxis.cpp,
+        and modifying SmartAxis*.*, SmartController.*, Makefile and README to accomodate
+        the addition of virtual axis and coordinated motion on motors that are Class5
+        and have a CAN bus option enabled.
+
 motorR6-9
   merge in SLAC SmartMotorAsynSrc
                 NewFocusSrc/Pico8742
