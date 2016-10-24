@@ -323,6 +323,7 @@ asynStatus LinmotAxis::sendCmd( int command, int param1, int param2, int param3,
   pC_->commandHeader_->write( command | commandCount_ );
   pC_->unlock();
 
+#if 0
   printf("sendCmd: \n");
   printf("   param1: %d\n", param1);
   printf("   param2: %d\n", param2);
@@ -331,8 +332,9 @@ asynStatus LinmotAxis::sendCmd( int command, int param1, int param2, int param3,
   printf("   param5: %d\n", param5);
   printf("   header: %d\n", command);
   printf("   cmdCnt: %d\n", commandCount_);
+#endif
 
-epicsThreadSleep(0.05);
+  epicsThreadSleep(0.05);
   return status;
 }
 
