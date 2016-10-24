@@ -1,3 +1,9 @@
+motorR6-9_0-2 (namrata)
+        Update limit handling, print debug messages (motorApp/linmotSrc/LinmotMotorDriver.cpp)
+        Update to asyn R4-26 (configure/RELEASE)
+        31-bit word handling fix; constructor tweaks (otorApp/EtherCATSrc/EtherCATMotorDriver.*)
+        Disable printfs (motorApp/linmotSrc/LinmotMotorDriver.cpp)
+
 motor-R6-9_0-1 (zoven)
         Adding files in motorApp/SmartMotorAsynSrc: SmartCommands.h, VirtualAxis.h, VirtualAxis.cpp,
         and modifying SmartAxis*.*, SmartController.*, Makefile and README to accomodate
