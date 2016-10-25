@@ -1,4 +1,4 @@
-motorR6-9_0-2 (namrata)
+motor-R6-9_0-2 (namrata)
         Update limit handling, print debug messages (motorApp/linmotSrc/LinmotMotorDriver.cpp)
         Update to asyn R4-26 (configure/RELEASE)
         31-bit word handling fix; constructor tweaks (otorApp/EtherCATSrc/EtherCATMotorDriver.*)
