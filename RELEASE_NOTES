@@ -1,3 +1,7 @@
+motor-R6-9_0-3 (namrata)
+        Add limit switch handling ability for linmot drive using device PDO instead of error code. 
+        (motorApp/linmotSrc/LinmotMotorDriver.cpp, LinmotMotorDriver.h)
+
 motor-R6-9_0-2 (namrata)
         Update limit handling, print debug messages (motorApp/linmotSrc/LinmotMotorDriver.cpp)
         Update to asyn R4-26 (configure/RELEASE)
