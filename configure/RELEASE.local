@@ -1,0 +1,62 @@
+# RELEASE.local
+#
+# Read definitions of:
+#       EPICS_SITE_TOP
+#       BASE_MODULE_VERSION
+#       EPICS_MODULES
+# from one of the following options
+-include $(TOP)/../../RELEASE_SITE
+-include $(TOP)/RELEASE_SITE
+
+# Check that EPICS_MODULES was defined in a RELEASE_SITE file
+-include $(TOP)/../../RELEASE_SITE.check
+
+# =============================================================
+# If you don't want to install into $(TOP) then
+# define INSTALL_LOCATION_APP here
+# =============================================================
+#INSTALL_LOCATION_APP=<fullpathname>
+
+# If any motor controller communication mechanism besides the VME backplane is
+# required, then ASYN must be defined.
+# Recommended ASYN release: R4-13 or higher
+ASYN_MODULE_VERSION=R4.30-1.1.2
+
+# The following support modules are required for the Hytec driver
+# Recommended IPAC release: R2-10 or higher
+IPAC_MODULE_VERSION=ipac-R2-11_1-2
+
+# Need the sequencer and busy record for the 
+# MM4005 and XPS trajectory scanning
+# Recommended SNCSEQ release: R2-0-12 or higher
+# New motor package from Mark Rivers no longer requires this
+# dependency
+SEQ_MODULE_VERSION=seq-R2-1-6_1-3
+#BUSY_MODULE_VERSION=busy-R1-4_1-2
+
+# The following must be defined for the MXmotor device driver.
+#!MX=$(SUPPORT)/mx/mx
+
+# The following support modules are required ONLY if the examples in
+# <motor>/motorExApp are built.  To build examples, the top Makefile,
+# <motor>/Makefile must also be edited.
+
+# The following is only needed for the motor examples in iocBoot.
+#!MOTOR=$(TOP)
+
+# ============================================================
+# External Support
+# ============================================================
+IPAC=$(EPICS_MODULES)/ipac/$(IPAC_MODULE_VERSION)
+ASYN=$(EPICS_MODULES)/asyn/$(ASYN_MODULE_VERSION)
+SNCSEQ=$(EPICS_MODULES)/seq/$(SEQ_MODULE_VERSION)
+#BUSY=$(EPICS_MODULES)/busy/$(BUSY_MODULE_VERSION)
+
+# =================================================================
+# Define EPICS_BASE
+# EPICS_BASE usually appears last so other apps can override stuff:
+# =================================================================
+EPICS_BASE=$(EPICS_SITE_TOP)/base/$(BASE_MODULE_VERSION)
+
+# End of file
+
