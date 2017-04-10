@@ -8,7 +8,6 @@
 #  CONFIG_SITE.Common.$(T_A)
 #  CONFIG_SITE.$(EPICS_HOST_ARCH).$(T_A)
 # Pickup variable definitions to be used below:
-include $(TOP)/RELEASE_SITE
 
 #ifeq ($(EPICS_HOST_ARCH),vl-linux-x86)
 #CROSS_COMPILER_TARGET_ARCHS = RTEMS-uC5282
