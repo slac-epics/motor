@@ -1,4 +1,10 @@
-R6.9_0.4:  (Ernesto)
+R6.9-0.5:  (Slepicka)
+           Build against new versions of:
+               asyn: R4.31-0.1.0
+               ipac: R2.14-0.1.0
+                seq: R2.2.4-0.1.0
+           
+R6.9-0.4:  (Ernesto)
            Build against new version of asyn: asyn R4.30-1.1.2
 motor-R6-9_0-3 (namrata)
         Add limit switch handling ability for linmot drive using device PDO instead of error code. 
