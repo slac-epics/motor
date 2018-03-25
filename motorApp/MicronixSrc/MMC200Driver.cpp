@@ -1,17 +1,18 @@
 /*
 FILENAME... MMC200Driver.cpp
-USAGE...    Motor driver support for the Micronix MMC-200 controller.
+USAGE...    Motor driver support for the Micronix MMC-100 and MMC-200 controllers.
 
 Kevin Peterson
 July 10, 2013
 
 */
 
-
+#include <string>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+
 
 #include <iocsh.h>
 #include <epicsThread.h>
@@ -21,15 +22,29 @@ July 10, 2013
 #include "MMC200Driver.h"
 #include <epicsExport.h>
 
+#include <dbDefs.h>
+#include <callback.h>
+#include <dbStaticLib.h>
+#include <dbAccess.h>
+#include <dbScan.h>
+#include <recGbl.h>
+#include <recSup.h>
+#include <dbEvent.h>
+#include <devSup.h>
+#include <dbFldTypes.h>
+
 /** Creates a new MMC200Controller object.
   * \param[in] portName          The name of the asyn port that will be created for this driver
-  * \param[in] MMC200PortName     The name of the drvAsynSerialPort that was created previously to connect to the MMC200 controller 
-  * \param[in] numAxes           The number of axes that this controller supports 
-  * \param[in] movingPollPeriod  The time between polls when any axis is moving 
-  * \param[in] idlePollPeriod    The time between polls when no axis is moving 
+  * \param[in] MMC200PortName    The name of the drvAsynSerialPort that was created previously to connect to the MMC200 controller 
+  * \param[in] numAxes           The number of axes that this controller supports
+  * \param[in] movingPollPeriod  The time between polls when any axis is moving
+  * \param[in] idlePollPeriod    The time between polls when no axis is moving
+  * \param[in] ignoreLimits      Should limit switches be ignored? 1 yes, 0 no
+  * \param[in] fbkPVPrefix       Prefix for feedback switch PV
   */
 MMC200Controller::MMC200Controller(const char *portName, const char *MMC200PortName, int numAxes, 
-                                 double movingPollPeriod, double idlePollPeriod, int ignoreLimits)
+                                 double movingPollPeriod, double idlePollPeriod, int ignoreLimits,
+                                 const char *fbkPVPrefix)
   :  asynMotorController(portName, numAxes, NUM_MMC200_PARAMS, 
                          0, // No additional interfaces beyond those in base class
                          0, // No additional callback interfaces beyond those in base class
@@ -48,15 +63,15 @@ MMC200Controller::MMC200Controller(const char *portName, const char *MMC200PortN
   else
     ignoreLimits_ = 1;
 
-  /* Connect to MMC200 controller */
+  /* Connect to MMC100 or MMC200 controller */
   status = pasynOctetSyncIO->connect(MMC200PortName, 0, &pasynUserController_, NULL);
   if (status) {
     asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR, 
-      "%s: cannot connect to MMC-200 controller\n",
+      "%s: cannot connect to MMC-100 or MMC-200 controller\n",
       functionName);
   }
   for (axis=0; axis<numAxes; axis++) {
-    pAxis = new MMC200Axis(this, axis);
+    pAxis = new MMC200Axis(this, axis, fbkPVPrefix);
   }
 
   startPoller(movingPollPeriod, idlePollPeriod, 2);
@@ -70,12 +85,15 @@ MMC200Controller::MMC200Controller(const char *portName, const char *MMC200PortN
   * \param[in] numAxes           The number of axes that this controller supports 
   * \param[in] movingPollPeriod  The time in ms between polls when any axis is moving
   * \param[in] idlePollPeriod    The time in ms between polls when no axis is moving 
+  * \param[in] ignoreLimits      Should limit switches be ignored? 1 yes, 0 no
+  * \param[in] fbkPVPrefix       Prefix for feedback switch PV
   */
 extern "C" int MMC200CreateController(const char *portName, const char *MMC200PortName, int numAxes, 
-                                   int movingPollPeriod, int idlePollPeriod, int ignoreLimits)
+                                   int movingPollPeriod, int idlePollPeriod, int ignoreLimits,
+                                   const char *fbkPVPrefix)
 {
   MMC200Controller *pMMC200Controller
-    = new MMC200Controller(portName, MMC200PortName, numAxes, movingPollPeriod/1000., idlePollPeriod/1000., ignoreLimits);
+    = new MMC200Controller(portName, MMC200PortName, numAxes, movingPollPeriod/1000., idlePollPeriod/1000., ignoreLimits, fbkPVPrefix);
   pMMC200Controller = NULL;
   return(asynSuccess);
 }
@@ -120,21 +138,31 @@ MMC200Axis* MMC200Controller::getAxis(int axisNo)
 // These are the MMC200Axis methods
 
 /** Creates a new MMC200Axis object.
-  * \param[in] pC Pointer to the MMC200Controller to which this axis belongs. 
-  * \param[in] axisNo Index number of this axis, range 0 to pC->numAxes_-1.
-  * 
+  * \param[in] pC		Pointer to the MMC200Controller to which this axis belongs.
+  * \param[in] axisNo		Index number of this axis, range 0 to pC->numAxes_-1.
+  * \param[in] fbkPVPrefix	Prefix for feedback control PV - must include trailing ':'
+  *
   * Initializes register numbers, etc.
   */
-MMC200Axis::MMC200Axis(MMC200Controller *pC, int axisNo)
+MMC200Axis::MMC200Axis(MMC200Controller *pC, int axisNo, const char *fbkPVPrefix)
   : asynMotorAxis(pC, axisNo),
     pC_(pC)
 {
   int errorFlag = 0;
   asynStatus status;
   static const char *functionName = "MMC200Axis::MMC200Axis";
-
+  unsigned int fbkReadback;
+  
   // controller axes are numbered from 1
   axisIndex_ = axisNo + 1;
+
+  //Combine feedback PV prefix and axis index to make feedback control PV
+  std::string temp;
+  temp = fbkPVPrefix + axisNo;
+  fbkPV_ = temp.c_str();
+
+  // Flush I/O in case there is lingering garbage
+  pC_->writeReadController();
 
   // Read the version string to determine controller model (200/100)
   sprintf(pC_->outString_, "%dVER?", axisIndex_);
@@ -209,6 +237,26 @@ MMC200Axis::MMC200Axis(MMC200Controller *pC, int axisNo)
   // Allow CNEN to turn motor power on/off
   setIntegerParam(pC->motorStatusGainSupport_, 1);
   setIntegerParam(pC->motorStatusHasEncoder_, 1);
+
+  // Attempt to set feedback mode to user request
+  dbNameToAddr(fbkPV_, fbkPVAddr_);
+  desiredFbk_ = dbGetField(fbkPVAddr_, DBR_USHORT, NULL, NULL , NULL, NULL);
+  sprintf(pC_->outString_, "%dFBK%d", axisIndex_, desiredFbk_);
+  status = pC_->writeReadController();
+  if (status != asynSuccess)
+    errorFlag = 1;
+  // Record last requested mode
+  lastFbkModeSet_ = desiredFbk_;
+  // Read back feedback mode
+  sprintf(pC_->outString_, "%dFBK?", axisIndex_);
+  status = pC_->writeReadController();
+  if (status != asynSuccess)
+    errorFlag = 1;
+  // The response string is of the form "#0"
+  fbkReadback = atoi(&pC_->inString_[1]);
+  // Whether it took or not, let's set PV based on feedback mode!
+  // Put in PV with one element. We will check and try to set this again during poll
+  dbPutField(fbkPVAddr_, DBR_USHORT, &fbkReadback, 1);
 
   // What should happen if the controller doesn't respond?
   // For now put the controller in an error state
@@ -369,6 +417,7 @@ asynStatus MMC200Axis::setClosedLoop(bool closedLoop)
   //static const char *functionName = "MMC200Axis::setClosedLoop";
 
   // closed-loop command has more than two states. Implement it in a parameter.
+  //NOTE we have actually implemented this using an external PV, see fbkPV
 
   // turn motor power on/off
   sprintf(pC_->outString_, "%dMOT%d", axisIndex_, (closedLoop) ? 1:0);
@@ -388,6 +437,7 @@ asynStatus MMC200Axis::poll(bool *moving)
   int driveOn;
   int lowLimit;
   int highLimit;
+  unsigned int feedbackMode;
   int status;
   double pos;
   double enc;
@@ -404,6 +454,24 @@ asynStatus MMC200Axis::poll(bool *moving)
   setDoubleParam(pC_->motorPosition_, pos / resolution_);
   setDoubleParam(pC_->motorEncoderPosition_, enc / resolution_
   );
+
+  // Read feedback mode of this axis
+  sprintf(pC_->outString_, "%dFBK?", axisIndex_);
+  comStatus = pC_->writeReadController();
+  if (comStatus) goto skip;
+  // The response string is of the form "#0"
+  feedbackMode = atoi(&pC_->inString_[1]);
+
+  // Check if desired feedback mode is diff. from last set, and if so, set it now
+  if ( lastFbkModeSet_ != feedbackMode ) {
+  sprintf(pC_->outString_, "%dFBK%d", axisIndex_, desiredFbk_);
+  status = pC_->writeController();
+  // Record last requested mode
+  lastFbkModeSet_ = desiredFbk_;
+  // Let's check one more time
+  sprintf(pC_->outString_, "%dFBK?", axisIndex_);
+  comStatus = pC_->writeReadController();
+  if (comStatus) goto skip; }
 
   // Read the status of this axis
   sprintf(pC_->outString_, "%dSTA?", axisIndex_);
@@ -459,6 +527,7 @@ asynStatus MMC200Axis::poll(bool *moving)
   setIntegerParam(pC_->motorStatusPowerOn_, driveOn);
   // should this line be here?
   setIntegerParam(pC_->motorStatusProblem_, 0);
+  
 
   skip:
   setIntegerParam(pC_->motorStatusProblem_, comStatus ? 1:0);
@@ -473,16 +542,18 @@ static const iocshArg MMC200CreateControllerArg2 = {"Number of axes", iocshArgIn
 static const iocshArg MMC200CreateControllerArg3 = {"Moving poll period (ms)", iocshArgInt};
 static const iocshArg MMC200CreateControllerArg4 = {"Idle poll period (ms)", iocshArgInt};
 static const iocshArg MMC200CreateControllerArg5 = {"Ignore limit flag", iocshArgInt};
+static const iocshArg MMC200CreateControllerArg6 = {"Feedback PV Prefix", iocshArgInt};
 static const iocshArg * const MMC200CreateControllerArgs[] = {&MMC200CreateControllerArg0,
                                                              &MMC200CreateControllerArg1,
                                                              &MMC200CreateControllerArg2,
                                                              &MMC200CreateControllerArg3,
                                                              &MMC200CreateControllerArg4,
-                                                             &MMC200CreateControllerArg5};
-static const iocshFuncDef MMC200CreateControllerDef = {"MMC200CreateController", 6, MMC200CreateControllerArgs};
+                                                             &MMC200CreateControllerArg5,
+                                                             &MMC200CreateControllerArg6};
+static const iocshFuncDef MMC200CreateControllerDef = {"MMC200CreateController", 7, MMC200CreateControllerArgs};
 static void MMC200CreateContollerCallFunc(const iocshArgBuf *args)
 {
-  MMC200CreateController(args[0].sval, args[1].sval, args[2].ival, args[3].ival, args[4].ival, args[5].ival);
+  MMC200CreateController(args[0].sval, args[1].sval, args[2].ival, args[3].ival, args[4].ival, args[5].ival, args[6].sval);
 }
 
 static void MMC200Register(void)

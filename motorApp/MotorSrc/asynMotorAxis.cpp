@@ -173,7 +173,7 @@ asynStatus asynMotorAxis::setDGain(double dGain)
 
 
 /** Set the motor closed loop status. 
-  * \param[in] closedLoop true = close loop, false = open looop. */
+  * \param[in] closedLoop true = close loop, false = open loop. */
 asynStatus asynMotorAxis::setClosedLoop(bool closedLoop)
 {
   return asynSuccess;

@@ -94,6 +94,13 @@ Pico8742Controller::Pico8742Controller(const char *portName, const char *Pico874
   status = writeReadController();
 
   closedLoop_ = (strncmp(inString_, "8743", 4) == 0) ? CLOSED_LOOP:OPEN_LOOP;
+  if(closedLoop_ == CLOSED_LOOP){
+    asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
+            "ERMAGERD CLERSED LERP\n");
+  } else {
+    asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
+            "ERRPEN LERP\n");
+  }
   
   /* get identification string - model, fw, version */
   sprintf(outString_, "*IDN?");
@@ -503,7 +510,7 @@ asynStatus Pico8742Axis::poll(bool *moving)
 { 
   static const char *functionName = "poll()";
   
-  int done;
+  int done, posenable;
   int hardwareStatus;
   //int driveOn;
   double position;
@@ -529,6 +536,7 @@ asynStatus Pico8742Axis::poll(bool *moving)
 
   /* if closed loop controller we have extra status bits */
   if(pC_->closedLoop_ == CLOSED_LOOP) {
+    setIntegerParam(pC_->motorStatusGainSupport_, 1);
     sprintf(pC_->outString_, "PH?");
     comStatus = pC_->writeReadController();
     if (comStatus) goto skip;
@@ -537,6 +545,13 @@ asynStatus Pico8742Axis::poll(bool *moving)
     setIntegerParam(pC_->motorStatusLowLimit_, (hardwareStatus >> (3*axisNo_))&0x1);
     setIntegerParam(pC_->motorStatusLowLimit_, (hardwareStatus >> (3*axisNo_))&0x2);
     //setIntegerParam(pC_->motorStatusAtHome_, (hardwareStatus >> (3*axisNo_))&0x4);
+    
+    // Position maintenance readback
+    sprintf(pC_->outString_, "%1dMM?", axisNo_ + 1);
+    comStatus = pC_->writeReadController();
+    if (comStatus) goto skip;
+    posenable = (atoi(pC_->inString_));
+    setIntegerParam(pC_->motorStatusPowerOn_, posenable);
   }
   // Read the drive power on status
   //sprintf(pC_->outString_, "#%02dE", axisNo_ + 1);

@@ -13,11 +13,11 @@ EPICS_BASE=$(EPICS_SITE_TOP)/base/$(BASE_MODULE_VERSION)
 # Define the version(s) of any other needed modules 
 # ===============================================================
 # Recommended IPAC release: R2-11
-IPAC_MODULE_VERSION=R3.0.0-1.1.4
+IPAC_MODULE_VERSION=R3.0.0-1.1.0
 # Recommended ASYN release: R4-21
-ASYN_MODULE_VERSION=R4.31-1.0.0
+ASYN_MODULE_VERSION=R4.29-0.1.2
 # Recommened BUSY release: R1-5
-BUSY_MODULE_VERSION=R1.6.1-0.2.5
+BUSY_MODULE_VERSION=R1.6.0-0.9.7
 # Recommended SNCSEQ release: R2-1-12
 SNCSEQ_MODULE_VERSION=R2.1.2-0.4.0
 
