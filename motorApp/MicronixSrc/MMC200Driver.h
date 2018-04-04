@@ -38,13 +38,15 @@ private:
   int model_;         /* Model number (200 or 100) */
   int rez_;          /* Units = picometers per full step */
   int microSteps_;   /* Units = microsteps per full step */
-  unsigned int desiredFbk_; /* Desired feedback mode from fbkPV_, can be 0, 2, 3 for MMC200 */
-  unsigned int lastFbkModeSet_;  /* Last requested feedback mode setting */
+  unsigned int lastFbkModeSet_;  /* Last requested feedback mode setting, can be 0, 2, 3 for MMC200*/
+  unsigned int fbkMode_; /* Current feedback mode of axis */
   double resolution_;   /* Units = mm per microstep */
   double maxVelocity_;  /* Units = mm per second */
-  const char *fbkPV_;  /* PV providing user control of axis feedback mode, constructed from prefix */
+  char fbkPV_[60];  /* PV providing user control of axis feedback mode, constructed from prefix, 60 should be plenty */
   asynStatus sendAccelAndVelocity(double accel, double velocity);
-  dbAddr *fbkPVAddr_;
+  struct dbAddr fbkPVAddr_;
+  bool fbkErrGiven;
+  int passes;
   
 friend class MMC200Controller;
 };

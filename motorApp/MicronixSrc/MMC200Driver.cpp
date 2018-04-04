@@ -7,12 +7,11 @@ July 10, 2013
 
 */
 
-#include <string>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-
+#include <iostream>
 
 #include <iocsh.h>
 #include <epicsThread.h>
@@ -151,15 +150,15 @@ MMC200Axis::MMC200Axis(MMC200Controller *pC, int axisNo, const char *fbkPVPrefix
   int errorFlag = 0;
   asynStatus status;
   static const char *functionName = "MMC200Axis::MMC200Axis";
-  unsigned int fbkReadback;
   
   // controller axes are numbered from 1
   axisIndex_ = axisNo + 1;
 
   //Combine feedback PV prefix and axis index to make feedback control PV
-  std::string temp;
-  temp = fbkPVPrefix + axisNo;
-  fbkPV_ = temp.c_str();
+  sprintf(fbkPV_, "%s%d", fbkPVPrefix, axisIndex_);
+//  sprintf(fbkPV_, "%s", "IOC:AMO:MMC200:01:TOD");
+  //Print the damn thing!
+  printf("%s\n",fbkPV_);
 
   // Flush I/O in case there is lingering garbage
   pC_->writeReadController();
@@ -238,25 +237,14 @@ MMC200Axis::MMC200Axis(MMC200Controller *pC, int axisNo, const char *fbkPVPrefix
   setIntegerParam(pC->motorStatusGainSupport_, 1);
   setIntegerParam(pC->motorStatusHasEncoder_, 1);
 
-  // Attempt to set feedback mode to user request
-  dbNameToAddr(fbkPV_, fbkPVAddr_);
-  desiredFbk_ = dbGetField(fbkPVAddr_, DBR_USHORT, NULL, NULL , NULL, NULL);
-  sprintf(pC_->outString_, "%dFBK%d", axisIndex_, desiredFbk_);
-  status = pC_->writeReadController();
-  if (status != asynSuccess)
-    errorFlag = 1;
-  // Record last requested mode
-  lastFbkModeSet_ = desiredFbk_;
   // Read back feedback mode
   sprintf(pC_->outString_, "%dFBK?", axisIndex_);
   status = pC_->writeReadController();
   if (status != asynSuccess)
     errorFlag = 1;
+
   // The response string is of the form "#0"
-  fbkReadback = atoi(&pC_->inString_[1]);
-  // Whether it took or not, let's set PV based on feedback mode!
-  // Put in PV with one element. We will check and try to set this again during poll
-  dbPutField(fbkPVAddr_, DBR_USHORT, &fbkReadback, 1);
+  fbkMode_ = atoi(&pC_->inString_[1]);
 
   // What should happen if the controller doesn't respond?
   // For now put the controller in an error state
@@ -417,7 +405,7 @@ asynStatus MMC200Axis::setClosedLoop(bool closedLoop)
   //static const char *functionName = "MMC200Axis::setClosedLoop";
 
   // closed-loop command has more than two states. Implement it in a parameter.
-  //NOTE we have actually implemented this using an external PV, see fbkPV
+  //NOTE we have actually implemented this using an external PV, see fbkPV_
 
   // turn motor power on/off
   sprintf(pC_->outString_, "%dMOT%d", axisIndex_, (closedLoop) ? 1:0);
@@ -437,11 +425,15 @@ asynStatus MMC200Axis::poll(bool *moving)
   int driveOn;
   int lowLimit;
   int highLimit;
-  unsigned int feedbackMode;
   int status;
+  long desiredFbk = 0;
+  long number_elements = 1;
   double pos;
   double enc;
   asynStatus comStatus;
+  long buffer[1];
+  long options = 0;
+  long tst = 0;
 
   // Read the current motor position
   sprintf(pC_->outString_, "%dPOS?", axisIndex_);
@@ -460,18 +452,41 @@ asynStatus MMC200Axis::poll(bool *moving)
   comStatus = pC_->writeReadController();
   if (comStatus) goto skip;
   // The response string is of the form "#0"
-  feedbackMode = atoi(&pC_->inString_[1]);
+  fbkMode_ = atoi(&pC_->inString_[1]);
 
-  // Check if desired feedback mode is diff. from last set, and if so, set it now
-  if ( lastFbkModeSet_ != feedbackMode ) {
-  sprintf(pC_->outString_, "%dFBK%d", axisIndex_, desiredFbk_);
-  status = pC_->writeController();
-  // Record last requested mode
-  lastFbkModeSet_ = desiredFbk_;
-  // Let's check one more time
-  sprintf(pC_->outString_, "%dFBK?", axisIndex_);
-  comStatus = pC_->writeReadController();
-  if (comStatus) goto skip; }
+  if (passes > 1) {
+  //Get record address for fbkPV
+  tst = dbNameToAddr(fbkPV_, &fbkPVAddr_);
+  if (tst==0) {
+  //First let's check actual feedback mode vs desired feedback mode
+  //Mode comes from feedback mode
+  dbGetField(&fbkPVAddr_, DBR_LONG, buffer, &options , &number_elements, NULL);
+  printf("%d\n", buffer[0]);
+} }
+
+  if ( fbkMode_ != desiredFbk ) {
+  //Only change mode if different than user request PV
+     if ( desiredFbk != lastFbkModeSet_ ) {
+        sprintf(pC_->outString_, "%dFBK%d", axisIndex_, desiredFbk);
+        status = pC_->writeController();
+        // Record last requested mode
+        lastFbkModeSet_ = desiredFbk;
+        fbkErrGiven = false;
+        // Let's check one more time
+        sprintf(pC_->outString_, "%dFBK?", axisIndex_);
+        comStatus = pC_->writeReadController();
+        if (comStatus) goto skip;
+        // The response string is of the form "#0"
+        fbkMode_ = atoi(&pC_->inString_[1]); }
+     else { //Uh-oh, feedback mode didn't take!
+        if ( !fbkErrGiven ) { 
+//            printf("Warning, axis feedback mode changed since it was last set\n");
+            fbkErrGiven = true;    
+        }
+     }
+  // Whether it took or not, let's set PV based on feedback mode!
+  //dbPutField(fbkPVAddr_, DBR_LONG, &fbkMode_, 1);
+  }
 
   // Read the status of this axis
   sprintf(pC_->outString_, "%dSTA?", axisIndex_);
@@ -528,6 +543,7 @@ asynStatus MMC200Axis::poll(bool *moving)
   // should this line be here?
   setIntegerParam(pC_->motorStatusProblem_, 0);
   
+  passes++;
 
   skip:
   setIntegerParam(pC_->motorStatusProblem_, comStatus ? 1:0);
@@ -542,7 +558,7 @@ static const iocshArg MMC200CreateControllerArg2 = {"Number of axes", iocshArgIn
 static const iocshArg MMC200CreateControllerArg3 = {"Moving poll period (ms)", iocshArgInt};
 static const iocshArg MMC200CreateControllerArg4 = {"Idle poll period (ms)", iocshArgInt};
 static const iocshArg MMC200CreateControllerArg5 = {"Ignore limit flag", iocshArgInt};
-static const iocshArg MMC200CreateControllerArg6 = {"Feedback PV Prefix", iocshArgInt};
+static const iocshArg MMC200CreateControllerArg6 = {"Feedback PV Prefix", iocshArgString};
 static const iocshArg * const MMC200CreateControllerArgs[] = {&MMC200CreateControllerArg0,
                                                              &MMC200CreateControllerArg1,
                                                              &MMC200CreateControllerArg2,
