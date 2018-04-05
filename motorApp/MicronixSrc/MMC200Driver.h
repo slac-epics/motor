@@ -10,6 +10,7 @@ July 10, 2013
 #include "asynMotorController.h"
 #include "asynMotorAxis.h"
 #include "dbAccess.h"
+#include "errlog.h"
 
 #define MAX_MMC200_AXES 99
 

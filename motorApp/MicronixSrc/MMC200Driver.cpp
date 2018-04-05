@@ -11,7 +11,6 @@ July 10, 2013
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-#include <iostream>
 
 #include <iocsh.h>
 #include <epicsThread.h>
@@ -21,16 +20,16 @@ July 10, 2013
 #include "MMC200Driver.h"
 #include <epicsExport.h>
 
-#include <dbDefs.h>
-#include <callback.h>
-#include <dbStaticLib.h>
-#include <dbAccess.h>
-#include <dbScan.h>
-#include <recGbl.h>
-#include <recSup.h>
-#include <dbEvent.h>
-#include <devSup.h>
-#include <dbFldTypes.h>
+//#include <dbDefs.h>
+//#include <callback.h>
+//#include <dbStaticLib.h>
+//#include <dbScan.h>
+//#include <recGbl.h>
+//#include <recSup.h>
+//#include <dbEvent.h>
+//#include <devSup.h>
+//#include <dbFldTypes.h>
+//#include <errlog.h>
 
 /** Creates a new MMC200Controller object.
   * \param[in] portName          The name of the asyn port that will be created for this driver
@@ -426,13 +425,11 @@ asynStatus MMC200Axis::poll(bool *moving)
   int lowLimit;
   int highLimit;
   int status;
-  long desiredFbk = 0;
+  long desiredFbk[1];
   long number_elements = 1;
   double pos;
   double enc;
   asynStatus comStatus;
-  long buffer[1];
-  long options = 0;
   long tst = 0;
 
   // Read the current motor position
@@ -454,40 +451,41 @@ asynStatus MMC200Axis::poll(bool *moving)
   // The response string is of the form "#0"
   fbkMode_ = atoi(&pC_->inString_[1]);
 
+  //Give it one pass so iocInit is completed
   if (passes > 1) {
   //Get record address for fbkPV
   tst = dbNameToAddr(fbkPV_, &fbkPVAddr_);
-  if (tst==0) {
-  //First let's check actual feedback mode vs desired feedback mode
-  //Mode comes from feedback mode
-  dbGetField(&fbkPVAddr_, DBR_LONG, buffer, &options , &number_elements, NULL);
-  printf("%d\n", buffer[0]);
-} }
-
-  if ( fbkMode_ != desiredFbk ) {
-  //Only change mode if different than user request PV
-     if ( desiredFbk != lastFbkModeSet_ ) {
-        sprintf(pC_->outString_, "%dFBK%d", axisIndex_, desiredFbk);
-        status = pC_->writeController();
-        // Record last requested mode
-        lastFbkModeSet_ = desiredFbk;
-        fbkErrGiven = false;
-        // Let's check one more time
-        sprintf(pC_->outString_, "%dFBK?", axisIndex_);
-        comStatus = pC_->writeReadController();
-        if (comStatus) goto skip;
-        // The response string is of the form "#0"
-        fbkMode_ = atoi(&pC_->inString_[1]); }
-     else { //Uh-oh, feedback mode didn't take!
-        if ( !fbkErrGiven ) { 
-//            printf("Warning, axis feedback mode changed since it was last set\n");
-            fbkErrGiven = true;    
-        }
-     }
-  // Whether it took or not, let's set PV based on feedback mode!
-  //dbPutField(fbkPVAddr_, DBR_LONG, &fbkMode_, 1);
+    if (tst==0) {
+    dbGetField(&fbkPVAddr_, DBR_LONG, desiredFbk, NULL, &number_elements, NULL);
+    }
+    else { errlogPrintf("Error, PV lookup failed! Is %s a valid PV?\n", fbkPV_); }
+  
+    //First let's check actual feedback mode vs desired feedback mode (from PV)
+    if ( fbkMode_ != desiredFbk[0] ) {
+    //Only change mode if different than user request PV
+       if ( desiredFbk[0] != lastFbkModeSet_ ) {
+          sprintf(pC_->outString_, "%dFBK%d", axisIndex_, desiredFbk[0]);
+          status = pC_->writeController();
+          // Record last requested mode
+          lastFbkModeSet_ = desiredFbk[0];
+          fbkErrGiven = false;
+          // Let's check one more time
+          sprintf(pC_->outString_, "%dFBK?", axisIndex_);
+          comStatus = pC_->writeReadController();
+          if (comStatus) goto skip;
+          // The response string is of the form "#0"
+          fbkMode_ = atoi(&pC_->inString_[1]);
+          desiredFbk[0] = fbkMode_; }
+       else { //Uh-oh, feedback mode didn't take!
+          if ( !fbkErrGiven ) { 
+              errlogPrintf("Warning, axis feedback mode changed since it was last set\n");
+              fbkErrGiven = true;    
+          }
+       }
+    }
+  // Whether we did anything or not, let's set PV based on live feedback mode!
+  dbPutField(&fbkPVAddr_, DBR_LONG, desiredFbk, 1);
   }
-
   // Read the status of this axis
   sprintf(pC_->outString_, "%dSTA?", axisIndex_);
   comStatus = pC_->writeReadController();
