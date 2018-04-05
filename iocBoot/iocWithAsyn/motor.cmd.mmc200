@@ -19,10 +19,11 @@ PORT="rs485p1"
 #    num axes,
 #    moving poll period (ms),
 #    idle poll period (ms),
-#    ignore limit flag)
+#    ignore limit flag,
+#    feedback PV prefix incl. trailing ':')
 ###
-#!MMC200CreateController("mmc200_1", PORT, 2, 500, 2000, 1)
-MMC200CreateController("mmc200_1", PORT, 2, 500, 0, 1)
+#!MMC200CreateController("mmc200_1", PORT, 2, 500, 2000, 1, "TST:FBK:")
+MMC200CreateController("mmc200_1", PORT, 2, 500, 0, 1, "TST:FBK:")
 
 # Turn off asyn traces
 #!asynSetTraceIOMask(PORT,0,0x0)
