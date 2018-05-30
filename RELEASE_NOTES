@@ -1,3 +1,7 @@
+           (namrata)
+           Modify Torque ON/OFF handling ability for linmot drive. 
+           (motorApp/linmotSrc/LinmotMotorDriver.cpp)
+
 R6.9-0.5:  (Slepicka)
            Build against new versions of:
                asyn: R4.31-0.1.0
