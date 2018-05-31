@@ -1,3 +1,5 @@
+R6.9-0.6   (jvamosi)
+           Add SmartMotorAsyn modification (by zoven).
            (namrata)
            Modify Torque ON/OFF handling ability for linmot drive. 
            (motorApp/linmotSrc/LinmotMotorDriver.cpp)
