@@ -1,10 +1,24 @@
 RELEASE_SITE
-*O.RTEMS*
-*O.linux*
-*O.Common*
+*O.*
+autosave
 bin
 db
 dbd
 lib
 include
+
+envPaths
+archive
+html
+doc
+display
+scripts
+
+startup
+
+# Rest
+*.bak
+*.log
+tags
+*~
 
