@@ -119,6 +119,9 @@ SmarActMCS2Controller::SmarActMCS2Controller(const char *portName, const char *I
 
     // FIXME the 'forcedFastPolls' may need to be set if the 'sleep/wakeup' feature
     //       of the sensor/readback is used.
+#ifdef DEBUG
+    printf("startPoller, moving = %f, idle = %f\n", movingPollPeriod, idlePollPeriod);
+#endif
     startPoller( movingPollPeriod, idlePollPeriod, 0 );
 }
 
@@ -134,6 +137,9 @@ SmarActMCS2Controller::sendCmd(size_t *got_p, char *rep, int len, double timeout
 
     if (len != -1) {
         status = pasynOctetSyncIO->writeRead( asynUserMot_p_, buf, strlen(buf), rep, len, timeout, &nwrite, got_p, &eomReason);
+#ifdef DEBUG
+        printf("sendCmd(%s) --> %s\n", buf, rep);
+#endif
     } else {
         status = pasynOctetSyncIO->write( asynUserMot_p_, buf, strlen(buf), timeout, &nwrite );
 #ifdef DEBUG
@@ -336,15 +342,6 @@ SmarActMCS2Axis::poll(bool *moving_p)
 {
     long long val;
 
-    if ( (comStatus_ = getVal("POS:CURR", &val)) )
-        goto bail;
-
-    setDoubleParam(c_p_->motorEncoderPosition_, PM2NM((double)val));
-    setDoubleParam(c_p_->motorPosition_, PM2NM((double)val));
-#ifdef DEBUGPOLL
-    printf("POLL (position %.6lf)\n", PM2MM((double)val));
-#endif
-
     if ( (comStatus_ = getVal("STAT", &val)) )
         goto bail;
 
@@ -358,6 +355,17 @@ SmarActMCS2Axis::poll(bool *moving_p)
 
 #ifdef DEBUGPOLL
     printf(" status %lld\n", val);
+#endif
+    if (!(val & SmarActMCS2StatusSensorPresent))   /* Can't ask for position if there isn't a sensor! */
+        goto bail;
+
+    if ( (comStatus_ = getVal("POS:CURR", &val)) )
+        goto bail;
+
+    setDoubleParam(c_p_->motorEncoderPosition_, PM2NM((double)val));
+    setDoubleParam(c_p_->motorPosition_, PM2NM((double)val));
+#ifdef DEBUGPOLL
+    printf("POLL (position %.6lf)\n", PM2MM((double)val));
 #endif
 
  bail:
