@@ -1,3 +1,6 @@
+R6.9-0.8.0 (mdunning)
+    Add support for NewFocus/Newport model 8742 picoMotors
+
 R6.9-0.6   (jvamosi)
            Add SmartMotorAsyn modification (by zoven).
            (namrata)
