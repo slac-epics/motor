@@ -1,3 +1,7 @@
+R6.9-0.7   (mcbrowne)
+	   Added support for SmarAct MCS2 controller.
+           Moved to newer version of asyn: R4.31-1.0.0.
+
 R6.9-0.6   (jvamosi)
            Add SmartMotorAsyn modification (by zoven).
            (namrata)
