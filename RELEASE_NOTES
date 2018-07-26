@@ -1,3 +1,8 @@
+R6.10-1.0.1 (marcio)
+           Exclusive release without IPAC and sequencer. Don't use it if you
+           need any of them. Also, this one uses 
+           ASYN_MODULE_VERSION=R4.31-0.1.0 instead of R4.31-1.0.0.
+
 R6.10-1.0.0 (marcio)
            This is a release that combines motor R6-10-1 with all changes made
            in SLAC since 2015-08-18, when R6-9 was first imported. This release
