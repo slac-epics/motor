@@ -1,0 +1,60 @@
+===================
+CONFIGURATION NOTES
+===================
+
+
+- Database definition (*.dbd) requirements.
+<App>DBD += devSmartMotorAsynSupport.dbd
+
+- Startup command file (st.cmd) requirements.
+("#"  is used to denote st.cmd comment lines.)
+("#!" is used to denote st.cmd command lines.)
+
+Configure an asyn communications port driver for the Animatics Smar tMotor.  This is done using
+a DIGI TS or RS-232. For example,
+
+## Connect to DIGI TS for Animatics Smart Motor
+## portName, ipAddress:port, priority, disable auto-connect, noProcessEos
+#!drvAsynIPPortConfigure( "L0", "ts-b34-nw01:2107", 0, 0, 0 )
+
+## Create serial port for Animatics Smart Motor
+#!drvAsynSerialPortConfigure("L0","/dev/ttyS0",0,0,0)
+## Configure serial port parameters
+#!asynSetOption("L0", -1, "baud", "9600")
+#!asynSetOption("L0", -1, "bits", "8")
+#!asynSetOption("L0", -1, "parity", "none")
+#!asynSetOption("L0", -1, "stop", "1")
+
+See asyn documentation for details.
+
+# Smart Motor Create
+#     (1) portName           The name of the asyn port that will be created for this driver
+#     (2) SmartPortName      The name of the drvAsynIPPPort that was created previously to connect to the Smart controller
+#     (3) Number of real axes        The number of real axes that this controller supports (normally 1, if serial or CANbus daisy chained, then more)
+#     (4) Number of virtual axes     The number of virtual axes (usual case is 0)  
+#     (5) Moving poll period (ms)    The time between polls when any axis is moving
+#     (6) Idle poll period (ms)      The time between polls when no axis is moving
+#!SmartCreateController(S0,L0,1,0,100,1000)
+
+
+# Load records
+#!dbLoadRecords("db/asynRecord.db","P=MOTR:B34:,R=ASYN,PORT=L0,ADDR=0,IMAX=100,OMAX=100")
+#!dbLoadRecords("db/basic_asyn_motor.db","PORT=S0,ADDR=0")
+
+
+-------------------
+asyn model 3 driver
+-------------------
+SmartMotorDriver.cpp
+SmartMotorDriver.h
+SmartMotorSupport.dbd
+
+
+-------------------
+Virtual axis
+-------------------
+If all your motors are Class5 and do have a CAN option enabled and CAN connection active,
+then you can write a subroutine on a SmartMotor Controller and link it to a virtual axis,
+and then use a virtual axis to trigger that subroutine that can start coordinated motion, 
+desired sequence of motion, ...
+This feature was developed for SLAC LCLS-II HGVPU project...

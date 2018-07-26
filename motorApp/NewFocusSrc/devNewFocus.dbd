@@ -2,6 +2,7 @@
 device(motor,VME_IO,devPMNC87xx,"PMNC87xx")
 driver(drvPMNC87xx)
 registrar(NewFocusRegister)
+registrar(Pico8742Register)
 variable(drvPMNC87xxdebug)
 
 # NewFocus 874x controller support

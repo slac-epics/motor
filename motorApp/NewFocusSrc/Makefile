@@ -19,6 +19,9 @@ NewFocus_SRCS += devPMNC87xx.cc drvPMNC87xx.cc
 # NewFocus 874x driver
 NewFocus_SRCS += 874xMotorDriver.cpp 
 
+# 874x device driver
+NewFocus_SRCS += Pico8742Driver.cpp
+
 NewFocus_LIBS += motor asyn
 NewFocus_LIBS += $(EPICS_BASE_IOC_LIBS)
 

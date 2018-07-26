@@ -1,0 +1,19 @@
+# Database for Pico8742 controller
+record(bo, "$(P)$(R):MOTOR_CHECK") {
+  field(DESC, "Check for Motors")
+  field(DTYP, "asynInt32")
+  field(OUT, "@asyn($(PORT),$(ADDR))MOTOR_CHECK")
+}
+
+record(bo, "$(P)$(R):SOFT_RESET") {
+  field(DESC, "Perform soft reset")
+  field(DTYP, "asynInt32")
+  field(OUT, "@asyn($(PORT),$(ADDR))SOFT_RESET")
+}
+
+record(stringin, "$(P)$(R):FIRMWARE") {
+  field(DESC, "Pico 8742 Firmware String")
+  field(DTYP, "asynOctetRead")
+  field(INP, "@asyn($(PORT),$(ADDR))FIRMWARE_VERSION")
+  field(SCAN, "I/O Intr")
+}

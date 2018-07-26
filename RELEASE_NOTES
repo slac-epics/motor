@@ -1,0 +1,47 @@
+R6.9-0.8.0 (mdunning)
+    Add support for NewFocus/Newport model 8742 picoMotors
+
+R6.9-0.7   (mcbrowne)
+	   Added support for SmarAct MCS2 controller.
+           Moved to newer version of asyn: R4.31-1.0.0.
+
+R6.9-0.6   (jvamosi)
+           Add SmartMotorAsyn modification (by zoven).
+           (namrata)
+           Modify Torque ON/OFF handling ability for linmot drive. 
+           (motorApp/linmotSrc/LinmotMotorDriver.cpp)
+
+R6.9-0.5:  (Slepicka)
+           Build against new versions of:
+               asyn: R4.31-0.1.0
+               ipac: R2.14-0.1.0
+                seq: R2.2.4-0.1.0
+           
+R6.9-0.4:  (Ernesto)
+           Build against new version of asyn: asyn R4.30-1.1.2
+motor-R6-9_0-3 (namrata)
+        Add limit switch handling ability for linmot drive using device PDO instead of error code. 
+        (motorApp/linmotSrc/LinmotMotorDriver.cpp, LinmotMotorDriver.h)
+
+motor-R6-9_0-2 (namrata)
+        Update limit handling, print debug messages (motorApp/linmotSrc/LinmotMotorDriver.cpp)
+        Update to asyn R4-26 (configure/RELEASE)
+        31-bit word handling fix; constructor tweaks (otorApp/EtherCATSrc/EtherCATMotorDriver.*)
+        Disable printfs (motorApp/linmotSrc/LinmotMotorDriver.cpp)
+
+motor-R6-9_0-1 (zoven)
+        Adding files in motorApp/SmartMotorAsynSrc: SmartCommands.h, VirtualAxis.h, VirtualAxis.cpp,
+        and modifying SmartAxis*.*, SmartController.*, Makefile and README to accomodate
+        the addition of virtual axis and coordinated motion on motors that are Class5
+        and have a CAN bus option enabled.
+
+motorR6-9
+  merge in SLAC SmartMotorAsynSrc
+                NewFocusSrc/Pico8742
+  new motor support:
+     motorApp/linmotSrc
+       Linmot Ethercat support.  Connects to
+       DLS ethercat driver asyn ports to communicate
+       with device PDOs
+     motorApp/EtherCATSrc
+       Beckhoff EL7041 ethercat support

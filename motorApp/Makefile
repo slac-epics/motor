@@ -96,6 +96,9 @@ ACRSrc_DEPEND_DIRS = MotorSrc
 DIRS += SmarActMCSSrc
 SmarActMCSSrc_DEPEND_DIRS = MotorSrc
 
+DIRS += SmarActMCS2Src
+SmarActMCS2Src_DEPEND_DIRS = MotorSrc
+
 DIRS += NPointSrc
 NPointSrc_DEPEND_DIRS = MotorSrc
 
@@ -107,6 +110,15 @@ PhytronSrc_DEPEND_DIRS = MotorSrc
 
 DIRS += AMCISrc
 AMCISrc_DEPEND_DIRS = MotorSrc
+
+DIRS += SmartMotorAsynSrc
+SmartMotorAsynSrc_DEPEND_DIRS = MotorSrc
+
+DIRS += linmotSrc
+linmotSrc_DEPEND_DIRS = MotorSrc
+
+DIRS += EtherCATSrc
+EtherCATSrc_DEPEND_DIRS = MotorSrc
 
 endif
 

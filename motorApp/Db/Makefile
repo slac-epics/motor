@@ -45,6 +45,9 @@ DB += profileMoveControllerXPS.template
 DB += profileMoveAxisXPS.template
 DB += PI_Support.db PI_SupportCtrl.db
 DB += Phytron_motor.db Phytron_I1AM01.db Phytron_MCM01.db
+DB += AnimaticsSmartMotor_extra.db
+DB += pico8742Axis.db
+DB += pico8742Controller.db
 DB += asyn_auto_power.db
 
 #----------------------------------------------------
