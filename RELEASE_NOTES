@@ -1,3 +1,6 @@
+R6.9-1.1.0 (mcbrowne)
+	   Cleaned up SmarAct MCS2 support, including support for openloop moves if no encoder present.
+
 R6.9-0.8.0 (mdunning)
     Add support for NewFocus/Newport model 8742 picoMotors
 
