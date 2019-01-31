@@ -278,7 +278,8 @@ static long init_record(struct motorRecord * pmr )
     pPvt->asynInt32Pvt = pasynInterface->drvPvt;
 
     /* Get the asynFloat64 interface */
-    pasynInterface = pasynManager->findInterface(pasynUser, asynFloat64Type, 1);    if (!pasynInterface) {
+    pasynInterface = pasynManager->findInterface(pasynUser, asynFloat64Type, 1);
+    if (!pasynInterface) {
         asynPrint(pasynUser, ASYN_TRACE_ERROR,
                   "devMotorAsyn::init_record, %s find float64 interface failed\n",
                   pmr->name);
@@ -288,7 +289,8 @@ static long init_record(struct motorRecord * pmr )
     pPvt->asynFloat64Pvt = pasynInterface->drvPvt;
 
     /* Get the asynDrvUser interface */
-    pasynInterface = pasynManager->findInterface(pasynUser, asynDrvUserType, 1);    if (!pasynInterface) {
+    pasynInterface = pasynManager->findInterface(pasynUser, asynDrvUserType, 1);
+    if (!pasynInterface) {
         asynPrint(pasynUser, ASYN_TRACE_ERROR,
                   "devMotorAsyn::init_record, %s find drvUser interface failed\n",
                   pmr->name);

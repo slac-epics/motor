@@ -119,9 +119,6 @@ SmarActMCS2Controller::SmarActMCS2Controller(const char *portName, const char *I
 
     // FIXME the 'forcedFastPolls' may need to be set if the 'sleep/wakeup' feature
     //       of the sensor/readback is used.
-#ifdef DEBUG
-    printf("startPoller, moving = %f, idle = %f\n", movingPollPeriod, idlePollPeriod);
-#endif
     startPoller( movingPollPeriod, idlePollPeriod, 0 );
 }
 
@@ -205,16 +202,10 @@ SmarActMCS2Axis::SmarActMCS2Axis(class SmarActMCS2Controller *cnt_p, int axis, i
     asynPrint(c_p_->pasynUserSelf, ASYN_TRACEIO_DRIVER, "SmarActMCS2Axis::SmarActMCS2Axis -- creating axis %u\n", axis);
 
     comStatus_ = getVal("VEL",&vel_);
-#ifdef DEBUG
-    printf("VEL %u returned %lld\n", axis, vel_);
-#endif
     if ( comStatus_ )
         goto bail;
     if ( (comStatus_ = getVal("ACC", &accl_)) )
         goto bail;
-#ifdef DEBUG
-    printf("ACC %u returned %lld\n", axis, accl_);
-#endif
     if ( (comStatus_ = getVal("STAT", &val)) )
         goto bail;
 
@@ -231,12 +222,15 @@ SmarActMCS2Axis::SmarActMCS2Axis(class SmarActMCS2Controller *cnt_p, int axis, i
     }
 
     // Determine if stage has a sensor.
+    hasEncoder_ = 0;
     if (val & SmarActMCS2StatusSensorPresent) {
         if ( asynSuccess == getVal("POS:CURR", &val) ) {
+            hasEncoder_ = 1;
             setIntegerParam(c_p_->motorStatusHasEncoder_, 1);
             setIntegerParam(c_p_->motorStatusGainSupport_, 1);
         }
     }
+    printf("Axis %d %s an encoder.\n", axis, hasEncoder_ ? "has" : "doesn't have");
 
  bail:
     clearErrors();
@@ -272,12 +266,6 @@ SmarActMCS2Axis::getVal(const char *parm_cmd, int *val_p)
     if ( st )
         return st;
     rc = sscanf(rep, "%d", val_p);
-#ifdef DEBUG
-    if (rc == 1)
-        printf("getValI(%d, %s) --> %d\n", this->channel_, parm_cmd, *val_p);
-    else
-        printf("getValI(%d, %s) --> ERROR!\n", this->channel_, parm_cmd);
-#endif
     return (rc != 1) ? asynError: asynSuccess;
 }
 
@@ -294,12 +282,6 @@ SmarActMCS2Axis::getVal(const char *parm_cmd, long long *val_p)
     if ( st )
         return st;
     rc = sscanf(rep, "%lld", val_p);
-#ifdef DEBUG
-    if (rc == 1)
-        printf("getValL(%d, %s) --> %lld\n", this->channel_, parm_cmd, *val_p);
-    else
-        printf("getValL(%d, %s) --> ERROR!\n", this->channel_, parm_cmd);
-#endif
     return (rc != 1) ? asynError: asynSuccess;
 }
 
@@ -320,9 +302,6 @@ SmarActMCS2Axis::getError()
     for (t = rep; *s != '"';)
         *t++ = *s++;
     *t = 0;
-#ifdef DEBUG
-    printf("getError --> %s\n", rep);
-#endif
     return rep;
 }
 
@@ -353,21 +332,16 @@ SmarActMCS2Axis::poll(bool *moving_p)
      */
     setIntegerParam(c_p_->motorStatusHomed_, (val & SmarActMCS2StatusReferenced) ? 1 : 0 );
 
-#ifdef DEBUGPOLL
-    printf(" status %lld\n", val);
-#endif
     if (!(val & SmarActMCS2StatusSensorPresent))   /* Can't ask for position if there isn't a sensor! */
         goto bail;
 
     if ( (comStatus_ = getVal("POS:CURR", &val)) )
         goto bail;
-
     setDoubleParam(c_p_->motorEncoderPosition_, PM2NM((double)val));
-    setDoubleParam(c_p_->motorPosition_, PM2NM((double)val));
-#ifdef DEBUGPOLL
-    printf("POLL (position %.6lf)\n", PM2MM((double)val));
-#endif
 
+    if ( (comStatus_ = getVal("POS:TARG", &val)) )
+        goto bail;
+    setDoubleParam(c_p_->motorPosition_, PM2NM((double)val));
  bail:
     clearErrors();
     setIntegerParam(c_p_->motorStatusProblem_,    comStatus_ ? 1 : 0 );
@@ -384,9 +358,6 @@ SmarActMCS2Axis::setSpeed(double velocity)
     asynStatus status;
 
     vel = (long long)fabs(velocity);
-#ifdef DEBUG
-    printf("setSpeed %d %lf --> %lld\n", channel_, velocity, vel);
-#endif
     if (vel !=  vel_) {
         /* change speed */
         if ( (asynSuccess == (status = c_p_->sendCmd(dummy, -1, ":CHAN%u:VEL %lld", channel_, vel))) &&
@@ -405,9 +376,6 @@ SmarActMCS2Axis::setAccel(double accel)
     asynStatus status;
 
     accl = (long long)fabs(accel);
-#ifdef DEBUG
-    printf("setAccel %d %lf --> %lld\n", channel_, accel, accl);
-#endif
     if (accl !=  accl_) {
         /* change speed */
         if ( (asynSuccess == (status = c_p_->sendCmd(dummy, -1, ":CHAN%u:ACC %lld", channel_, accl))) &&
@@ -435,6 +403,18 @@ SmarActMCS2Axis::setHoldTime(int holdTime)
     return asynSuccess;
 }
 
+/*
+ * NOTE: We're making assumptions here about how things are used.  Encoder
+ * ticks are pm or n-degrees, but we will use EGU of either mm or degrees,
+ * so there is a factor of 10^9 here.  We will set MRES to 10^-6, so we 
+ * need to scale the values here by 10^-3.  (Unfortunately, we're dealing with
+ * int32s at some point, so we can't just use pm as our stepsize and need
+ * to compromise and use nm instead.)
+ *
+ * Now for open loop mode, we assume that the voltage and frequency are 
+ * set elsewhere, and MRES is adjusted so that position etc. are all in
+ * estimated steps, so position can be used directly.
+ */
 asynStatus  
 SmarActMCS2Axis::move(double position, int relative, double min_vel, double max_vel, double accel)
 {
@@ -443,21 +423,32 @@ SmarActMCS2Axis::move(double position, int relative, double min_vel, double max_
     printf("Move to %f (speed %f - %f, accel %f)\n", position, min_vel, max_vel, accel);
 #endif
 
-    if ( (comStatus_ = setSpeed(NM2PM(max_vel))) )
-        goto bail;
-    if ( (comStatus_ = setAccel(NM2PM(accel))) )
-        goto bail;
+    if (hasEncoder_) { /* Closed loop */
+        if ( (comStatus_ = setSpeed(NM2PM(max_vel))) )
+            goto bail;
+        if ( (comStatus_ = setAccel(NM2PM(accel))) )
+            goto bail;
 
-    /* cache 'closed-loop' setting until next move */
-    if ( (comStatus_ = setHoldTime(getClosedLoop() ? HOLD_FOREVER : 0)) )
-        goto bail;
+        /* cache 'closed-loop' setting until next move */
+        if ( (comStatus_ = setHoldTime(getClosedLoop() ? HOLD_FOREVER : 0)) )
+            goto bail;
 
-    movemode = (relative ? MCS2MM_REL : MCS2MM_ABS);
-
-    if ( (comStatus_ = c_p_->sendCmd(dummy, -1, "CHAN%u:MMOD %d", channel_, (int)movemode)) )
-        goto bail;
-
-    comStatus_ = c_p_->sendCmd(dummy, -1, ":MOVE%u %.0lf", channel_, NM2PM(position));
+        movemode = (relative ? MCS2MM_REL : MCS2MM_ABS);
+        if ( (comStatus_ = c_p_->sendCmd(dummy, -1, "CHAN%u:MMOD %d", channel_, (int)movemode)) )
+            goto bail;
+        comStatus_ = c_p_->sendCmd(dummy, -1, ":MOVE%u %.0lf", channel_, NM2PM(position));
+    } else { /* Open loop */
+        double curpos;
+        movemode = MCS2MM_STEP;
+        if ( (comStatus_ = c_p_->sendCmd(dummy, -1, "CHAN%u:MMOD %d", channel_, (int)movemode)) )
+            goto bail;
+        c_p_->getDoubleParam(axisNo_, c_p_->motorPosition_, &curpos);
+        if (!relative)
+            position -= curpos; /* Make the position relative! */
+        comStatus_ = c_p_->sendCmd(dummy, -1, ":MOVE%u %.0lf", channel_, position);
+        position += curpos; /* Now make the position absolute! */
+        setDoubleParam(c_p_->motorPosition_, position);
+    }
 
  bail:
     clearErrors();
