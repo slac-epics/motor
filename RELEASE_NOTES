@@ -1,0 +1,8 @@
+R6.9-ess-0.0.1	2019-05-18 Bruce Hill
+	From ESS branch ess-6.9.x branch
+		https://github.com/EuropeanSpallationSource/motor
+		Includes support needed for ethercatmc module
+		Note: Also includes work to split motor module and replace
+			driver src directories w/ git submodules.
+	Added SLAC build support
+
