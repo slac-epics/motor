@@ -46,6 +46,10 @@ SUBMODULES += motorThorLabs
 
 # Add only checked-out submodules to DIRS
 DIRS += $(subst /Makefile,,$(wildcard $(addsuffix /Makefile, $(SUBMODULES))))
+# For SLAC build, just define DIRS to the list of desired motor submodules
+# For ESS ethercatmc support we appear to just need core motor
+DIRS = 
+
 
 include $(TOP)/configure/RULES_DIRS
 
