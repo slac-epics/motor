@@ -1,3 +1,9 @@
+R6.9-2.0.0 (slepicka)
+	Cherry picked commits from alexmon and klauer for the HXR undulator.
+	Building using:
+	    asyn: R4.32-1.0.0
+	    ipac: R2.11-1.6.0
+
 R6.9-1.1.0 (mcbrowne)
 	   Cleaned up SmarAct MCS2 support, including support for openloop moves if no encoder present.
 
