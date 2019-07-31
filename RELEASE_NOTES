@@ -1,3 +1,6 @@
+R6.10.1-2.0.0 (slepicka)
+	Add changes made by alexmon at Aerotech devEnsembleAsyn.cc to support SXR undulator.
+
 R6.10-1.0.1 (marcio)
            Exclusive release without IPAC and sequencer. Don't use it if you
            need any of them. Also, this one uses 
