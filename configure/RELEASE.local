@@ -20,11 +20,11 @@
 # If any motor controller communication mechanism besides the VME backplane is
 # required, then ASYN must be defined.
 # Recommended ASYN release: R4-13 or higher
-ASYN_MODULE_VERSION=R4.31-1.0.0
+ASYN_MODULE_VERSION=R4.32-1.0.0
 
 # The following support modules are required for the Hytec driver
 # Recommended IPAC release: R2-10 or higher
-IPAC_MODULE_VERSION=R2.14-0.1.0
+IPAC_MODULE_VERSION=R2.11-1.6.0
 
 # Need the sequencer and busy record for the 
 # MM4005 and XPS trajectory scanning
