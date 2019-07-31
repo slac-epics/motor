@@ -2,6 +2,9 @@
 FILENAME... drvEnsembleAsyn.cc
 USAGE...    Motor record asyn driver level support for Aerotech Ensemble.
 
+Version:        $Revision: 1.2 $
+Modified By:    $Author: alexmon $
+Last Modified:  $Date: 2018/10/5 $
 */
 
 /*
@@ -472,13 +475,19 @@ static int motorAxisMove(AXIS_HDL pAxis, double position, int relative,
     PRINT(pAxis->logParam, FLOW, "Set card %d, axis %d move to %f, min vel=%f, max_vel=%f, accel=%f\n",
           pAxis->card, axis, position, min_velocity, max_velocity, acceleration);
 
+    if (acceleration > 0)
+    { /* only use the acceleration if > 0 */
+        sprintf(outputBuff, "RAMP RATE %.*f", maxDigits, acceleration * fabs(pAxis->stepSize));
+        ret_status = sendAndReceive(pAxis->pController, outputBuff, inputBuff, sizeof(inputBuff));
+    }
+
     if (relative)
     {
         if (position >= 0.0)
             posdir = true;
         else
             posdir = false;
-        moveCommand = "INC";
+        moveCommand = "MOVEINC";
     }
     else
     {
@@ -486,24 +495,14 @@ static int motorAxisMove(AXIS_HDL pAxis, double position, int relative,
             posdir = true;
         else
             posdir = false;
-        moveCommand = "ABS";
+        moveCommand = "MOVEABS";
     }
-
-    sprintf(outputBuff, "%s", moveCommand);
-    ret_status = sendAndReceive(pAxis->pController, outputBuff, inputBuff, sizeof(inputBuff));
-    if (ret_status)
-        return (MOTOR_AXIS_ERROR);
-
-    if (acceleration > 0)
-    { /* only use the acceleration if > 0 */
-        sprintf(outputBuff, "RAMP RATE %.*f", maxDigits, acceleration * fabs(pAxis->stepSize));
-        ret_status = sendAndReceive(pAxis->pController, outputBuff, inputBuff, sizeof(inputBuff));
-    }
-
-    sprintf(outputBuff, "LINEAR @%d %.*f F%.*f", axis, maxDigits, position * fabs(pAxis->stepSize),
+    
+    sprintf(outputBuff, "%s @%d %.*f F%.*f", moveCommand, axis, maxDigits, position * fabs(pAxis->stepSize),
             maxDigits, max_velocity * fabs(pAxis->stepSize));
 
     ret_status = sendAndReceive(pAxis->pController, outputBuff, inputBuff, sizeof(inputBuff));
+
     if (ret_status)
         return (MOTOR_AXIS_ERROR);
 
