@@ -1,3 +1,7 @@
+R6.10.1-2.1.0 (slepicka)
+	Add patch by alexmon at Aerotech drvEnsembleAsyn.cc
+	Comment: clear motorAxisproblem if a limit switch is hit
+
 R6.10.1-2.0.0 (slepicka)
 	Add changes made by alexmon at Aerotech devEnsembleAsyn.cc to support SXR undulator.
 
