@@ -420,8 +420,9 @@ static int motorAxisSetInteger(AXIS_HDL pAxis, motorAxisParam_t function, int va
     switch (function)
     {
     case motorAxisClosedLoop:
-        if (value == 0)
+        if (value == 0){
             sprintf(outputBuff, "DISABLE @%d", pAxis->axis);
+        }
         else
         {
             sprintf(outputBuff, "AXISFAULT @%d", pAxis->axis);
@@ -800,8 +801,14 @@ static void EnsemblePoller(EnsembleController *pController)
                     else if (axisFault != pAxis->lastFault)
                     {
                         pAxis->lastFault = axisFault;
-                        motorParam->setInteger(pAxis->params, motorAxisProblem, 1);
-                        PRINT(pAxis->logParam, TERROR, "EnsemblePoller: controller fault on axis=%d fault=0x%X\n", itera, axisFault);
+                        /* clear motorAxisproblem if a limit switch is hit*/
+                        if(axisFault == 4 || axisFault == 8) {
+                           motorParam->setInteger(pAxis->params, motorAxisProblem, 0);
+                        }
+                        else {
+                           motorParam->setInteger(pAxis->params, motorAxisProblem, 1);
+                           PRINT(pAxis->logParam, TERROR, "EnsemblePoller: controller fault on axis=%d fault=0x%X\n", itera, axisFault);
+                        }
                     }
                 }
             }
