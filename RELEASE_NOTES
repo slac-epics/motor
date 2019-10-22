@@ -1,3 +1,6 @@
+R6.10.1-2.1.1 (slepicka)
+	Bumping asyn to R4.32-1.0.0
+
 R6.10.1-2.1.0 (slepicka)
 	Add patch by alexmon at Aerotech drvEnsembleAsyn.cc
 	Comment: clear motorAxisproblem if a limit switch is hit
