@@ -327,6 +327,9 @@ SmarActMCS2Axis::poll(bool *moving_p)
     *moving_p = (val & SmarActMCS2StatusMoving) ? true : false;
     setIntegerParam(c_p_->motorStatusDone_, !*moving_p );
 
+    setIntegerParam(c_p_->motorStatusFollowingError_,
+                    (val & SmarActMCS2StatusMoveFailed) ? true : false);
+
     /* Check if the sensor 'knows' absolute position and
      * update the MSTA 'HOMED' bit.
      */
