@@ -48,7 +48,21 @@ typedef enum {
 #define XPSProfileGroupNameString             "XPS_PROFILE_GROUP_NAME"
 #define XPSTrajectoryFileString               "XPS_TRAJECTORY_FILE"
 #define XPSStatusString                       "XPS_STATUS"
-#define XPSStatusStringString                 "XPS_STATUS_STRING"
+#define updateAxisInfoString                  "UPDATE_AXIS_INFO"
+#define XPSVbasString                         "XPS_VBAS"
+#define XPSVeloString                         "XPS_VELO"
+#define XPSVmaxString                         "XPS_VMAX"
+#define XPSAcclString                         "XPS_ACCL"
+#define XPSMresString                         "XPS_MRES"
+#define XPSHlmString                          "XPS_HLM"
+#define XPSLlmString                          "XPS_LLM"
+#define XPSUnitsString                        "XPS_EGU"
+#define XPSStatusStringString                 "XPS_STATUS_STRING" //TODO: Check where this is used ...
+#define XPSStageStringString                  "XPS_STAGE"
+#define XPSDriverString                       "XPS_DRIVER"
+#define XPSConnectedString                    "XPS_CONNECTED"
+#define XPSControllerStatusString             "XPS_CONTROLLER_STATUS"
+#define XPSFirmwareString                     "FIRMWARE_VERSION"
 #define XPSTclScriptString                    "XPS_TCL_SCRIPT"
 #define XPSTclScriptExecuteString             "XPS_TCL_SCRIPT_EXECUTE"
 
@@ -112,12 +126,29 @@ class epicsShareClass XPSController : public asynMotorController {
   int XPSProfileGroupName_;
   int XPSTrajectoryFile_;
   int XPSStatus_;
+  int updateAxisInfo_;
+  int XPSvbas_;
+  int XPSvelo_;
+  int XPSvmax_;
+  int XPSaccl_;
+  int XPSmres_;
+  int XPShlm_;
+  int XPSllm_;
+  int XPSUnitsString_;
   int XPSStatusString_;
+  int XPSStageString_;
+  int XPSDriverString_;
+  int XPSConnected_;
+  int XPSControllerStatus_;
+  int XPSFirmwareString_;
   int XPSTclScript_;
   int XPSTclScriptExecute_;
   #define LAST_XPS_PARAM XPSTclScriptExecute_
 
   private:
+  asynStatus connectController();
+  asynStatus disconnectController();
+
   bool enableSetPosition_;          /**< Enable/disable setting the position from EPICS */ 
   double setPositionSettlingTime_;  /**< The settling (sleep) time used when setting position. */
   char *IPAddress_;
@@ -132,7 +163,10 @@ class epicsShareClass XPSController : public asynMotorController {
   int autoEnable_;
   int noDisableError_;
   bool enableMovingMode_;
-  
+  int controllerStatus_;
+  int connected_;
+  int rtryConnect_;
+
   friend class XPSAxis;
 };
 #define NUM_XPS_PARAMS ((int)(&LAST_XPS_PARAM - &FIRST_XPS_PARAM + 1))

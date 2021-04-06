@@ -53,6 +53,9 @@ class epicsShareClass XPSAxis : public asynMotorAxis
 
   virtual asynStatus defineProfile(double *positions, size_t numPoints);
   virtual asynStatus readbackProfile();
+
+  asynStatus getInfo();
+  asynStatus initializeParam();
   
   private:
   XPSController *pC_;
@@ -61,6 +64,10 @@ class epicsShareClass XPSAxis : public asynMotorAxis
   asynStatus setPID(const double * value, int pidoption);
   asynStatus getPID();
   asynStatus setPIDValue(const double * value, int pidoption);
+
+  asynStatus connectAxis();
+  asynStatus disconnectAxis();
+
   double motorRecPositionToXPSPosition(double motorRecPosition);
   double XPSPositionToMotorRecPosition(double XPSPosition);
   double motorRecStepToXPSStep(double motorRecStep);
@@ -82,6 +89,8 @@ class epicsShareClass XPSAxis : public asynMotorAxis
   double encoderPosition_;
   double currentVelocity_;
   double velocity_;
+  double vBas_;
+  double encResolution_;
   double accel_;
   double highLimit_;
   double lowLimit_;
@@ -97,6 +106,7 @@ class epicsShareClass XPSAxis : public asynMotorAxis
   double deferredPosition_;
   bool deferredMove_;
   bool deferredRelative_;
+  int connected_;
 
   friend class XPSController;
 };

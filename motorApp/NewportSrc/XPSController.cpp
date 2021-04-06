@@ -132,7 +132,7 @@ const static CorrectorTypes_t CorrectorTypes = {
 #ifndef MIN
 #define MIN(a,b) ((a)<(b)? (a): (b))
 #endif
-
+#define MAX_RTRY 5
 
 XPSController::XPSController(const char *portName, const char *IPAddress, int IPPort, 
                              int numAxes, double movingPollPeriod, double idlePollPeriod,
@@ -153,6 +153,7 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
   IPPort_ = IPPort;
   pAxes_ = (XPSAxis **)(asynMotorController::pAxes_);
   movesDeferred_ = false;
+  rtryConnect_ = 0;
 
   // Create controller-specific parameters
   createParam(XPSMinJerkString,                       asynParamFloat64, &XPSMinJerk_);
@@ -170,7 +171,21 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
   createParam(XPSProfileGroupNameString,              asynParamOctet,   &XPSProfileGroupName_);
   createParam(XPSTrajectoryFileString,                asynParamOctet,   &XPSTrajectoryFile_);
   createParam(XPSStatusString,                        asynParamInt32,   &XPSStatus_);
+  createParam(updateAxisInfoString,                   asynParamInt32,   &updateAxisInfo_);
+  createParam(XPSVbasString,                          asynParamFloat64, &XPSvbas_);
+  createParam(XPSVeloString,                          asynParamFloat64, &XPSvelo_);
+  createParam(XPSVmaxString,                          asynParamFloat64, &XPSvmax_);
+  createParam(XPSAcclString,                          asynParamFloat64, &XPSaccl_);
+  createParam(XPSMresString,                          asynParamFloat64, &XPSmres_);
+  createParam(XPSHlmString,                           asynParamFloat64, &XPShlm_);
+  createParam(XPSLlmString,                           asynParamFloat64, &XPSllm_);
+  createParam(XPSUnitsString,                         asynParamOctet,   &XPSUnitsString_);
   createParam(XPSStatusStringString,                  asynParamOctet,   &XPSStatusString_);
+  createParam(XPSStageStringString,                   asynParamOctet,   &XPSStageString_);
+  createParam(XPSDriverString,                        asynParamOctet,   &XPSDriverString_);
+  createParam(XPSConnectedString,                     asynParamInt32,   &XPSConnected_);
+  createParam(XPSControllerStatusString,              asynParamOctet,   &XPSControllerStatus_);
+  createParam(XPSFirmwareString,                      asynParamOctet,   &XPSFirmwareString_);
   createParam(XPSTclScriptString,                     asynParamOctet,   &XPSTclScript_);
   createParam(XPSTclScriptExecuteString,              asynParamInt32,   &XPSTclScriptExecute_);
 
@@ -180,6 +195,7 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
     printf("%s:%s: error calling TCP_ConnectToServer for pollSocket\n",
            driverName, functionName);
   }
+  connectController();
   
   // This socket is used for moving motors during profile moves
   // Each axis also has its own moveSocket
@@ -211,7 +227,7 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
   autoEnable_ = 1;
 
   /* Flag used to turn off setting MSTA problem bit when the axis is disabled.*/
-  noDisableError_ = 0;
+  noDisableError_ = 1;
 
   /* Flag to disable a mode to change the moving state determination for an axis.*/
   /* See function XPSController::enableMovingMode().*/
@@ -257,7 +273,10 @@ asynStatus XPSController::writeInt32(asynUser *pasynUser, epicsInt32 value)
    * status at the end, but that's OK */
   status = pAxis->setIntegerParam(function, value);
 
-  if (function == XPSTclScriptExecute_) {
+  if (function == updateAxisInfo_)
+  {
+    pAxis->getInfo();
+  }  else if (function == XPSTclScriptExecute_) {
     /* Execute the TCL script */
     char fileName[MAX_FILENAME_LEN];
     getStringParam(XPSTclScript_, (int)sizeof(fileName), fileName);
@@ -330,6 +349,72 @@ asynStatus XPSController::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
   
   return status;
     
+}
+
+asynStatus XPSController::connectController() {
+  int status = 0;
+  XPSAxis *pAxis;
+  static const char *functionName = "connectController";
+
+  connected_ = 0;
+  // This socket is used for polling by the controller and all axes
+
+  if (pollSocket_ < 0) {
+    pollSocket_ = TCP_ConnectToServer(IPAddress_, IPPort_, XPS_POLL_TIMEOUT);
+    if (pollSocket_ < 0) {
+      asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                "%s:%s: error calling TCP_ConnectToServer for pollSocket\n",
+                driverName, functionName);
+    }
+  }
+  else {
+    status = ControllerStatusGet(pollSocket_,
+                                 &controllerStatus_);
+    if(status != 0) {
+    }
+    else {
+      connected_ = 1;
+      FirmwareVersionGet(pollSocket_, firmwareVersion_);
+      setStringParam(XPSFirmwareString_, firmwareVersion_);
+      // This socket is used for moving motors during profile moves
+      // Each axis also has its own moveSocket
+      moveSocket_ = TCP_ConnectToServer(IPAddress_, IPPort_, XPS_MOVE_TIMEOUT);
+      if (moveSocket_ < 0) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                  "%s:%s: error calling TCP_ConnectToServer for moveSocket\n",
+                  driverName, functionName);
+      }
+      FirmwareVersionGet(pollSocket_, firmwareVersion_);
+      setStringParam(XPSFirmwareString_, firmwareVersion_);
+      /* connect to each axis */
+      for (int i=0; i<numAxes_; i++) {
+        pAxis=getAxis(i);
+        if (!pAxis) continue;
+        pAxis->connectAxis();
+      }
+    }
+  }
+  return (asynStatus) status;
+}
+
+asynStatus XPSController::disconnectController() {
+  asynStatus status = asynSuccess;
+  XPSAxis *pAxis;
+
+  connected_ = 0;
+  /* disconnect each axis */
+  for (int i=0; i<numAxes_; i++) {
+        pAxis=getAxis(i);
+        if (!pAxis) continue;
+        pAxis->disconnectAxis();
+  }
+/*
+  TCP_CloseSocket(pollSocket_);
+  pollSocket_ = -1;
+  TCP_CloseSocket(moveSocket_);
+  moveSocket_ = -1;
+*/
+  return status;
 }
 
 /**
@@ -1126,16 +1211,47 @@ asynStatus XPSController::poll()
   int number;
   char fileName[MAX_FILENAME_LEN];
   char groupName[MAX_GROUPNAME_LEN];
-  
-  getIntegerParam(profileExecuteState_, &executeState);
-  if (executeState != PROFILE_EXECUTE_EXECUTING) return asynSuccess;
+  char pstr[80];
 
-  getStringParam(XPSTrajectoryFile_, (int)sizeof(fileName), fileName);
-  getStringParam(XPSProfileGroupName_, (int)sizeof(groupName), groupName);
-  status = MultipleAxesPVTParametersGet(pollSocket_, groupName, fileName, &number);
-  if (status) return asynError;
-  setIntegerParam(profileCurrentPoint_, number);
-  callParamCallbacks();
+  if ( pollSocket_ < 0 || connected_ == 0 ) {
+    /* if disconnected attempt to reconnect */
+    connectController();
+    rtryConnect_ = 0;
+  }
+  else {
+    status = ControllerStatusGet(pollSocket_,
+                                 &controllerStatus_);
+
+    if (status ) {
+      asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                "%s:poll(): error calling ControllerStatusGet status=%d\n",
+                driverName, status);
+      /* close sockets, disconnect from controller */
+      rtryConnect_++;
+      if(rtryConnect_ == MAX_RTRY) {
+        disconnectController();
+        setStringParam(XPSControllerStatus_, "Disconnected");
+      }
+    }
+    else {
+      status = ControllerStatusStringGet(pollSocket_,
+                                         controllerStatus_,
+                                         pstr);
+      if(status == 0){
+        setStringParam(XPSControllerStatus_, pstr);
+        rtryConnect_ = 0; /* reset timeout */
+      }
+      getIntegerParam(profileExecuteState_, &executeState);
+      if (executeState != PROFILE_EXECUTE_EXECUTING) return asynSuccess;
+
+      getStringParam(XPSTrajectoryFile_, (int)sizeof(fileName), fileName);
+      getStringParam(XPSProfileGroupName_, (int)sizeof(groupName), groupName);
+      status = MultipleAxesPVTParametersGet(pollSocket_, groupName, fileName, &number);
+      if (status) return asynError;
+      setIntegerParam(profileCurrentPoint_, number);
+    }
+    callParamCallbacks();
+  }
   return asynSuccess;
 }
 
