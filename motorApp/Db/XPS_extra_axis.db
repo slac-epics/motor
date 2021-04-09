@@ -1,0 +1,161 @@
+# Database for XPS axis
+record(ao, "$(P)$(R):XPS_GETINFO") {
+  field(DESC, "Update XPS Info")
+  field(DTYP, "asynInt32")
+  field(PREC, "0")
+  field(OUT, "@asyn($(PORT),$(ADDR))UPDATE_AXIS_INFO")
+  field(FLNK, "$(P)$(R):XPS_FAN_RBK PP")
+}
+
+record(waveform, "$(P)$(R):XPS_AXIS_STATUS") {
+  field(DESC, "XPS Stage Status")
+  field(DTYP, "asynOctetRead")
+  field(FTVL, "CHAR")
+  field(NELM, "100")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_STAGE_STATUS")
+  field(SCAN, "I/O Intr")
+}
+
+record(stringin, "$(P)$(R):XPS_EGU") {
+  field(DESC, "XPS EGU")
+  field(DTYP, "asynOctetRead")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_EGU")
+  field(SCAN, "Passive")
+  field(FLNK, "$(P)$(R):XPS_EGU_PUSH")
+}
+
+record(stringin, "$(P)$(R):XPS_NAME") {
+  field(DESC, "XPS Stage Name")
+  field(DTYP, "asynOctetRead")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_STAGE")
+  field(SCAN, "I/O Intr")
+}
+
+record(ai, "$(P)$(R):XPS_VBAS_RBK") {
+  field(DESC, "XPS Base Velocity")
+  field(PREC, "$(PREC)")
+  field(DTYP, "asynFloat64")
+  field(SCAN, "Passive")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_VBAS")
+}
+
+record(ai, "$(P)$(R):XPS_VELO_RBK") {
+  field(DESC, "XPS Max Velocity")
+  field(PREC, "$(PREC)")
+  field(DTYP, "asynFloat64")
+  field(SCAN, "Passive")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_VELO")
+}
+
+
+record(ai, "$(P)$(R):XPS_MRES_RBK") {
+  field(DESC, "XPS MRES")
+  field(PREC, "$(PREC)")
+  field(DTYP, "asynFloat64")
+  field(SCAN, "Passive")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_MRES")
+  field(PINI, "YES")
+}
+
+record(ai, "$(P)$(R):XPS_LLM_RBK") {
+  field(DESC, "XPS Low Limit")
+  field(PREC, "$(PREC)")
+  field(DTYP, "asynFloat64")
+  field(SCAN, "Passive")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_LLM")
+}
+
+record(ai, "$(P)$(R):XPS_HLM_RBK") {
+  field(DESC, "XPS High Limit")
+  field(PREC, "$(PREC)")
+  field(DTYP, "asynFloat64")
+  field(SCAN, "Passive")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_HLM")
+}
+
+record(ai, "$(P)$(R):XPS_ACCL_RBK") {
+  field(DESC, "XPS Acceleration (sec)")
+  field(PREC, "$(PREC)")
+  field(DTYP, "asynFloat64")
+  field(SCAN, "Passive")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_ACCL")
+}
+
+record(waveform, "$(P)$(R):XPS_DRIVER") {
+  field(DESC, "XPS Firmware Version")
+  field(DTYP, "asynOctetRead")
+  field(FTVL, "CHAR")
+  field(NELM, "100")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_DRIVER")
+  field(SCAN, "I/O Intr")
+}
+
+record(bi, "$(P)$(R):XPS_AXIS_CONNECTED") {
+  field(DESC, "XPS Axis Status ")
+  field(SCAN, "I/O Intr")
+  field(DTYP, "asynInt32")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_CONNECTED")
+  field(ZNAM, "Disconnected")
+  field(ONAM, "Connected")
+}
+
+
+record(seq, "$(P)$(R):XPS_SEQ_PUSH") {
+  field(SELM, "All")
+  field(DOL1, "$(P)$(R):XPS_MRES_RBK")
+  field(LNK1, "$(MOTOR).MRES PP")
+  field(DOL2, "$(P)$(R):XPS_MRES_RBK")
+  field(LNK2, "$(MOTOR).RDBD")
+  field(DOL3, "$(P)$(R):XPS_VBAS_RBK")
+  field(LNK3, "$(MOTOR).VBAS")
+  field(DOL4, "$(P)$(R):XPS_VELO_RBK")
+  field(LNK4, "$(MOTOR).VELO")
+  field(DOL5, "$(P)$(R):XPS_ACCL_RBK")
+  field(LNK5, "$(MOTOR).ACCL")
+  field(DOL6, "$(P)$(R):XPS_LLM_RBK")
+  field(LNK6, "$(MOTOR).LLM")
+  field(FLNK, "$(P)$(R):XPS_EGU PP")
+  field(DLY1, "1")
+  field(DOL7, "$(P)$(R):XPS_HLM_RBK")
+  field(LNK7, "$(MOTOR).HLM")
+}
+
+record(ao, "$(P)$(R):XPS_RSTR_RAW") {
+  field(DESC, "Restore motor raw value")
+  field(OUT, "$(MOTOR).RVAL PP")
+  field(DOL, "$(MOTOR).RRBV")
+  field(FLNK, "$(P)$(R):XPS_SPMG_G PP")
+  field(OMSL, "closed_loop")
+}
+
+record(ao, "$(P)$(R):XPS_SPMG_S") {
+  field(DESC, "Put motor record to STOP")
+  field(OUT, "$(MOTOR).SPMG PP")
+  field(FLNK, "$(P)$(R):XPS_SEQ_PUSH PP")
+  field(VAL, "0")
+}
+
+record(ao, "$(P)$(R):XPS_SPMG_G") {
+  field(DESC, "Put motor record to GO")
+  field(OUT, "$(MOTOR).SPMG PP")
+  field(VAL, "3")
+}
+
+record(stringout, "$(P)$(R):XPS_EGU_PUSH") {
+  field(DESC, "Push of EGU to motorRecord")
+  field(DOL, "$(P)$(R):XPS_EGU PP")
+  field(OMSL, "closed_loop")
+  field(OUT, "$(MOTOR).EGU")
+  field(FLNK, "$(P)$(R):XPS_RSTR_RAW")
+}
+
+record(fanout, "$(P)$(R):XPS_FAN_RBK") {
+  field(FLNK, "$(P)$(R):XPS_SPMG_S")
+  field(LNK1, "$(P)$(R):XPS_MRES_RBK")
+  field(LNK2, "$(P)$(R):XPS_VBAS_RBK")
+  field(LNK3, "$(P)$(R):XPS_VELO_RBK")
+  field(LNK4, "$(P)$(R):XPS_ACCL_RBK")
+  field(LNK5, "$(P)$(R):XPS_LLM_RBK")
+  field(LNK6, "$(P)$(R):XPS_HLM_RBK")
+}
+

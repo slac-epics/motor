@@ -57,8 +57,8 @@ typedef enum {
 #define XPSHlmString                          "XPS_HLM"
 #define XPSLlmString                          "XPS_LLM"
 #define XPSUnitsString                        "XPS_EGU"
-#define XPSStatusStringString                 "XPS_STATUS_STRING" //TODO: Check where this is used ...
-#define XPSStageStringString                  "XPS_STAGE"
+#define XPSStageStatusString                  "XPS_STAGE_STATUS"
+#define XPSStageNameString                    "XPS_STAGE"
 #define XPSDriverString                       "XPS_DRIVER"
 #define XPSConnectedString                    "XPS_CONNECTED"
 #define XPSControllerStatusString             "XPS_CONTROLLER_STATUS"
@@ -135,8 +135,8 @@ class epicsShareClass XPSController : public asynMotorController {
   int XPShlm_;
   int XPSllm_;
   int XPSUnitsString_;
-  int XPSStatusString_;
-  int XPSStageString_;
+  int XPSStageStatus_;
+  int XPSStageName_;
   int XPSDriverString_;
   int XPSConnected_;
   int XPSControllerStatus_;

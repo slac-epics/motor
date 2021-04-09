@@ -180,8 +180,8 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
   createParam(XPSHlmString,                           asynParamFloat64, &XPShlm_);
   createParam(XPSLlmString,                           asynParamFloat64, &XPSllm_);
   createParam(XPSUnitsString,                         asynParamOctet,   &XPSUnitsString_);
-  createParam(XPSStatusStringString,                  asynParamOctet,   &XPSStatusString_);
-  createParam(XPSStageStringString,                   asynParamOctet,   &XPSStageString_);
+  createParam(XPSStageStatusString,                   asynParamOctet,   &XPSStageStatus_);
+  createParam(XPSStageNameString,                     asynParamOctet,   &XPSStageName_);
   createParam(XPSDriverString,                        asynParamOctet,   &XPSDriverString_);
   createParam(XPSConnectedString,                     asynParamInt32,   &XPSConnected_);
   createParam(XPSControllerStatusString,              asynParamOctet,   &XPSControllerStatus_);

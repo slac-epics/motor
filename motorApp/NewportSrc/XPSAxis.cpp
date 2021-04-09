@@ -152,9 +152,6 @@ XPSAxis::XPSAxis(XPSController *pC, int axisNo, const char *positionerName, doub
   TCP_SetTimeout(moveSocket_, -0.1);
   pollSocket_ = pC_->pollSocket_;
   
-  /* create TCP Socket for Axis, check if present */
-  connectAxis();
-
   /* Set an EPICS exit handler that will shut down polling before asyn kills the IP sockets */
   epicsAtExit(shutdownCallback, pC_);
 
@@ -187,6 +184,9 @@ XPSAxis::XPSAxis(XPSController *pC, int axisNo, const char *positionerName, doub
   if (index != NULL) *index = '\0';  /* Terminate group name at place of '.' */
 
   stepSize_ = stepSize;
+
+  /* create TCP Socket for Axis, check if present */
+  connectAxis();
 
   if(connected_){
     //getInfo
@@ -594,7 +594,7 @@ asynStatus XPSAxis::poll(bool *moving)
               driverName, functionName, pC_->portName, axisNo_, positionerName_, axisStatus_, statusString);
     /* Set the status */
     setIntegerParam(pC_->XPSStatus_, axisStatus_);
-    setStringParam(pC_->XPSStatusString_, statusString);
+    setStringParam(pC_->XPSStageStatus_, statusString);
 
     /* Previously we set the motion done flag by seeing if axisStatus_ was >=43 && <= 48, which means moving,
      * homing, jogging, etc.  However, this information is about the group, not the axis, so if one
@@ -1875,7 +1875,7 @@ asynStatus XPSAxis::getInfo()
   sprintf( par,  "SmartStageName"     );
   status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
   if (status == 0) {
-    pC_->setStringParam(axisNo_,pC_->XPSStageString_, pstr);
+    pC_->setStringParam(axisNo_,pC_->XPSStageName_, pstr);
   }
   
   sprintf( par,  "DriverName"     );
@@ -1911,10 +1911,10 @@ asynStatus XPSAxis::initializeParam(){
        setDoubleParam(pC_->XPSllm_, 0.0);
        setDoubleParam(pC_->motorPosition_, 0.0);
        setIntegerParam(pC_->XPSStatus_, 0);
-       pC_->setStringParam(axisNo_,pC_->XPSStageString_, "Not present");
+       pC_->setStringParam(axisNo_,pC_->XPSStageName_, "Not present");
        pC_->setStringParam(axisNo_,pC_->XPSDriverString_, " ");
        pC_->setStringParam(axisNo_,pC_->XPSUnitsString_, " ");
-       pC_->setStringParam(axisNo_,pC_->XPSStatusString_, " ");
+       pC_->setStringParam(axisNo_,pC_->XPSStageStatus_, " ");
        setIntegerParam(pC_->XPSConnected_, 0);
        callParamCallbacks();
 
@@ -1935,7 +1935,7 @@ asynStatus XPSAxis::connectAxis(){
     status = PositionerStageParameterGet( moveSocket_, positionerName_, par, pstr );
     status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
     if (status == 0) {
-      pC_->setStringParam(axisNo_,pC_->XPSStageString_, pstr);
+      pC_->setStringParam(axisNo_,pC_->XPSStageName_, pstr);
       connected_ = 1;
       setIntegerParam(pC_->XPSConnected_, 1);
       callParamCallbacks();
@@ -1961,7 +1961,7 @@ asynStatus XPSAxis::disconnectAxis(){
   if(connected_) {
       connected_ = 0;
       setIntegerParam(pC_->XPSConnected_, 0);
-      pC_->setStringParam(axisNo_,pC_->XPSStageString_, "Not present");
+      pC_->setStringParam(axisNo_,pC_->XPSStageName_, "Not present");
 //      initializeParam();
       callParamCallbacks();
   }
