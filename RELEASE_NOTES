@@ -1,3 +1,7 @@
+R6.10.1-2.3.0  (zoven)
+    Import changes from motor-R6-8-RC1_1-12 for Newport XPS controller
+      - auto detection of stage and motor record parameters
+
 R6.10.1-2.2.0  (Kukhee Kim)
         Restore back IPAC to support Hytec Motor, build with ipac R2.15-1.0.0
 
