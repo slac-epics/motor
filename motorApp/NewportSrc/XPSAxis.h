@@ -107,6 +107,7 @@ class epicsShareClass XPSAxis : public asynMotorAxis
   bool deferredMove_;
   bool deferredRelative_;
   int connected_;
+  int hardwareStatus_;
 
   friend class XPSController;
 };

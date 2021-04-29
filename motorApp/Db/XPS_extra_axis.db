@@ -99,6 +99,13 @@ record(bi, "$(P)$(R):XPS_AXIS_CONNECTED") {
   field(ONAM, "Connected")
 }
 
+record(longin, "$(P)$(R):XPS_HW_STATUS") {
+  field(DESC, "XPS Axis Hardware Status")
+  field(SCAN, "I/O Intr")
+  field(DTYP, "asynInt32")
+  field(INP, "@asyn($(PORT),$(ADDR))XPS_HW_STATUS")
+}
+
 
 record(seq, "$(P)$(R):XPS_SEQ_PUSH") {
   field(SELM, "All")

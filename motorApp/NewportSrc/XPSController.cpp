@@ -171,6 +171,7 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
   createParam(XPSProfileGroupNameString,              asynParamOctet,   &XPSProfileGroupName_);
   createParam(XPSTrajectoryFileString,                asynParamOctet,   &XPSTrajectoryFile_);
   createParam(XPSStatusString,                        asynParamInt32,   &XPSStatus_);
+  createParam(XPSHwStatusString,                      asynParamInt32,   &XPSHwStatus_);
   createParam(updateAxisInfoString,                   asynParamInt32,   &updateAxisInfo_);
   createParam(XPSVbasString,                          asynParamFloat64, &XPSvbas_);
   createParam(XPSVeloString,                          asynParamFloat64, &XPSvelo_);

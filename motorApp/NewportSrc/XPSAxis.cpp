@@ -743,6 +743,18 @@ asynStatus XPSAxis::poll(bool *moving)
       setIntegerParam(pC_->motorStatusLowLimit_, 0);
     }
 
+    /* Read the hardware status */
+    status = PositionerHardwareStatusGet(pollSocket_,
+                                         positionerName_,
+                                         &hardwareStatus_);
+    if (status) {
+      asynPrint(pasynUser_, ASYN_TRACE_ERROR,
+                "%s:%s: [%s,%d]: error calling PositionHardwareStatusGet status=%d\n",
+                driverName, functionName, pC_->portName, axisNo_,  status);
+      goto done;
+    }
+    setIntegerParam(pC_->XPSHwStatus_, hardwareStatus_);
+
     /* Read the current velocity and use it set motor direction and moving flag. */
     status = GroupVelocityCurrentGet(pollSocket_,
                                      positionerName_,

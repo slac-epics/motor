@@ -48,6 +48,7 @@ typedef enum {
 #define XPSProfileGroupNameString             "XPS_PROFILE_GROUP_NAME"
 #define XPSTrajectoryFileString               "XPS_TRAJECTORY_FILE"
 #define XPSStatusString                       "XPS_STATUS"
+#define XPSHwStatusString                     "XPS_HW_STATUS"
 #define updateAxisInfoString                  "UPDATE_AXIS_INFO"
 #define XPSVbasString                         "XPS_VBAS"
 #define XPSVeloString                         "XPS_VELO"
@@ -126,6 +127,7 @@ class epicsShareClass XPSController : public asynMotorController {
   int XPSProfileGroupName_;
   int XPSTrajectoryFile_;
   int XPSStatus_;
+  int XPSHwStatus_;
   int updateAxisInfo_;
   int XPSvbas_;
   int XPSvelo_;
