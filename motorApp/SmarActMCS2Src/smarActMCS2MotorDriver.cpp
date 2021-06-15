@@ -1,5 +1,11 @@
 /* Motor driver support for smarAct MCS2 Controller   */
 
+/*
+ * Unit note: the smarAct stages should always have MRES = 1e-6, so EGU of mm/deg become
+ * "native" units of nm/udeg.  But the *real* native units are pm/ndeg, so we need an
+ * additional conversion factor for any position, speed, or acceleration.
+ */
+
 #include <iocsh.h>
 
 #include <asynOctetSyncIO.h>
@@ -360,6 +366,7 @@ SmarActMCS2Axis::setSpeed(double velocity)
     long long  vel;
     asynStatus status;
 
+    velocity = NM2PM(velocity);
     vel = (long long)fabs(velocity);
     if (vel !=  vel_) {
         /* change speed */
@@ -378,6 +385,7 @@ SmarActMCS2Axis::setAccel(double accel)
     long long  accl;
     asynStatus status;
 
+    accel = NM2PM(accel);
     accl = (long long)fabs(accel);
     if (accl !=  accl_) {
         /* change speed */
@@ -427,9 +435,9 @@ SmarActMCS2Axis::move(double position, int relative, double min_vel, double max_
 #endif
 
     if (hasEncoder_) { /* Closed loop */
-        if ( (comStatus_ = setSpeed(NM2PM(max_vel))) )
+        if ( (comStatus_ = setSpeed(max_vel)) )
             goto bail;
-        if ( (comStatus_ = setAccel(NM2PM(accel))) )
+        if ( (comStatus_ = setAccel(accel)) )
             goto bail;
 
         /* cache 'closed-loop' setting until next move */
