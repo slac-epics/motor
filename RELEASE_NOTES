@@ -1,3 +1,7 @@
+R6.9-1.1.1 (mcbrowne)
+	   Fixed homing etc. in SmarAct MCS2 support.  Removed RTEMS as a target, as the PCDS RTEMS
+	   compiler is hopelessly broken.
+
 R6.9-1.1.0 (mcbrowne)
 	   Cleaned up SmarAct MCS2 support, including support for openloop moves if no encoder present.
 
