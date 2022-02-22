@@ -1,3 +1,6 @@
+R6.10.1-2.3.1  (marcio)
+    Bumping asyn to R4.39-1.0.1
+
 R6.10.1-2.3.0  (zoven)
     Import changes from motor-R6-8-RC1_1-12 for Newport XPS controller
       - auto detection of stage and motor record parameters
