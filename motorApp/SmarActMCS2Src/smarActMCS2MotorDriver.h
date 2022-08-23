@@ -75,6 +75,7 @@ private:
 	long long              accl_;
 	int                    holdTime_;
 	int                    channel_;
+        int                    hasEncoder_;
 friend class SmarActMCS2Controller;
 };
 
