@@ -1795,121 +1795,131 @@ asynStatus XPSAxis::doMoveToHome(void)
   return asynSuccess;
 }
 
-asynStatus XPSAxis::getInfo()
+asynStatus XPSAxis::getInfo(bool withoutRes)
 {
   asynStatus s=asynSuccess;
   int status;
   double minJerkTime, maxJerkTime;
   char par[80];
   char pstr[80];
+  
   if(connected_) {
-  pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &encResolution_);
-  sprintf( par,  "DisplacementPerFullStep"     );
-  status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
-  status |= ( sscanf( pstr, "%lf", &encResolution_ ) != 1 );
-  if (status == 0){
-    setDoubleParam(pC_->XPSmres_, encResolution_);
-    stepSize_ = encResolution_;
-  }
-  else {
-    sprintf( par,  "EncoderResolution"     );
+    if(withoutRes == false) { 
+      pC_->getDoubleParam(axisNo_, pC_->motorResolution_, &encResolution_);
+      sprintf( par,  "DisplacementPerFullStep"     );
+      status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+      status |= ( sscanf( pstr, "%lf", &encResolution_ ) != 1 );
+      if (status == 0){
+        setDoubleParam(pC_->XPSmres_, encResolution_);
+        stepSize_ = encResolution_;
+      }
+      else {
+        sprintf( par,  "EncoderResolution"     );
+        status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+        status |= ( sscanf( pstr, "%lf", &encResolution_ ) != 1 );
+        if (status == 0) {
+          setDoubleParam(pC_->XPSmres_, encResolution_);
+          stepSize_ = encResolution_;
+        }
+        else {  /* couldn't get step size from controller, not that important just need to be consistent w/motor record */
+          encResolution_ = 0.0001;
+          stepSize_ = encResolution_;
+          setDoubleParam(pC_->XPSmres_, encResolution_);
+        }
+      }
+    }
+    else {
+      // don't get resolution from controller but use stepsize set in XPSCreateAxis()
+      encResolution_ = stepSize_;
+      setDoubleParam(pC_->XPSmres_, encResolution_);
+    }
+
+    /* get base velocity */
+    sprintf( par,  "HomeSearchMaximumVelocity"     );
     status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
-    status |= ( sscanf( pstr, "%lf", &encResolution_ ) != 1 );
+    status |= ( sscanf( pstr, "%lf", &vBas_ ) != 1 );
     if (status == 0) {
-      setDoubleParam(pC_->XPSmres_, encResolution_);
-      stepSize_ = encResolution_;
+      setDoubleParam(pC_->XPSvbas_, vBas_);
     }
-    else {  /* couldn't get step size from controller, not that important just need to be consistent w/motor record */
-      encResolution_ = 0.0001;
-      stepSize_ = encResolution_;
-      setDoubleParam(pC_->XPSmres_, encResolution_);
+    
+    /* get max velocity */
+    sprintf( par,  "MaximumVelocity"     );
+    status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+    status |= ( sscanf( pstr, "%lf", &velocity_ ) != 1 );
+    if (status == 0) {
+      setDoubleParam(pC_->XPSvelo_, velocity_);
+      setDoubleParam(pC_->XPSvmax_, velocity_);
     }
-  }
+    
+    /* get base velocity */
+    sprintf( par,  "MaximumAcceleration"     );
+    status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+    status |= ( sscanf( pstr, "%lf", &accel_ ) != 1 );
+    if (status == 0) {
+      setDoubleParam(pC_->XPSaccl_, velocity_/accel_);
+    }
   
-  /* get base velocity */
-  sprintf( par,  "HomeSearchMaximumVelocity"     );
-  status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
-  status |= ( sscanf( pstr, "%lf", &vBas_ ) != 1 );
-  if (status == 0) {
-    setDoubleParam(pC_->XPSvbas_, vBas_);
-  }
-  /* get max velocity */
-  sprintf( par,  "MaximumVelocity"     );
-  status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
-  status |= ( sscanf( pstr, "%lf", &velocity_ ) != 1 );
-  if (status == 0) {
-    setDoubleParam(pC_->XPSvelo_, velocity_);
-    setDoubleParam(pC_->XPSvmax_, velocity_);
-  }
-  /* get base velocity */
-  sprintf( par,  "MaximumAcceleration"     );
-  status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
-  status |= ( sscanf( pstr, "%lf", &accel_ ) != 1 );
-  if (status == 0) {
-    setDoubleParam(pC_->XPSaccl_, velocity_/accel_);
-  }
+    /* get min jerk time */
+    sprintf( par,  "MinimumJerkTime"     );
+    status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+    status |= ( sscanf( pstr, "%lf", &minJerkTime ) != 1 );
+    if (status == 0){
+      setDoubleParam(pC_->XPSMinJerk_, minJerkTime);
+    }
   
-  /* get min jerk time */
-  sprintf( par,  "MinimumJerkTime"     );
-  status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
-  status |= ( sscanf( pstr, "%lf", &minJerkTime ) != 1 );
-  if (status == 0){
-    setDoubleParam(pC_->XPSMinJerk_, minJerkTime);
-  }
-  
-  /* get max jerk time */
-  sprintf( par,  "MaximumJerkTime"     );
-  status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
-  status |= ( sscanf( pstr, "%lf", &maxJerkTime ) != 1 );
-  if (status == 0) {
-    setDoubleParam(pC_->XPSMaxJerk_, maxJerkTime);
-  }
+    /* get max jerk time */
+    sprintf( par,  "MaximumJerkTime"     );
+    status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+    status |= ( sscanf( pstr, "%lf", &maxJerkTime ) != 1 );
+    if (status == 0) {
+      setDoubleParam(pC_->XPSMaxJerk_, maxJerkTime);
+    }
 
-  //   status = PositionerUserTravelLimitsGet(pollSocket_, positionerName_, &lowLimit_, &highLimit_);
-  //   if (status == 0) {
-  //     setDoubleParam(pC_->motorHighLimit_, (highLimit_));
-  //     setDoubleParam(pC_->motorLowLimit_, (lowLimit_));
-  //   }
-  sprintf( par,  "MaximumTargetPosition"     );
-  status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
-  status |= ( sscanf( pstr, "%lf", &highLimit_ ) != 1 );
-  if (status == 0) {
-    setDoubleParam(pC_->XPShlm_, highLimit_);
-  }
+    //   status = PositionerUserTravelLimitsGet(pollSocket_, positionerName_, &lowLimit_, &highLimit_);
+    //   if (status == 0) {
+    //     setDoubleParam(pC_->motorHighLimit_, (highLimit_));
+    //     setDoubleParam(pC_->motorLowLimit_, (lowLimit_));
+    //   }
+    sprintf( par,  "MaximumTargetPosition"     );
+    status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+    status |= ( sscanf( pstr, "%lf", &highLimit_ ) != 1 );
+    if (status == 0) {
+      setDoubleParam(pC_->XPShlm_, highLimit_);
+    }
 
-  sprintf( par,  "MinimumTargetPosition"     );
-  status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
-  status |= ( sscanf( pstr, "%lf", &lowLimit_ ) != 1 );
-  if (status == 0) {
-    setDoubleParam(pC_->XPSllm_, lowLimit_);
-  }
+    sprintf( par,  "MinimumTargetPosition"     );
+    status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+    status |= ( sscanf( pstr, "%lf", &lowLimit_ ) != 1 );
+    if (status == 0) {
+      setDoubleParam(pC_->XPSllm_, lowLimit_);
+    }
 
-  sprintf( par,  "SmartStageName"     );
-  status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
-  if (status == 0) {
-    pC_->setStringParam(axisNo_,pC_->XPSStageName_, pstr);
+    sprintf( par,  "SmartStageName"     );
+    status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+    if (status == 0) {
+      pC_->setStringParam(axisNo_,pC_->XPSStageName_, pstr);
+    }
+  
+    sprintf( par,  "DriverName"     );
+    status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+    if (status == 0) {
+      pC_->setStringParam(axisNo_,pC_->XPSDriverString_, pstr);
+    }
+  
+    sprintf( par,  "Unit"    );
+    status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
+    if (status == 0) {
+      pC_->setStringParam(axisNo_,pC_->XPSUnitsString_, pstr);
+    }
+  
+    getPID();
+    callParamCallbacks();
+    if (status != 0)
+      s = asynSuccess;
   }
   
-  sprintf( par,  "DriverName"     );
-  status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
-  if (status == 0) {
-    pC_->setStringParam(axisNo_,pC_->XPSDriverString_, pstr);
-  }
-  
-  sprintf( par,  "Unit"    );
-  status = PositionerStageParameterGet( pollSocket_, positionerName_, par, pstr );
-  if (status == 0) {
-    pC_->setStringParam(axisNo_,pC_->XPSUnitsString_, pstr);
-  }
-  
-  getPID();
-  callParamCallbacks();
-  if (status != 0)
-  s = asynSuccess;
-  }
   return s;
 }
-
 
 asynStatus XPSAxis::initializeParam(){
        setDoubleParam(pC_->XPSmres_, stepSize_);

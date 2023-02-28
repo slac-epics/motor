@@ -50,6 +50,7 @@ typedef enum {
 #define XPSStatusString                       "XPS_STATUS"
 #define XPSHwStatusString                     "XPS_HW_STATUS"
 #define updateAxisInfoString                  "UPDATE_AXIS_INFO"
+#define updateAxisInfoNoResString             "UPDATE_AXIS_INFO_NORES"
 #define XPSVbasString                         "XPS_VBAS"
 #define XPSVeloString                         "XPS_VELO"
 #define XPSVmaxString                         "XPS_VMAX"
@@ -129,6 +130,7 @@ class epicsShareClass XPSController : public asynMotorController {
   int XPSStatus_;
   int XPSHwStatus_;
   int updateAxisInfo_;
+  int updateAxisInfoNoRes_;
   int XPSvbas_;
   int XPSvelo_;
   int XPSvmax_;

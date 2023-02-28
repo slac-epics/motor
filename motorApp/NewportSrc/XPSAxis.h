@@ -54,7 +54,7 @@ class epicsShareClass XPSAxis : public asynMotorAxis
   virtual asynStatus defineProfile(double *positions, size_t numPoints);
   virtual asynStatus readbackProfile();
 
-  asynStatus getInfo();
+  asynStatus getInfo(bool withoutRes);
   asynStatus initializeParam();
   
   private:

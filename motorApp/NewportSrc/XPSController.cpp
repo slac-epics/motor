@@ -173,6 +173,7 @@ XPSController::XPSController(const char *portName, const char *IPAddress, int IP
   createParam(XPSStatusString,                        asynParamInt32,   &XPSStatus_);
   createParam(XPSHwStatusString,                      asynParamInt32,   &XPSHwStatus_);
   createParam(updateAxisInfoString,                   asynParamInt32,   &updateAxisInfo_);
+  createParam(updateAxisInfoNoResString,              asynParamInt32,   &updateAxisInfoNoRes_);
   createParam(XPSVbasString,                          asynParamFloat64, &XPSvbas_);
   createParam(XPSVeloString,                          asynParamFloat64, &XPSvelo_);
   createParam(XPSVmaxString,                          asynParamFloat64, &XPSvmax_);
@@ -274,10 +275,11 @@ asynStatus XPSController::writeInt32(asynUser *pasynUser, epicsInt32 value)
    * status at the end, but that's OK */
   status = pAxis->setIntegerParam(function, value);
 
-  if (function == updateAxisInfo_)
-  {
-    pAxis->getInfo();
-  }  else if (function == XPSTclScriptExecute_) {
+  if (function == updateAxisInfo_){
+    pAxis->getInfo(false);
+  } else if (function == updateAxisInfoNoRes_){
+    pAxis->getInfo(true);
+  } else if (function == XPSTclScriptExecute_) {
     /* Execute the TCL script */
     char fileName[MAX_FILENAME_LEN];
     getStringParam(XPSTclScript_, (int)sizeof(fileName), fileName);
