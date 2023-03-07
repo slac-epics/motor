@@ -4,6 +4,10 @@
  * Unit note: the smarAct stages should always have MRES = 1e-6, so EGU of mm/deg become
  * "native" units of nm/udeg.  But the *real* native units are pm/ndeg, so we need an
  * additional conversion factor for any position, speed, or acceleration.
+ *
+ * PicoScale note: because of adjustment issues, the PicoScale can be valid or invalid.
+ * This means that the "SensorPresent" bit comes and goes, and this code cannot assume
+ * that an encoder is always there.
  */
 
 #include <iocsh.h>
@@ -228,14 +232,16 @@ SmarActMCS2Axis::SmarActMCS2Axis(class SmarActMCS2Controller *cnt_p, int axis, i
     }
 
     // Determine if stage has a sensor.
-    hasEncoder_ = 0;
-    if (val & SmarActMCS2StatusSensorPresent) {
-        if ( asynSuccess == getVal("POS:CURR", &val) ) {
-            hasEncoder_ = 1;
-            setIntegerParam(c_p_->motorStatusHasEncoder_, 1);
-            setIntegerParam(c_p_->motorStatusGainSupport_, 1);
-        }
+    if ((val & SmarActMCS2StatusSensorPresent) && (asynSuccess == getVal("POS:CURR", &val))) {
+        hasEncoder_ = 1;
+        setIntegerParam(c_p_->motorStatusHasEncoder_, 1);
+        setIntegerParam(c_p_->motorStatusGainSupport_, 1);
+    } else {
+        hasEncoder_ = 0;
+        setIntegerParam(c_p_->motorStatusHasEncoder_, 0);
+        setIntegerParam(c_p_->motorStatusGainSupport_, 0);
     }
+
     printf("Axis %d %s an encoder.\n", axis, hasEncoder_ ? "has" : "doesn't have");
 
  bail:
@@ -329,6 +335,21 @@ SmarActMCS2Axis::poll(bool *moving_p)
 
     if ( (comStatus_ = getVal("STAT", &val)) )
         goto bail;
+
+    // Do we have a sensor *now*?
+    if ((val & SmarActMCS2StatusSensorPresent) && (asynSuccess == getVal("POS:CURR", &val))) {
+	if (!hasEncoder_)
+	    printf("Axis %d now has an encoder.\n", axisNo_);
+        hasEncoder_ = 1;
+        setIntegerParam(c_p_->motorStatusHasEncoder_, 1);
+        setIntegerParam(c_p_->motorStatusGainSupport_, 1);
+    } else {
+	if (hasEncoder_)
+	    printf("Axis %d now doesn't have an encoder.\n", axisNo_);
+        hasEncoder_ = 0;
+        setIntegerParam(c_p_->motorStatusHasEncoder_, 0);
+        setIntegerParam(c_p_->motorStatusGainSupport_, 0);
+    }
 
     *moving_p = (val & SmarActMCS2StatusMoving) ? true : false;
     setIntegerParam(c_p_->motorStatusDone_, !*moving_p );
