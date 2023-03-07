@@ -331,24 +331,26 @@ SmarActMCS2Axis::clearErrors()
 asynStatus
 SmarActMCS2Axis::poll(bool *moving_p)
 {
-    long long val;
+    long long val, pos;
 
     if ( (comStatus_ = getVal("STAT", &val)) )
         goto bail;
 
     // Do we have a sensor *now*?
-    if ((val & SmarActMCS2StatusSensorPresent) && (asynSuccess == getVal("POS:CURR", &val))) {
-	if (!hasEncoder_)
+    if ((val & SmarActMCS2StatusSensorPresent) && (asynSuccess == getVal("POS:CURR", &pos))) {
+	if (!hasEncoder_) {
 	    printf("Axis %d now has an encoder.\n", axisNo_);
-        hasEncoder_ = 1;
-        setIntegerParam(c_p_->motorStatusHasEncoder_, 1);
-        setIntegerParam(c_p_->motorStatusGainSupport_, 1);
+	    hasEncoder_ = 1;
+	    setIntegerParam(c_p_->motorStatusHasEncoder_, 1);
+	    setIntegerParam(c_p_->motorStatusGainSupport_, 1);
+	}
     } else {
-	if (hasEncoder_)
+	if (hasEncoder_) {
 	    printf("Axis %d now doesn't have an encoder.\n", axisNo_);
-        hasEncoder_ = 0;
-        setIntegerParam(c_p_->motorStatusHasEncoder_, 0);
-        setIntegerParam(c_p_->motorStatusGainSupport_, 0);
+	    hasEncoder_ = 0;
+	    setIntegerParam(c_p_->motorStatusHasEncoder_, 0);
+	    setIntegerParam(c_p_->motorStatusGainSupport_, 0);
+	}
     }
 
     *moving_p = (val & SmarActMCS2StatusMoving) ? true : false;
