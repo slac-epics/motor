@@ -627,3 +627,12 @@ asynStatus SmartAxis5::handleError(int error) {
 
   return status;
 }
+
+asynStatus SmartAxis5::setCANAddress(int canAddr) {
+  static const char *functionName = "setCANAddress";
+  canAddr_= canAddr;
+  asynPrint(pC_->pasynUserSelf, ASYN_TRACE_FLOW,
+            "%s:%s: CAN address for axis %d set to %d\n",
+            driverName, functionName, axisNo_, canAddr_);
+  return asynSuccess;
+}

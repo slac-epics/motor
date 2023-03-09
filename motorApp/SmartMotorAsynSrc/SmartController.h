@@ -44,12 +44,13 @@ class SmartController : public asynMotorController {
  public:
   SmartController(const char *portName, const char *SmartPortName, int numAxes,
                   int numVirtualAxes, double movingPollPeriod,
-                  double idlePollPeriod);
+                  double idlePollPeriod, int default_class);
   /* These are the methods that we override from asynMotorDriver */
   void report(FILE *fp, int level);
   SmartAxisBase *getAxis(asynUser *pasynUser);
   SmartAxisBase *getAxis(int axisNo);
   VirtualAxis *getVirtualAxis(asynUser *pasynUser);
+  asynStatus setCANAddress(int axisNo, int canAddr);
 
   asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
   asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
