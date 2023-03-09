@@ -1,3 +1,9 @@
+R6.10.1-2.4.1  (jvamosi)
+    Pulling in SmartMotors changes from R6.9-2.0.0 (klauer).
+        - Add smartSetCANAddr for setting the CANbus address on class 5 SmartMotors
+        - Allow support for specifying the default motor class
+    Adding record to XPS_extra_axis.db for updating axis info without resolution
+
 R6.10.1-2.4.0  (jvamosi)
     Added option to XPS controller not to update resolution.
 
