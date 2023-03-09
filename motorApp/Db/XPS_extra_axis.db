@@ -7,6 +7,14 @@ record(ao, "$(P)$(R):XPS_GETINFO") {
   field(FLNK, "$(P)$(R):XPS_FAN_RBK PP")
 }
 
+record(ao, "$(P)$(R):XPS_GETINFO_NORES") {
+  field(DESC, "Update XPS Info Without Resolution")
+  field(DTYP, "asynInt32")
+  field(PREC, "0")
+  field(OUT, "@asyn($(PORT),$(ADDR))UPDATE_AXIS_INFO_NORES")
+  field(FLNK, "$(P)$(R):XPS_FAN_RBK PP")
+}
+
 record(waveform, "$(P)$(R):XPS_AXIS_STATUS") {
   field(DESC, "XPS Stage Status")
   field(DTYP, "asynOctetRead")
