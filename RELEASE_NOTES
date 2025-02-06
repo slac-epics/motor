@@ -1,3 +1,10 @@
+R6.9-2.1.0 (lorelli)
+    Update to asyn/R4.39-1.0.2, seq/R2.2.4-1.2, ipac/R2.15-1.0.2
+    Build fixes for EPICS V7
+
+R6.9-2.0.1 (lorelli) 
+    Upgrade to asyn/R4.39-1.0.1, ipac/R2.15-1.0.2
+
 R6.9-2.0.0 (slepicka)
 	Cherry picked commits from alexmon and klauer for the HXR undulator.
 	Building using:
