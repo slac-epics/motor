@@ -64,6 +64,8 @@ Last Modified:  $Date: 2009-04-27 14:28:42 $
 #include <osiUnistd.h> 
 #include <epicsVersion.h>
 #include <epicsEndian.h>
+#include <errlog.h>
+#include <stdlib.h>
 
 /* Less than EPICS base version test.*/
 #define LT_EPICSBASE(v,r,l) ((EPICS_VERSION<=(v)) && (EPICS_REVISION<=(r)) && (EPICS_MODIFICATION<(l)))
