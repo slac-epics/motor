@@ -14,7 +14,7 @@
 # ==========================================================
 # Define the version strings for all needed modules
 # ==========================================================
-ASYN_MODULE_VERSION		= R4.35-0.0.2
+ASYN_MODULE_VERSION		= R4.39-1.0.2
 
 # ==========================================================
 # External Support module path definitions
