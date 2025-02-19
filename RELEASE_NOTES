@@ -1,3 +1,6 @@
+R6.9-2.1.1 (lorelli)
+    Update to ipac/R2.15-1.1.0
+
 R6.9-2.1.0 (lorelli)
     Update to asyn/R4.39-1.0.2, seq/R2.2.4-1.2, ipac/R2.15-1.0.2
     Build fixes for EPICS V7
