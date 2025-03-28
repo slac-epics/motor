@@ -21,4 +21,4 @@ startup
 *.log
 tags
 *~
-
+modules/RELEASE.*
