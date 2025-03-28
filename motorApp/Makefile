@@ -12,6 +12,12 @@ DIRS += MotorSrc
 DIRS += SoftMotorSrc
 SoftMotorSrc_DEPEND_DIRS = MotorSrc
 
+DIRS += linmotSrc
+linmotSrc_DEPEND_DIRS = MotorSrc
+
+DIRS += EtherCATSrc
+EtherCATSrc_DEPEND_DIRS = MotorSrc
+
 DIRS += op
 DIRS += Db
 DIRS += iocsh
