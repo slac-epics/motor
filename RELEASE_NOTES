@@ -1,3 +1,7 @@
+R6.10.1.-2.5.2 (lorelli)
+    Upgrade to IPAC R2.15-1.1.0
+    Fix -fpermissive build errors related to IPAC
+
 R6.10.1-2.5.1  (lorelli)
     Upgrade to asyn R4.39-1.0.2
 
