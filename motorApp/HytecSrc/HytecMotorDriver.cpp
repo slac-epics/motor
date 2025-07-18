@@ -80,7 +80,7 @@
 #include "HytecMotorDriver.h"
 #include <epicsExport.h>
 
-static void ISR_8601(int pDrv);
+static void ISR_8601(void* pDrv);
 static void intQueuedTask( void *pDrv );
 
 #define MAX_MESSAGES  100           /* maximum number of messages */
@@ -197,7 +197,7 @@ asynStatus HytecMotorController::SetupCard()
 			 this->ipslot,
 			 this->vector,
 			 &ISR_8601,
-			 (long)this);
+			 this);
       
     /* If Interrupts NOT Setup OK */
     if (st!=OK) 
@@ -520,8 +520,9 @@ asynStatus HytecMotorController::writeFloat64(asynUser *pasynUser, epicsFloat64 
 }
 
 // ISR8601 Routines to handle interrupts
-static void ISR_8601(int pDrv)
+static void ISR_8601(void* pParam)
 {
+    int pDrv = (int)(uintptr_t)pParam;
     HytecMotorController *pController = (HytecMotorController*) pDrv;
 	HytecMotorAxis * pAxis;
 	volatile char * chanbase;
