@@ -24,7 +24,7 @@ ASYN_MODULE_VERSION=R4.39-1.0.2
 
 # The following support modules are required for the Hytec driver
 # Recommended IPAC release: R2-10 or higher
-IPAC_MODULE_VERSION=R2.15-1.0.0
+IPAC_MODULE_VERSION=R2.15-1.1.0
 
 # Need the sequencer and busy record for the 
 # MM4005 and XPS trajectory scanning
