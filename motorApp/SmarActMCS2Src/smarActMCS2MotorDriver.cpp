@@ -500,6 +500,13 @@ SmarActMCS2Axis::move(double position, int relative, double min_vel, double max_
         double curpos;
         movemode = MCS2MM_STEP;
         if ( (comStatus_ = c_p_->sendCmd(dummy, -1, "CHAN%u:MMOD %d", channel_, (int)movemode)) )
+            goto bail;        /*
+         * Set the output back to 0 V for a stick-slip piezo
+         * Note, 0 = - 20 V a piezo scanner model, to set it
+         * 0 V you need to set it to 174762!! We currently
+         * don't check for piezo scanners . . . 
+         */
+        if ( (comStatus_ = c_p_->sendCmd(dummy,-1, "CHAN%u:POS:SCAN %d", channel_, 0)) )
             goto bail;
         c_p_->getDoubleParam(axisNo_, c_p_->motorPosition_, &curpos);
         if (!relative)
