@@ -1,3 +1,11 @@
+R6.10.1.-2.5.3 (aberges)
+    Update smarActMCS2Motor Driver to mitigate operational failures:
+        - holdTime now defaults to 10 sec. Can be set with downstream common
+          IOCs using streamDevice protocols
+        - explicitly set the scan voltage to 0 % after open-loop movements.
+          This is analogous to the closed-loop Target-to-Zero-Voltage property.
+          NOTE: 0 % output on a stick-slip piezo is 0 V, 0 % output on a scanner piezo is -20 V.
+
 R6.10.1.-2.5.2 (lorelli)
     Upgrade to IPAC R2.15-1.1.0
     Fix -fpermissive build errors related to IPAC
