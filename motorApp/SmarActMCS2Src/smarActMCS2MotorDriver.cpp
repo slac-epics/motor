@@ -38,7 +38,7 @@ static char dummy[10];
 #define REP_LEN 100
 #define DEFLT_TIMEOUT 2.0
 
-#define HOLD_FOREVER    -1
+#define HOLD_DEFAULT     10000
 #define HOLD_NEVER       0
 #define MM2PM(x)         ((x)*1000000000.)
 #define PM2MM(x)         ((x)/1000000000.)
@@ -222,13 +222,20 @@ SmarActMCS2Axis::SmarActMCS2Axis(class SmarActMCS2Controller *cnt_p, int axis, i
     setIntegerParam(c_p_->motorStatusPowerOn_, Holding(val));
     if ( Holding(val) ) {
         // still holding? This means that - in a previous life - the
-        // axis was configured for 'infinite holding'. Inherit this
+        // axis was configured for some non-zero hold time. Inherit the
+        // default holding time for now.
         // (until the next 'move' command that is).
+        // (or we whenever we decide to change it)
         ///
-        holdTime_ = HOLD_FOREVER;
+        holdTime_ = HOLD_DEFAULT;
+        if ( (comStatus_ = setHoldTime(holdTime_)) ) {
+            goto bail;
+        }
     } else {
-        // initial value from 'closed-loop' property
-        holdTime_ = getClosedLoop() ? HOLD_FOREVER : 0;
+        // initial value from 'closed-loop' property which technically
+        // doesn't work here due to how CNEN is behaving. We'll handle
+        // this later during encoder detection
+        holdTime_ = getClosedLoop() ? HOLD_DEFAULT : 0;
     }
 
     // Determine if stage has a sensor.
@@ -236,6 +243,10 @@ SmarActMCS2Axis::SmarActMCS2Axis(class SmarActMCS2Controller *cnt_p, int axis, i
         hasEncoder_ = 1;
         setIntegerParam(c_p_->motorStatusHasEncoder_, 1);
         setIntegerParam(c_p_->motorStatusGainSupport_, 1);
+        setIntegerParam(c_p_->motorClosedLoop_, 1);
+        if ( (comStatus_ = getVal("HOLD", &holdTime_)) ) {
+            goto bail;
+        }      
     } else {
         hasEncoder_ = 0;
         setIntegerParam(c_p_->motorStatusHasEncoder_, 0);
@@ -243,6 +254,14 @@ SmarActMCS2Axis::SmarActMCS2Axis(class SmarActMCS2Controller *cnt_p, int axis, i
     }
 
     printf("Axis %d %s an encoder.\n", axis, hasEncoder_ ? "has" : "doesn't have");
+    // If it has an encoder, you probably don't want the manufacturer 
+    // default hold time of infinity. Let's set it to our default instead
+    if (hasEncoder_) {
+        holdTime_ = HOLD_DEFAULT;
+        if ( (comStatus_ = setHoldTime(holdTime_)) ) {
+            goto bail;
+        }
+    }
 
  bail:
     clearErrors();
@@ -343,6 +362,7 @@ SmarActMCS2Axis::poll(bool *moving_p)
 	    hasEncoder_ = 1;
 	    setIntegerParam(c_p_->motorStatusHasEncoder_, 1);
 	    setIntegerParam(c_p_->motorStatusGainSupport_, 1);
+        setIntegerParam(c_p_->motorClosedLoop_, 1);
 	}
     } else {
 	if (hasEncoder_) {
@@ -421,6 +441,9 @@ SmarActMCS2Axis::setAccel(double accel)
     return asynSuccess;
 }
 
+/* HoldTime is only valid for Stick-Slip and Piezo Scanners.
+ * Need new toys if we're going to play with magnetic drive stages.
+ */
 asynStatus  
 SmarActMCS2Axis::setHoldTime(int holdTime)
 {
@@ -464,9 +487,11 @@ SmarActMCS2Axis::move(double position, int relative, double min_vel, double max_
             goto bail;
 
         /* cache 'closed-loop' setting until next move */
-        if ( (comStatus_ = setHoldTime(getClosedLoop() ? HOLD_FOREVER : 0)) )
+        /* Start by asking for the current hold time */
+        if ( (comStatus_ = getVal("HOLD", &holdTime_)) )
             goto bail;
-
+        if ( (comStatus_ = setHoldTime(getClosedLoop() ? holdTime_ : 0)) )
+            goto bail;
         movemode = (relative ? MCS2MM_REL : MCS2MM_ABS);
         if ( (comStatus_ = c_p_->sendCmd(dummy, -1, "CHAN%u:MMOD %d", channel_, (int)movemode)) )
             goto bail;
@@ -505,7 +530,7 @@ SmarActMCS2Axis::home(double min_vel, double max_vel, double accel, int forwards
         goto bail;
 
     /* cache 'closed-loop' setting until next move */
-    if ( (comStatus_ = setHoldTime(getClosedLoop() ? HOLD_FOREVER : 0)) )
+    if ( (comStatus_ = setHoldTime(getClosedLoop() ? HOLD_DEFAULT : 0)) )
         goto bail;
 
     /* Set the "safe direction", aka the direction the home goes towards. */
@@ -517,6 +542,7 @@ SmarActMCS2Axis::home(double min_vel, double max_vel, double accel, int forwards
         goto bail;
 
     comStatus_ = c_p_->sendCmd(dummy, -1, ":REF%u", channel_);
+    holdTime_ = getVal("HOLD", &holdTime_);
 
  bail:
     clearErrors();
