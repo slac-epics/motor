@@ -1,4 +1,4 @@
-R6.10.1.-2.5.3 (aberges)
+R6.10.1.-2.6.0 (aberges)
     Update smarActMCS2Motor Driver to mitigate operational failures:
         - holdTime now defaults to 10 sec. Can be set with downstream common
           IOCs using streamDevice protocols
