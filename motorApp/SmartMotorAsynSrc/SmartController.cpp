@@ -438,7 +438,7 @@ static void SmartSetCANAddressCallFunc(const iocshArgBuf *args) {
 }
 static void SmartMotorAsynRegister(void) {
   iocshRegister(&SmartCreateControllerDef, SmartCreateContollerCallFunc);
-  iocshRegister(&SmartCreateControllerDef, SmartCreateContollerCallFunc);
+  iocshRegister(&SmartSetCANAddressDef, SmartSetCANAddressCallFunc);
 }
 
 extern "C" {
