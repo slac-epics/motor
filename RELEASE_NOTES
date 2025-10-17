@@ -1,4 +1,7 @@
-R6.10.1.-2.6.0 (aberges)
+R6.10.1-2.6.1 (lorelli)
+    Fixed missing SmartSetCANAddress IOCSH function
+
+R6.10.1-2.6.0 (aberges)
     Update smarActMCS2Motor Driver to mitigate operational failures:
         - holdTime now defaults to 10 sec. Can be set with downstream common
           IOCs using streamDevice protocols
