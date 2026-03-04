@@ -1,3 +1,7 @@
+R6.9-ess-0.0.5  2026-03-03 Jeremy Lorelli
+    Enable motorPI submodule
+    Update motorPI to R1-1-2
+
 R6.9-ess-0.0.4  2025-10-10 Zachary Lentz
     Build against asyn/R4.42-1.0.0
 
