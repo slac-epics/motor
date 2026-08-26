@@ -389,8 +389,7 @@ enum moveMode{
 
 
 /******************************************************************************
- * Debug MIP and MIP changes
- * Not yet used (needs better printing)
+ * Debug formatting and logging for MIP state changes
 *******************************************************************************/
 static void mipSetBit(motorRecord *pmr, unsigned v)
 {
@@ -412,6 +411,13 @@ static void mipSetMip(motorRecord *pmr, unsigned v)
 static void dbgMipToString(unsigned v, char *buf, size_t buflen)
 {
   int len;
+
+  if (v == MIP_DONE)
+  {
+      epicsSnprintf(buf, buflen, "'DONE'");
+      return;
+  }
+
   memset(buf, 0, buflen);
   len = epicsSnprintf(buf, buflen-1,
            "'%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s'",
@@ -442,8 +448,8 @@ static void dbgMipToString(unsigned v, char *buf, size_t buflen)
   }
 }
 
-/*  abbreviated Bits: */
-/* Jf Jr J1 Hf Hr Mo Rt Lp MB St Dr Da JR Js J2 Ex */
+/* MIP_DONE is printed as DONE.  Nonzero bits are abbreviated as follows: */
+/* Jf Jr J1 Hf Hr Mo Ry Lp Mb St Dr Da jR jS J2 Ex */
 /* 16 bits * 3 + NUL + spare */
 #define MBLE 50
 
@@ -486,7 +492,7 @@ static void dbgMipToString(unsigned v, char *buf, size_t buflen)
     mipSetMip(pmr,(v));                              \
     /* Prevent spammy MIP messages and log only an   \
      * actual state transition. */                   \
-    if (old != pmr->mip) {                           \
+    if (old != MIP_DONE || pmr->mip != MIP_DONE) {  \
         char obuf[MBLE];                             \
         char nbuf[MBLE];                             \
         dbgMipToString(old, obuf, sizeof(obuf));     \
