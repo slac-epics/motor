@@ -412,12 +412,6 @@ static void dbgMipToString(unsigned v, char *buf, size_t buflen)
 {
   int len;
 
-  if (v == MIP_DONE)
-  {
-      epicsSnprintf(buf, buflen, "'DONE'");
-      return;
-  }
-
   memset(buf, 0, buflen);
   len = epicsSnprintf(buf, buflen-1,
            "'%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s'",
@@ -448,8 +442,8 @@ static void dbgMipToString(unsigned v, char *buf, size_t buflen)
   }
 }
 
-/* MIP_DONE is printed as DONE.  Nonzero bits are abbreviated as follows: */
-/* Jf Jr J1 Hf Hr Mo Ry Lp Mb St Dr Da jR jS J2 Ex */
+/*  abbreviated Bits: */
+/* Jf Jr J1 Hf Hr Mo Rt Lp MB St Dr Da JR Js J2 Ex */
 /* 16 bits * 3 + NUL + spare */
 #define MBLE 50
 
