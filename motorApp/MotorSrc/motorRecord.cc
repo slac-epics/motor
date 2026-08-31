@@ -389,8 +389,7 @@ enum moveMode{
 
 
 /******************************************************************************
- * Debug MIP and MIP changes
- * Not yet used (needs better printing)
+ * Debug formatting and logging for MIP state changes
 *******************************************************************************/
 static void mipSetBit(motorRecord *pmr, unsigned v)
 {
@@ -412,6 +411,7 @@ static void mipSetMip(motorRecord *pmr, unsigned v)
 static void dbgMipToString(unsigned v, char *buf, size_t buflen)
 {
   int len;
+
   memset(buf, 0, buflen);
   len = epicsSnprintf(buf, buflen-1,
            "'%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s'",
@@ -482,16 +482,20 @@ static void dbgMipToString(unsigned v, char *buf, size_t buflen)
 
 #define MIP_SET_VAL(v)                               \
   do {                                               \
-    char obuf[MBLE];                                 \
-    char nbuf[MBLE];                                 \
     epicsUInt16 old = pmr->mip;                      \
     mipSetMip(pmr,(v));                              \
-    dbgMipToString(old, obuf, sizeof(obuf));         \
-    dbgMipToString(pmr->mip, nbuf, sizeof(nbuf));    \
-    Debug(pmr,2, "%s:%d %s mipSetVal old=%s new=%s\n",   \
-          __FILE__, __LINE__, pmr->name,             \
-          obuf, nbuf);                               \
+    /* Prevent spammy MIP messages and log only an   \
+     * actual state transition. */                   \
+    if (old != MIP_DONE || pmr->mip != MIP_DONE) {  \
+        char obuf[MBLE];                             \
+        char nbuf[MBLE];                             \
+        dbgMipToString(old, obuf, sizeof(obuf));     \
+        dbgMipToString(pmr->mip, nbuf, sizeof(nbuf));\
+        Debug(pmr,2, "%s:%d %s mipSetVal old=%s new=%s\n", \
+              __FILE__, __LINE__, pmr->name,         \
+              obuf, nbuf);                           \
     }                                                \
+  }                                                  \
   while(0)
 
 #else
